@@ -1,0 +1,12 @@
+.formFieldContainer {
+    margin-bottom: 16px;
+
+    :global {
+
+        .ms-TextField,
+        .ms-Dropdown-container,
+        .ms-DatePicker {
+            width: 100%;
+        }
+    }
+}

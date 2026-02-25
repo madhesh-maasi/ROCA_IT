@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "income-tax-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/incomeTax/IncomeTaxWebPart.js",
+          "manifest": "./src/webparts/incomeTax/IncomeTaxWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "IncomeTaxWebPartStrings": "lib/webparts/incomeTax/loc/{locale}.js"
+  }
+}

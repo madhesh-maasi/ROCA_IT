@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "income-tax-client-side-solution",
+    "id": "d155a610-5c4e-43fc-829c-899abebaae80",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.22.1"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "IncomeTax description"
+      },
+      "longDescription": {
+        "default": "IncomeTax description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "income-tax Feature",
+        "description": "The feature that activates elements of the income-tax solution.",
+        "id": "ce4476c4-beb8-4ae6-9613-0305c05063f4",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/income-tax.sppkg"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.21.1",
+    "sdksVersions": {},
+    "version": "1.22.1",
+    "libraryName": "income-tax",
+    "libraryId": "d155a610-5c4e-43fc-829c-899abebaae80",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "IncomeTax",
+    "solutionShortDescription": "IncomeTax description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
