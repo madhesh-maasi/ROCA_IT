@@ -1,0 +1,54 @@
+.iconButton {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+
+  i {
+    font-size: 16px;
+  }
+
+  svg {
+    display: block; // prevent tiny baseline gaps below svg
+  }
+
+  &:not(:disabled):active {
+    transform: scale(0.92);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // ── Edit Variant (Indigo) ──────────────────────────────────────────
+  &.edit {
+    color: #4b55c9; // Indigo
+    &:hover:not(:disabled) {
+      background-color: rgba(75, 85, 201, 0.1);
+    }
+  }
+
+  // ── Delete Variant (Red) ───────────────────────────────────────────
+  &.delete {
+    color: #ef4444; // Red
+    &:hover:not(:disabled) {
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  // ── Default Variant (Gray) ─────────────────────────────────────────
+  &.default {
+    color: #6b7280; // Gray
+    &:hover:not(:disabled) {
+      background-color: rgba(107, 114, 128, 0.1);
+    }
+  }
+}

@@ -1,0 +1,51 @@
+.btnGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.financeTableContainer {
+  /* Scope overriding the global PrimeReact datatable to give rows detached floating appearance from the image */
+  :global {
+    .p-datatable-wrapper {
+      background: transparent;
+    }
+    .p-datatable-table {
+      border-collapse: separate;
+      border-spacing: 0 8px; /* Adds physical gaps between rows */
+      background: transparent;
+    }
+
+    .p-datatable-thead > tr > th {
+      border-bottom: none; // remove default border
+    }
+
+    .p-datatable-tbody > tr {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f8fafc;
+
+      & > td {
+        border: none; /* remove default borders */
+        padding: 14px 16px;
+
+        &:first-child {
+          border-top-left-radius: 8px;
+          border-bottom-left-radius: 8px;
+        }
+        &:last-child {
+          border-top-right-radius: 8px;
+          border-bottom-right-radius: 8px;
+        }
+      }
+
+      &:hover {
+        background: #f8fafc;
+      }
+    }
+  }
+}
+
+.addPopupContent {
+  padding: 4px 0 8px;
+}

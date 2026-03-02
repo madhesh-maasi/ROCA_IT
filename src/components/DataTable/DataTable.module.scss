@@ -1,0 +1,192 @@
+// ─── DataTable – clean borderless design ─────────────────────────────────────
+// Matches the reference UI: no gridlines, indigo header text, subtle row
+// separators, blue active-page pill, and "Showing X to Y of Z entries" footer.
+
+.dataTableContainer {
+  width: 100%;
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 10px;
+
+  .dataTable {
+    width: 100%;
+
+    :global {
+      // ── table root ──────────────────────────────────────────────────────────
+      .p-datatable-table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      // ── header cells ────────────────────────────────────────────────────────
+      .p-datatable-thead > tr > th {
+        background: #e0e7ff; // light violet/indigo from image
+        color: #4f46e5; // indigo text
+        font-size: 13px;
+        font-weight: 700;
+        padding: 12px 16px;
+        border: none;
+        white-space: nowrap;
+        user-select: none;
+        letter-spacing: 0.01em;
+      }
+      .p-datatable-thead > tr > th:first-child {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+      }
+      .p-datatable-thead > tr > th:last-child {
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+      }
+
+      // sort icon colours
+      .p-sortable-column .p-sortable-column-icon {
+        color: #6366f1;
+        font-size: 11px;
+        margin-left: 4px;
+      }
+
+      .p-sortable-column.p-highlight,
+      .p-sortable-column:hover {
+        background: #c3ddfd !important;
+        color: #4338ca !important;
+      }
+
+      // remove the default blue outline on focused sort columns
+      .p-sortable-column:focus {
+        box-shadow: none;
+        outline: none;
+      }
+
+      // ── body cells ──────────────────────────────────────────────────────────
+      .p-datatable-tbody > tr > td {
+        padding: 14px 16px;
+        border: none;
+        border-bottom: 1px solid #f1f5f9;
+        color: #475569;
+        font-size: 13px;
+        background: #ffffff;
+      }
+
+      .p-datatable-tbody > tr:last-child > td {
+        border-bottom: none;
+      }
+
+      // row hover
+      .p-datatable-tbody > tr:hover > td {
+        background: #f8faff;
+      }
+
+      // striped rows override (disabled visually – keep clean look)
+      .p-datatable-striped .p-datatable-tbody > tr:nth-child(odd) > td {
+        background: #fafbff;
+      }
+
+      // empty message
+      .p-datatable-emptymessage > td {
+        text-align: center;
+        color: #9ca3af;
+        font-style: italic;
+        padding: 32px 16px;
+        border-bottom: none;
+      }
+
+      // ── paginator ───────────────────────────────────────────────────────────
+      .p-paginator {
+        background: transparent;
+        border: none;
+        padding: 12px 16px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+      }
+
+      // "Showing X to Y of Z entries"
+      .p-paginator-current {
+        margin-right: auto;
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      // prev / next arrow buttons
+      .p-paginator-prev,
+      .p-paginator-next {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        border-radius: 50%;
+        border: 1px solid #f1f5f9;
+        background: #f8fafc;
+        color: #475569;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+        margin: 0 2px;
+
+        &:hover {
+          background: #e2e8f0;
+        }
+
+        &.p-disabled {
+          opacity: 0.5;
+          cursor: default;
+          pointer-events: none;
+        }
+
+        .p-paginator-icon {
+          font-size: 10px;
+          font-weight: 800;
+        }
+      }
+
+      // numbered page buttons
+      .p-paginator-pages .p-paginator-page {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+        margin: 0 4px;
+
+        &:hover {
+          background: #e2e8f0;
+        }
+
+        // active page – filled blue circle
+        &.p-highlight {
+          background: #424fc4; // Blue matching image
+          color: #ffffff;
+        }
+      }
+
+      // first/last jump buttons (hide to keep it clean)
+      .p-paginator-first,
+      .p-paginator-last {
+        display: none;
+      }
+
+      // ── checkbox selection fixes ──────────────────────────────────────────────
+      // Hide the native accessible input to prevent overlapping a second native black tick
+      .p-hidden-accessible {
+        display: none !important;
+      }
+
+      // Hide the prime-react injected SVG check if it clashes with primeicons
+      .p-checkbox .p-checkbox-box .p-checkbox-icon {
+        display: none !important;
+      }
+    }
+  }
+}

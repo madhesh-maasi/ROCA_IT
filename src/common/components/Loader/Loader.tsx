@@ -1,27 +1,35 @@
-import * as React from 'react';
-import { Spinner, SpinnerSize } from '@fluentui/react/lib/Spinner';
-import styles from './Loader.module.scss';
+import * as React from "react";
+import styles from "./Loader.module.scss";
 
 export interface ILoaderProps {
-    /** Text to display below the spinner. */
-    label?: string;
-    /** Spinner size variant. Defaults to SpinnerSize.large. */
-    size?: SpinnerSize;
+  /** Text to display below the spinner. */
+  label?: string;
+  /** Whether to show the loader as a full-screen overlay. Defaults to true. */
+  fullScreen?: boolean;
 }
 
 /**
- * A reusable loading indicator component built on Fluent UI Spinner.
- * Use this wherever data is being fetched or processed asynchronously.
- *
- * @example
- * <Loader label="Loading tax records..." />
+ * A reusable modern loading indicator with a premium feel.
  */
-const Loader: React.FC<ILoaderProps> = ({ label = 'Loading...', size = SpinnerSize.large }) => {
-    return (
-        <div className={styles.loaderContainer}>
-            <Spinner size={size} label={label} ariaLive="assertive" />
+const Loader: React.FC<ILoaderProps> = ({
+  label = "Preparing your dashboard...",
+  fullScreen = true,
+}) => {
+  return (
+    <div
+      className={`${styles.loaderContainer} ${fullScreen ? styles.fullScreen : ""}`}
+    >
+      <div className={styles.loaderWrapper}>
+        <div className={styles.spinner}>
+          <div className={styles.circle}></div>
+          <div className={styles.circle}></div>
+          <div className={styles.circle}></div>
+          <div className={styles.circle}></div>
         </div>
-    );
+        {label && <p className={styles.loaderLabel}>{label}</p>}
+      </div>
+    </div>
+  );
 };
 
 export default Loader;

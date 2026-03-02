@@ -1,0 +1,19 @@
+.excelImport {
+  display: inline-block;
+
+  .uploadBtn {
+    min-width: 140px;
+    background: #059669; // Green for Excel
+    color: white;
+    border: none;
+
+    &:hover {
+      background: #047857;
+    }
+
+    &:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+  }
+}

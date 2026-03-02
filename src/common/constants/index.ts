@@ -1,1 +1,6 @@
-export { LIST_NAMES, DATE_FORMATS, APP_CONFIG } from './appConstants';
+export {
+  LIST_NAMES,
+  DATE_FORMATS,
+  APP_CONFIG,
+  deploymentConfig,
+} from "./appConstants";

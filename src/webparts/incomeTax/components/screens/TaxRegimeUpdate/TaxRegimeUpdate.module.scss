@@ -1,0 +1,152 @@
+.screen {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.headerToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333333;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .searchBlock {
+      width: 250px;
+    }
+  }
+}
+
+.tableCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  .editBtn {
+    background: transparent;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f0f7ff;
+    }
+
+    i {
+      font-size: 1rem;
+    }
+  }
+}
+
+.updatePopup {
+  width: 400px !important;
+
+  // Overriding standard PrimeReact dialog structure from Popup wrapper
+  :global {
+    .p-dialog-header {
+      display: none !important; // Hide standard header, using custom one inside body
+    }
+    .p-dialog-content {
+      padding: 0 !important;
+    }
+  }
+
+  .popupInner {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #333333;
+      text-align: center;
+    }
+
+    .employeeDetails {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .detailLabel {
+        font-size: 11px;
+        font-weight: 600;
+        color: #333333;
+      }
+
+      .detailText {
+        font-size: 14px;
+        color: #495057;
+        font-weight: 500;
+      }
+    }
+
+    .formGroup {
+      // Overriding standard Form logic to fit neatly
+      :global(.p-dropdown) {
+        width: 100%;
+        border-radius: 6px;
+        border-color: #d1d5db; // lighter border
+      }
+    }
+
+    .popupActions {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 8px;
+
+      button {
+        flex: 1;
+        padding: 10px 0;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+      }
+
+      .cancelBtn {
+        background-color: white;
+        border-color: #aeb9e1;
+        color: #424fc4;
+
+        &:hover {
+          background-color: #f8f9fa;
+        }
+      }
+
+      .updateBtn {
+        background-color: #424fc4;
+        color: white;
+
+        &:hover {
+          background-color: #3641a0;
+        }
+      }
+    }
+  }
+}

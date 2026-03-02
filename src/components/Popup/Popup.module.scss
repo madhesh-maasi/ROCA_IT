@@ -1,0 +1,147 @@
+// ── Dialog Mask (Overlay) ───────────────────────────────────────────────────
+.popupMask {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.45);
+  transition: all 0.3s ease-in-out;
+}
+
+.popup {
+  :global {
+    // ── Dialog ──────────────────────────────────────────────────────────────
+    .p-dialog {
+      border-radius: 16px !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      background: #ffffff !important;
+    }
+
+    // ── Header ──────────────────────────────────────────────────────────────
+    .p-dialog-header {
+      align-items: center;
+      background: #ffffff;
+      border-bottom: 1px solid #f1f5f9 !important;
+      padding: 20px 28px !important;
+      display: flex;
+      justify-content: space-between;
+      text-align: center;
+
+      .p-dialog-title {
+        font-size: 19px !important;
+        font-weight: 500 !important;
+        color: #0f172a !important;
+        font-family: "Poppins", sans-serif !important;
+        letter-spacing: -0.02em;
+      }
+
+      .p-dialog-header-icon {
+        color: #64748b;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #f8fafc;
+          color: #1e293b;
+          transform: rotate(90deg);
+        }
+
+        .p-icon {
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+
+    // ── Content ─────────────────────────────────────────────────────────────
+    .p-dialog-content {
+      background: #ffffff !important;
+      padding: 0px 32px 16px !important;
+      font-family: "Poppins", sans-serif !important;
+    }
+
+    // ── Footer ──────────────────────────────────────────────────────────────
+    .p-dialog-footer {
+      background: #fdfdfd;
+      border-top: 1px solid #f1f5f9 !important;
+      padding: 16px 28px 20px !important;
+    }
+
+    // ── Buttons inside dialog footer (PrimeReact) ────────────────────────────
+    .p-button {
+      font-family: "Poppins", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 10px 24px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      outline: none;
+
+      .p-button-icon {
+        font-size: 14px;
+      }
+
+      &:active {
+        transform: scale(0.97);
+      }
+    }
+
+    .p-button-primary,
+    .p-button:not(.p-button-outlined):not(.p-button-secondary) {
+      background: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+
+      &:hover:not(:disabled) {
+        background: #4338ca;
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+        transform: translateY(-1px);
+      }
+
+      &:disabled {
+        background: #94a3b8;
+        opacity: 0.7;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+    }
+
+    .p-button-outlined.p-button-secondary {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0 !important;
+      color: #475569;
+
+      &:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #cbd5e1 !important;
+        color: #1e293b;
+      }
+    }
+  }
+}
+
+// ── Body content area ────────────────────────────────────────────────────────
+.popupBody {
+  font-size: 15px;
+  color: #334155;
+  line-height: 1.6;
+  font-family: "Poppins", sans-serif;
+}
+
+// ── Footer action row ────────────────────────────────────────────────────────
+.footerActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}

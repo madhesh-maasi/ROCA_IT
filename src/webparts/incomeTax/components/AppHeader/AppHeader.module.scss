@@ -1,0 +1,34 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #3d4db7;
+  padding: 0 6px;
+  border-radius: 4px;
+  height: 52px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandTitle {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+}
+
+.logo {
+  img {
+    width: fit-content;
+    height: 40px;
+  }
+}

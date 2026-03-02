@@ -1,0 +1,97 @@
+.screen {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 120px); // Approximate header/footer height
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.headerToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333333;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .calendarBlock {
+      width: 200px;
+
+      :global(.p-calendar) {
+        width: 100%;
+
+        :global(.p-inputtext) {
+          background-color: #ffffff;
+          border: 1px solid #d1d5db;
+          border-right: none;
+          color: #4b5563;
+          border-top-left-radius: 6px;
+          border-bottom-left-radius: 6px;
+          padding: 8px 12px;
+          box-shadow: none;
+
+          &:enabled:focus {
+            box-shadow: none;
+            border-color: #d1d5db;
+          }
+        }
+
+        :global(.p-button) {
+          background-color: #ffffff;
+          border: 1px solid #d1d5db;
+          border-left: none;
+          color: #6b7280;
+          border-top-right-radius: 6px;
+          border-bottom-right-radius: 6px;
+
+          &:enabled:hover {
+            background-color: #f9fafb;
+            color: #374151;
+            border-color: #d1d5db;
+          }
+        }
+      }
+    }
+  }
+}
+
+.tableCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  // DataTable overrides for the redesigned look
+  :global(.p-datatable) {
+    :global(.p-datatable-thead > tr > th) {
+      background-color: #eef2ff; // Pale blue background
+      color: #3b82f6; // Darker blue text
+      font-weight: 600;
+      border-bottom: 2px solid #dee2e6;
+      padding: 12px 16px;
+
+      :global(.p-sortable-column-icon) {
+        color: #3b82f6;
+        width: 0.8rem;
+        height: 0.8rem;
+        margin-left: 0.5rem;
+      }
+    }
+
+    :global(.p-datatable-tbody > tr > td) {
+      padding: 12px 16px;
+      color: #495057;
+      border-bottom: 1px solid #f1f3f5;
+    }
+  }
+}

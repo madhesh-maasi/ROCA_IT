@@ -1,0 +1,118 @@
+.screen {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333333;
+  }
+}
+
+.notePanel {
+  background-color: #f0f7ff;
+  border: 1px solid #d0e3ff;
+  border-radius: 6px;
+  padding: 16px 20px;
+  color: #0052cc;
+
+  .noteTitle {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .noteList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    gap: 40px;
+    font-size: 13px;
+
+    li {
+      position: relative;
+      padding-left: 12px;
+
+      &::before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: #0052cc;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+.filtersBar {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+
+  .filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .groupLabel {
+      font-size: 11px;
+      font-weight: 600;
+      color: #333333;
+    }
+
+    .yearDropdown {
+      width: 140px;
+      :global(.p-dropdown) {
+        border-radius: 6px;
+      }
+    }
+
+    .radioGroup {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      height: 24px; // match visual height of dropdown/inputs
+    }
+  }
+
+  .actionsGroup {
+    margin-left: auto; // pushes the download button to the far right
+
+    .downloadBtn {
+      background-color: #424fc4; // match the indigo from the user's previously liked table buttons and current mockup
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #3641a0;
+      }
+    }
+  }
+}
+
+.tableCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}

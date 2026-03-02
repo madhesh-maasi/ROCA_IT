@@ -1,17 +1,17 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { incomeTaxReducer } from './slices';
+import { configureStore } from "@reduxjs/toolkit";
+import { incomeTaxReducer, userReducer } from "./slices";
+import employeeReducer from "./slices/employeeSlice";
 
 /**
  * Central Redux store for the ROCA_IT solution.
  * Add new feature reducers here as the solution grows.
  */
 export const store = configureStore({
-    reducer: {
-        incomeTax: incomeTaxReducer,
-        // Add more slices here as new features are added:
-        // employees: employeesReducer,
-        // departments: departmentsReducer,
-    },
+  reducer: {
+    incomeTax: incomeTaxReducer,
+    user: userReducer,
+    employee: employeeReducer,
+  },
 });
 
 /**

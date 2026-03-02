@@ -1,0 +1,185 @@
+.calendarContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+
+  .required {
+    color: #ef4444;
+    margin-left: 2px;
+  }
+}
+
+.calendarWrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  cursor: pointer;
+}
+
+.calendarIcon {
+  position: absolute;
+  left: 14px;
+  color: #a0a0a0;
+  font-size: 15px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.calendar {
+  width: 100%;
+
+  :global(.p-inputtext) {
+    width: 100%;
+    border-radius: 8px !important;
+    border: 1px solid #f0f0f0 !important;
+    background: #ffffff !important;
+    padding: 10px 14px 10px 38px !important; // Padding on left for icon
+    font-size: 14px;
+    color: #4b5563;
+    font-weight: 400;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #d1d5db !important;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: #d1d5db !important;
+      box-shadow: 0 0 0 3px rgba(229, 231, 235, 0.3) !important;
+    }
+  }
+
+  &.p-invalid :global(.p-inputtext) {
+    border-color: #ef4444 !important;
+  }
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+// ── Dropdown Panel Global Resets ──
+:global(.p-datepicker) {
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  margin-top: 8px;
+
+  &:not(.p-datepicker-inline) {
+    border: none;
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  :global(.p-datepicker-header) {
+    padding: 0 0 12px 0;
+    margin-bottom: 8px;
+    background: transparent;
+    border-bottom: 1px solid #f7fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    :global(.p-datepicker-title) {
+      margin: 0;
+      line-height: normal;
+
+      .p-datepicker-month,
+      .p-datepicker-year {
+        font-weight: 700;
+        color: #1a202c;
+        font-size: 15px;
+        transition: color 0.2s;
+
+        &:hover {
+          color: #4f46e5;
+        }
+      }
+    }
+
+    button {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 8px;
+      color: #718096;
+      background: transparent;
+      border: none;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #f7fafc;
+        color: #4f46e5;
+      }
+
+      &:focus {
+        box-shadow: none;
+      }
+    }
+  }
+
+  table {
+    font-size: 14px;
+    margin: 0;
+
+    th {
+      padding: 8px;
+      font-weight: 600;
+      color: #a0aec0;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 2px;
+
+      > span {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4a5568;
+        font-weight: 500;
+        transition: all 0.2s;
+
+        &:not(.p-highlight):not(.p-disabled):hover {
+          background: #f7fafc;
+          color: #4f46e5;
+        }
+
+        &.p-highlight {
+          background: #4f46e5;
+          color: #ffffff;
+          box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
+        }
+
+        &.p-datepicker-today {
+          background: #eef2ff;
+          color: #4f46e5;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+}

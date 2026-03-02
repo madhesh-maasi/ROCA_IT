@@ -1,0 +1,237 @@
+.screen {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 120px); // Approximate header/footer height
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333333;
+  }
+}
+
+.formCard {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  .row {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .col {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333333;
+    }
+  }
+
+  .radioGroup {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .rowWrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+
+    .peoplePickerWrapper {
+      flex: 2;
+      min-width: 300px;
+    }
+
+    .filePickerWrapper {
+      flex: 1;
+    }
+  }
+
+  .calendarCol {
+    max-width: 400px;
+
+    :global(.p-calendar) {
+      width: 100%;
+    }
+  }
+
+  .actionsRow {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 12px;
+
+    :global(.p-button) {
+      min-width: 120px;
+    }
+  }
+}
+
+.tabsCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  .tabToggle {
+    display: flex;
+    align-items: center;
+    background-color: #f1f3f5;
+    border-radius: 20px;
+    padding: 4px;
+
+    .tabBtn {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #495057;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.active {
+        background-color: #435b80; // Assuming a dark blue like the mockup
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      &:hover:not(.active) {
+        background-color: #e9ecef;
+      }
+    }
+  }
+
+  .tabContent {
+    padding: 16px;
+
+    // DataTable overrides for the redesigned look
+    :global(.p-datatable) {
+      :global(.p-datatable-thead > tr > th) {
+        background-color: #eef2ff; // Pale blue background
+        color: #3b82f6; // Darker blue text
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+        padding: 12px 16px;
+
+        :global(.p-sortable-column-icon) {
+          color: #3b82f6;
+          width: 0.8rem;
+          height: 0.8rem;
+          margin-left: 0.5rem;
+        }
+      }
+
+      :global(.p-datatable-tbody > tr > td) {
+        padding: 12px 16px;
+        color: #495057;
+      }
+    }
+  }
+}
+
+.searchToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .rightActions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+  }
+}
+
+.statusDraft {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &::before {
+    content: "✏️";
+    font-size: 10px;
+  }
+}
+
+.statusSubmitted {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &::before {
+    content: "✓";
+    font-size: 10px;
+  }
+}
+
+.errorSummary {
+  margin: 16px 0;
+  padding: 16px;
+  background: #fff5f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+
+  h4 {
+    margin: 0 0 12px 0;
+    color: #991b1b;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .errorList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .errorRow {
+    font-size: 13px;
+    color: #7f1d1d;
+    line-height: 1.5;
+
+    strong {
+      color: #b91c1c;
+      margin-right: 4px;
+    }
+  }
+}

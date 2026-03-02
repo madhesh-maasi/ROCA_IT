@@ -1,0 +1,83 @@
+import * as React from "react";
+import styles from "./StatusBadge.module.scss";
+
+// All known statuses — extend as needed
+export type StatusVariant =
+  | "submitted"
+  | "approved"
+  | "rework"
+  | "cancelled"
+  | "pending"
+  | "draft"
+  | "completed";
+
+const STATUS_CONFIG: Record<
+  StatusVariant,
+  { label: string; icon: string; colorClass: string }
+> = {
+  submitted: {
+    label: "Submitted",
+    icon: "pi pi-circle-fill",
+    colorClass: styles.submitted,
+  },
+  approved: {
+    label: "Approved",
+    icon: "pi pi-circle-fill",
+    colorClass: styles.approved,
+  },
+  rework: { label: "Rework", icon: "pi pi-refresh", colorClass: styles.rework },
+  cancelled: {
+    label: "Cancelled",
+    icon: "pi pi-times-circle",
+    colorClass: styles.cancelled,
+  },
+  pending: {
+    label: "Pending",
+    icon: "pi pi-clock",
+    colorClass: styles.pending,
+  },
+  draft: { label: "Draft", icon: "pi pi-file-edit", colorClass: styles.draft },
+  completed: {
+    label: "Completed",
+    icon: "pi pi-verified",
+    colorClass: styles.completed,
+  },
+};
+
+export interface IStatusBadgeProps {
+  /** The status to display. */
+  status: StatusVariant;
+  /** Override the display label (optional). */
+  label?: string;
+  /** Additional class for the outer span. */
+  className?: string;
+}
+
+/**
+ * A pill-shaped status badge with a coloured icon + label.
+ *
+ * @example
+ * <StatusBadge status="submitted" />
+ * <StatusBadge status="rework" label="Needs Rework" />
+ */
+const StatusBadge: React.FC<IStatusBadgeProps> = ({
+  status,
+  label,
+  className,
+}) => {
+  const config = STATUS_CONFIG[status];
+  const displayLabel = label ?? config.label;
+
+  return (
+    <span
+      className={`${styles.badge} ${config.colorClass} ${className || ""}`}
+      title={displayLabel}
+    >
+      <i className={`${config.icon} ${styles.badgeIcon}`} />
+      <span className={styles.badgeLabel}>{displayLabel}</span>
+    </span>
+  );
+};
+
+export { StatusBadge };
+export default StatusBadge;

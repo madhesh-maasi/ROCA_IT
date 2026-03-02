@@ -1,0 +1,51 @@
+.inputFieldContainer {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  width: 100%;
+
+  .label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+
+    .required {
+      color: #d32f2f;
+      margin-left: 4px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+  }
+
+  .inputText {
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #495057;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+
+    &:hover {
+      border-color: #495057;
+    }
+
+    &:focus {
+      outline: 0 none;
+      outline-offset: 0;
+      box-shadow: 0 0 0 0.1rem rgba(0, 0, 0, 0.4);
+      border-color: #000000;
+    }
+  }
+
+  .errorMessage {
+    color: #d32f2f;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}

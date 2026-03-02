@@ -1,0 +1,393 @@
+import * as React from "react";
+import styles from "./LookupConfig.module.scss";
+import {
+  SearchInput,
+  AppDataTable,
+  ActionButton,
+  IconButton,
+  Popup,
+  InputField,
+} from "../../../../../components";
+import { AppDropdown } from "../../../../../components";
+import { ActionPopup } from "../../../../../common/components";
+import { IColumnDef } from "../../../../../components/DataTable/DataTable";
+import screenStyles from "../screens.module.scss";
+import { exportToExcel } from "../../../../../common/utils/exportUtils";
+import {
+  getListItems,
+  addListItem,
+  updateListItem,
+  deleteListItem,
+} from "../../../../../common/utils/pnpService";
+import { LIST_NAMES } from "../../../../../common/constants/appConstants";
+import {
+  validateField,
+  required,
+} from "../../../../../common/utils/validationUtils";
+import AppToast, {
+  showToast,
+} from "../../../../../common/components/Toast/Toast";
+import { Toast as PrimeToast } from "primereact/toast";
+import Loader from "../../../../../common/components/Loader/Loader";
+import { handleError } from "../../../../../common/utils/errorUtils";
+
+interface ILookupData {
+  id: number;
+  sectionId: string;
+  section: string; // mapped from Title or Lookup
+  subSection: string; // mapped from SubSection
+  types: string; // mapped from Types
+  maxAmount: string; // mapped from MaxAmount
+}
+
+const LookupConfig: React.FC = () => {
+  const toast = React.useRef<PrimeToast>(null);
+  const [data, setData] = React.useState<ILookupData[]>([]);
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  // Consolidated UI States
+  const [uiState, setUiState] = React.useState({
+    isLoading: true,
+    isSaving: false,
+  });
+
+  // Consolidated Dialog State
+  const [dialog, setDialog] = React.useState<{
+    type: "ADD" | "EDIT" | "DELETE" | null;
+    id: number | null;
+  }>({ type: null, id: null });
+
+  // Consolidated Form State
+  const [formData, setFormData] = React.useState({
+    sectionId: "",
+    subSection: "",
+    types: "",
+    maxAmount: "",
+  });
+
+  const [sectionOptions, setSectionOptions] = React.useState<
+    { label: string; value: number }[]
+  >([]);
+
+  const fetchSectionOptions = async () => {
+    try {
+      const items = await getListItems(LIST_NAMES.SECTION_CONFIG);
+      const options = items.map((item) => ({
+        label: item.Title || "",
+        value: item.Id || 0,
+      }));
+      setSectionOptions(options);
+      return options;
+    } catch (error) {
+      await handleError(error, "Loading sections for dropdown", toast);
+      return [];
+    }
+  };
+
+  const fetchLookupItems = async (
+    options: { label: string; value: number }[],
+  ) => {
+    setUiState((p) => ({ ...p, isLoading: true }));
+    try {
+      const items = await getListItems(LIST_NAMES.LOOKUP_CONFIG);
+      const mapped: ILookupData[] = items.map((item) => {
+        const sid = item.SectionId;
+        const matched = options.find((o) => o.value === sid);
+        return {
+          id: item.Id,
+          sectionId: sid ? String(sid) : "",
+          section: matched ? matched.label : item.Title || "",
+          subSection: item.SubSection || "",
+          types: item.Types || "",
+          maxAmount: item.MaxAmount ? String(item.MaxAmount) : "",
+        };
+      });
+      setData(mapped);
+    } catch (error) {
+      await handleError(error, "Loading lookup items", toast);
+    } finally {
+      setUiState((p) => ({ ...p, isLoading: false }));
+    }
+  };
+
+  const init = async (): Promise<void> => {
+    const opts = await fetchSectionOptions();
+    await fetchLookupItems(opts);
+  };
+
+  React.useEffect(() => {
+    void init();
+  }, []);
+
+  const filteredData = data.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      item.section.toLowerCase().includes(term) ||
+      item.subSection.toLowerCase().includes(term) ||
+      item.types.toLowerCase().includes(term)
+    );
+  });
+
+  const handleExport = () => {
+    exportToExcel(
+      filteredData.map(({ section, subSection, types, maxAmount }) => ({
+        Sections: section,
+        "Sub-Sections": subSection,
+        Types: types,
+        "Max Amount": maxAmount,
+      })),
+      "Lookup_Configuration",
+    );
+  };
+
+  // ─── Dialog Triggers ────────────────────────────────────────────────────────
+
+  const openAddPopup = () => {
+    setFormData({ sectionId: "", subSection: "", types: "", maxAmount: "" });
+    setDialog({ type: "ADD", id: null });
+  };
+
+  const openEditPopup = (row: ILookupData) => {
+    setFormData({
+      sectionId: row.sectionId,
+      subSection: row.subSection,
+      types: row.types,
+      maxAmount: row.maxAmount,
+    });
+    setDialog({ type: "EDIT", id: row.id });
+  };
+
+  const openDeleteConfirm = (row: ILookupData) => {
+    setDialog({ type: "DELETE", id: row.id });
+  };
+
+  // ─── Form Actions ───────────────────────────────────────────────────────────
+
+  const handleSave = async () => {
+    // Validate
+    const sectionErr = validateField(formData.sectionId, [
+      required("Section is required"),
+    ]);
+    const subSectionErr = validateField(formData.subSection, [
+      required("Sub-Section is required"),
+    ]);
+    const typesErr = validateField(formData.types, [
+      required("Types is required"),
+    ]);
+    const maxAmtErr = validateField(formData.maxAmount, [
+      required("Max Amount is required"),
+    ]);
+
+    // Validate uniqueness of the combination
+    let duplicateErr = "";
+    const isDuplicate = data.some((item) => {
+      if (dialog.type === "EDIT" && item.id === dialog.id) return false;
+      return (
+        item.sectionId === formData.sectionId &&
+        item.subSection.toLowerCase() ===
+          formData.subSection.trim().toLowerCase() &&
+        item.types.toLowerCase() === formData.types.trim().toLowerCase()
+      );
+    });
+
+    if (isDuplicate) {
+      duplicateErr =
+        "This combination of Section, Sub-Section, and Type already exists.";
+    }
+
+    if (sectionErr || subSectionErr || typesErr || maxAmtErr || duplicateErr) {
+      const errorMsg =
+        duplicateErr || sectionErr || subSectionErr || typesErr || maxAmtErr;
+      showToast(toast, "warn", "Validation Error", errorMsg);
+      return;
+    }
+
+    setUiState((p) => ({ ...p, isSaving: true }));
+    try {
+      // const selectedSection = sectionOptions.find(
+      //   (o) => o.value === Number(formData.sectionId),
+      // );
+      const payload = {
+        SectionId: Number(formData.sectionId),
+        SubSection: formData.subSection.trim(),
+        Types: formData.types.trim(),
+        MaxAmount: formData.maxAmount.trim(),
+      };
+
+      if (dialog.type === "EDIT" && dialog.id) {
+        await updateListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id, payload);
+        showToast(toast, "success", "Saved", "Item updated successfully.");
+      } else {
+        await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
+        showToast(toast, "success", "Saved", "Item added successfully.");
+      }
+
+      setDialog({ type: null, id: null });
+      await init();
+    } catch (error) {
+      await handleError(error, "Saving item", toast);
+    } finally {
+      setUiState((p) => ({ ...p, isSaving: false }));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!dialog.id) return;
+
+    setUiState((p) => ({ ...p, isSaving: true }));
+    try {
+      await deleteListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id);
+      showToast(toast, "success", "Deleted", "Item deleted successfully.");
+      setDialog({ type: null, id: null });
+      await init();
+    } catch (error) {
+      await handleError(error, "Deleting item", toast);
+    } finally {
+      setUiState((p) => ({ ...p, isSaving: false }));
+    }
+  };
+
+  // ─── Table Columns ──────────────────────────────────────────────────────────
+
+  const actionTemplate = (rowData: ILookupData) => {
+    return (
+      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <IconButton
+          variant="edit"
+          icon="pi pi-pencil"
+          title="Edit"
+          onClick={() => openEditPopup(rowData)}
+        />
+        <IconButton
+          variant="delete"
+          icon="pi pi-trash"
+          title="Delete"
+          onClick={() => openDeleteConfirm(rowData)}
+        />
+      </div>
+    );
+  };
+
+  const columns: IColumnDef[] = [
+    { field: "section", header: "Sections" },
+    { field: "subSection", header: "Sub-Sections" },
+    { field: "types", header: "Types" },
+    { field: "maxAmount", header: "Max Amount" },
+    {
+      field: "action",
+      header: "Action",
+      body: actionTemplate,
+      sortable: false,
+      style: { width: "120px" },
+    },
+  ];
+
+  return (
+    <div className={screenStyles.screen}>
+      <AppToast toastRef={toast} />
+      {uiState.isLoading && (
+        <Loader fullScreen label="Loading Configuration..." />
+      )}
+
+      <div className={styles.header}>
+        <h2>Lookup Configuration</h2>
+        <div className={styles.toolbar}>
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search"
+            className={styles.searchInput}
+          />
+          <ActionButton
+            variant="export"
+            className="secondaryBtn"
+            onClick={handleExport}
+          />
+          <ActionButton
+            variant="add"
+            className="primaryBtn"
+            onClick={openAddPopup}
+          />
+        </div>
+      </div>
+
+      <div className={styles.tableContainer}>
+        <AppDataTable
+          data={filteredData}
+          columns={columns}
+          paginator={true}
+          rows={10}
+        />
+      </div>
+
+      {/* ── Add / Edit Popup ── */}
+      <Popup
+        visible={dialog.type === "ADD" || dialog.type === "EDIT"}
+        header={dialog.type === "EDIT" ? "Edit Lookup Item" : "Add Lookup Item"}
+        onHide={() => setDialog({ type: null, id: null })}
+        confirmLabel="Save"
+        onConfirm={handleSave}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <AppDropdown
+            id="sectionName"
+            label="Section"
+            placeholder="Select a section..."
+            value={formData.sectionId ? Number(formData.sectionId) : ""}
+            options={sectionOptions}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, sectionId: String(e.value) }))
+            }
+            required
+            disabled={uiState.isSaving}
+          />
+          <InputField
+            id="subSection"
+            label="Sub-Section"
+            value={formData.subSection}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, subSection: e.target.value }))
+            }
+            disabled={uiState.isSaving}
+          />
+          <InputField
+            id="types"
+            label="Type"
+            value={formData.types}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, types: e.target.value }))
+            }
+            disabled={uiState.isSaving}
+          />
+          <InputField
+            id="maxAmount"
+            label="Max Amount"
+            value={formData.maxAmount}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                maxAmount: e.target.value.replace(/[^0-9]/g, ""),
+              }))
+            }
+            required
+            disabled={uiState.isSaving}
+          />
+        </div>
+      </Popup>
+
+      <ActionPopup
+        visible={dialog.type === "DELETE"}
+        onHide={() => {
+          setDialog({ type: null, id: null });
+        }}
+        onConfirm={() => {
+          void handleDelete();
+        }}
+        actionType="Delete"
+        message={`Are you sure you want to delete\n this item?`}
+      />
+    </div>
+  );
+};
+
+export default LookupConfig;

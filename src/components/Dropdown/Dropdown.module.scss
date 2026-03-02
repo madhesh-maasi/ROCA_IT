@@ -1,0 +1,108 @@
+.dropdownContainer {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  width: 100%;
+
+  .label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+
+    .required {
+      color: #d32f2f;
+      margin-left: 4px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+  }
+
+  // The wrapper receives the class `styles.dropdown`
+  // We specify :global to override PrimeReact specificity if needed
+  :global(.p-dropdown).dropdown {
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #ffffff;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+
+    // The internal text container
+    :global(.p-dropdown-label) {
+      padding: 8px 12px;
+      font-size: 14px;
+      color: #495057;
+      display: flex;
+      align-items: center;
+    }
+
+    // The chevron icon wrapper
+    :global(.p-dropdown-trigger) {
+      width: 2.5rem;
+      color: #6c757d;
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+
+    &:hover {
+      border-color: #495057;
+    }
+
+    &:focus,
+    &:focus-within,
+    &:global(.p-focus),
+    &:global(.p-inputwrapper-focus) {
+      outline: 0 none;
+      outline-offset: 0;
+      box-shadow: 0 0 0 0.1rem rgba(0, 0, 0, 0.4);
+      border-color: #000000;
+    }
+  }
+
+  .errorMessage {
+    color: #d32f2f;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}
+
+:global(.roca-dropdown-panel) {
+  background-color: #ffffff !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  padding: 4px 0 !important;
+
+  :global(.p-dropdown-items-wrapper) {
+    max-height: 200px;
+    overflow: auto;
+  }
+
+  :global(.p-dropdown-items) {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+  }
+
+  :global(.p-dropdown-item) {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+
+    &:global(.p-highlight) {
+      background-color: #e3f2fd;
+      color: #000000;
+      font-weight: 600;
+    }
+  }
+}

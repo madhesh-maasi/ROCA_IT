@@ -1,4 +1,5 @@
-import { SPHttpClient } from '@microsoft/sp-http';
+import { SPHttpClient } from "@microsoft/sp-http";
+import { AppRole } from "../../../common/models";
 
 export interface IIncomeTaxProps {
   description: string;
@@ -10,4 +11,8 @@ export interface IIncomeTaxProps {
   spHttpClient: SPHttpClient;
   /** Absolute URL of the current SharePoint site. */
   siteUrl: string;
+  /** Role of the current user — controls which nav items are visible. */
+  userRole: AppRole;
+  /** SharePoint WebPart context object required for PnP controls. */
+  context: any;
 }

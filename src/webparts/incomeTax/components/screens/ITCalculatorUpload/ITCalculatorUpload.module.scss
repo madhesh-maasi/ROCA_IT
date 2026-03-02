@@ -1,0 +1,150 @@
+.screen {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333333;
+  }
+}
+
+.headerToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .tabToggle {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+
+    .tabBtn {
+      border: none;
+      background: transparent;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #495057;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.active {
+        background-color: #424fc4; // Blue brand background
+        color: white;
+      }
+
+      &:hover:not(.active) {
+        background-color: #f1f3f5;
+      }
+    }
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+}
+
+.tableCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  .actionCell {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    .iconBtn {
+      background: transparent;
+      border: none;
+      color: #3b82f6; // Blue download
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #eef2ff;
+      }
+
+      i {
+        font-size: 1.1rem;
+      }
+    }
+
+    .iconBtnDelete {
+      background: transparent;
+      border: none;
+      color: #ef4444; // Red trash
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #fef2f2;
+      }
+
+      i {
+        font-size: 1.1rem;
+      }
+    }
+  }
+
+  // Soft purple header styling from mockup
+  :global(.p-datatable) {
+    :global(.p-datatable-thead > tr > th) {
+      background-color: #e9edff;
+      color: #424fc4;
+      border-bottom: none;
+    }
+  }
+}
+
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  .formGroup {
+    :global(.p-dropdown) {
+      width: 100%;
+    }
+
+    .fileLabel {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: #495057;
+      margin-bottom: 6px;
+    }
+
+    // Tidy up file picker to fit cleanly in ActionPopup modal
+    :global(.roca-file-picker-container) {
+      margin-top: 4px;
+    }
+  }
+}

@@ -1,0 +1,247 @@
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 6px;
+  gap: 8px;
+  border: none;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.15s,
+    transform 0.1s;
+
+  &:has(.rounded) {
+    gap: 0px !important;
+  }
+
+  &:not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  // ── Global Standardized Button Classes ────────────────────────────
+  &.primaryBtn {
+    background-color: #4b55c9; // Indigo
+    color: #fff;
+    border: none;
+
+    i {
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: #3f47a8;
+    }
+  }
+
+  &.rounded {
+    border-radius: 50% !important;
+    padding: 0 !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &.secondaryBtn {
+    background-color: #ffffff !important;
+    color: #4b55c9 !important;
+    border: 1px solid #4b55c9 !important;
+
+    i {
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: #f0fdf4 !important;
+      border-color: #3f47a8 !important;
+      color: #3f47a8 !important;
+    }
+  }
+
+  // ── Approve ──────────────────────────────────────────────────────
+  &.approve {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+  }
+
+  // ── Rework ───────────────────────────────────────────────────────
+  &.rework {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #d97706;
+      border-color: #d97706;
+    }
+  }
+
+  // ── Cancel ───────────────────────────────────────────────────────
+  &.cancel {
+    background: transparent !important;
+    border: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+
+    &:hover:not(:disabled) {
+      background: #f3f4f6 !important;
+      border-color: #9ca3af !important;
+      color: #4b5563 !important;
+    }
+  }
+
+  // ── Save ─────────────────────────────────────────────────────────
+  &.save {
+    background: #6b7280;
+    border-color: #6b7280;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #4b5563;
+      border-color: #4b5563;
+    }
+  }
+
+  // ── Continue ─────────────────────────────────────────────────────
+  &.continue {
+    background: #4b55c9;
+    border-color: #4b55c9;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────
+  &.delete {
+    background: #4f46e5 !important;
+    border-color: #4f46e5 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2) !important;
+
+    &:hover:not(:disabled) {
+      background: #4338ca !important;
+      border-color: #4338ca !important;
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3) !important;
+    }
+  }
+
+  // ── Upload ───────────────────────────────────────────────────────
+  &.upload {
+    background: #4b55c9;
+    border-color: #4b55c9;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #4b55c9;
+      border-color: #4b55c9;
+    }
+  }
+
+  // ── Download ─────────────────────────────────────────────────────
+  &.download {
+    background: #4b55c9;
+    border-color: #4b55c9;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #4b55c9;
+      border-color: #4b55c9;
+    }
+  }
+
+  // ── Export / Import ──────────────────────────────────────────────
+  &.export,
+  &.import {
+    // background: #10b981;
+    // border-color: #10b981;
+    background-color: #4b55c9;
+    border-color: #4b55c9;
+    color: #ffffff;
+    &:hover:not(:disabled) {
+      background: #4b55c9;
+      border-color: #4b55c9;
+    }
+  }
+
+  // ── Add ──────────────────────────────────────────────────────────
+  &.add {
+    background: #4b55c9;
+    border-color: #4b55c9;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #4b55c9;
+      border-color: #4b55c9;
+    }
+  }
+
+  // ── Tab ──────────────────────────────────────────────────────────
+  &.tab {
+    border: none !important;
+    padding: 8px 16px;
+    font-weight: 500;
+  }
+
+  // ── Expand & Collapse ────────────────────────────────────────────
+  &.expand,
+  &.collapse {
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  // ── New IT Declaration ──────────────────────────────────────────
+  &.newDeclaration {
+    background: linear-gradient(
+      135deg,
+      #f43f5e 0%,
+      #fb923c 50%,
+      #22c55e 100%
+    ) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    padding: 10px 16px !important;
+    border-radius: 10px !important;
+    width: 100%;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: normal !important;
+    line-height: 1.2;
+    text-align: center;
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    i {
+      font-size: 14px !important;
+      margin-right: 6px;
+    }
+  }
+}

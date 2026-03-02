@@ -1,0 +1,30 @@
+.radioWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  .label {
+    font-size: 14px;
+    color: #333333;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  // Ensure native input doesn't double-trigger clicks if it surfaces
+  :global(.p-radiobutton) {
+    input[type="radio"] {
+      pointer-events: none;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+
+    .label {
+      cursor: not-allowed;
+    }
+  }
+}
