@@ -20,15 +20,20 @@ import {
   ArrowDown01Icon,
 } from "@hugeicons/core-free-icons";
 import { AppRole, INavGroup } from "../../../../common/models";
-import { ActionButton } from "../../../../components";
+import { ActionButton } from "../../../../CommonInputComponents";
 import { useAppSelector, useAppDispatch } from "../../../../store/hooks";
-import {
-  selectIncomeTaxItems,
-  fetchIncomeTaxItems,
-} from "../../../../store/slices/incomeTaxSlice";
+import { fetchIncomeTaxItems } from "../../../../store/slices/incomeTaxSlice";
 import { selectUserDetails } from "../../../../store/slices/userSlice";
-import { updateListItem } from "../../../../common/utils/pnpService";
-import { LIST_NAMES } from "../../../../common/constants/appConstants";
+import {
+  updateListItem,
+  getSP,
+  getListItems,
+} from "../../../../common/utils/pnpService";
+import {
+  LIST_NAMES,
+  NAV_CONFIG,
+} from "../../../../common/constants/appConstants";
+import { curFinanicalYear } from "../../../../common/utils/functions";
 import TaxRegimePopup from "../screens/SubmittedDeclarations/TaxRegimePopup";
 import styles from "./SideNav.module.scss";
 
@@ -55,83 +60,7 @@ const ICON_SIZE_SM = 18;
 
 // ─── Nav configuration ────────────────────────────────────────────────────────
 
-const NAV_GROUPS: INavGroup[] = [
-  {
-    key: "itDeclaration",
-    label: "IT Declaration",
-    icon: "fileEdit",
-    items: [
-      {
-        key: "submittedDeclarations",
-        label: "Submitted Declarations",
-        icon: "submittedDeclarations",
-      },
-      { key: "itCalculator", label: "IT Calculator", icon: "itCalculator" },
-    ],
-  },
-  {
-    key: "administration",
-    label: "Administration",
-    icon: "administration",
-    allowedRoles: ["Admin", "FinanceApprover"],
-    items: [
-      {
-        key: "employeeDeclaration",
-        label: "Employee Declaration",
-        icon: "employeeDeclaration",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "sectionConfig",
-        label: "Section Config",
-        icon: "sectionConfig",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "lookupConfig",
-        label: "Lookup Config",
-        icon: "lookupConfig",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "releaseDeclaration",
-        label: "Release Declaration",
-        icon: "releaseDeclaration",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "extendSubmission",
-        label: "Extend Submission",
-        icon: "extendSubmission",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "exportDeclaration",
-        label: "Export Declaration",
-        icon: "exportDeclaration",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "taxRegimeUpdate",
-        label: "Tax Regime Update",
-        icon: "taxRegimeUpdate",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "itCalculatorUpload",
-        label: "IT Calculator Upload",
-        icon: "itCalculatorUpload",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
-        key: "financeApprover",
-        label: "Finance Approver",
-        icon: "financeApprover",
-        allowedRoles: ["Admin", "FinanceApprover"],
-      },
-    ],
-  },
-];
+const NAV_GROUPS: INavGroup[] = NAV_CONFIG;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -185,49 +114,108 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectUserDetails);
-  const itItems = useAppSelector(selectIncomeTaxItems);
 
   const [collapsed, setCollapsed] = React.useState(false);
-  const [showTaxPopup, setShowTaxPopup] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     itDeclaration: true,
     administration: true,
   });
 
-  // Calculate if the "New IT Declaration" button should be shown
-  // It shows if there is an item with Status "Draft" for the current user
-  const draftItem = React.useMemo(() => {
-    if (!user || !itItems) return null;
-    const userEmail = user.Email || user.LoginName;
-    return itItems.find(
-      (item) =>
-        (item.EmployeeID === userEmail || item.Author?.Email === userEmail) &&
-        item.Status === "Draft",
-    );
-  }, [user, itItems]);
+  // ── New IT Declaration button state ──────────────────────────────────────
+  // Tracks whether to show the button and which declaration type drives it
+  const [releasedDeclarationType, setReleasedDeclarationType] = React.useState<
+    "Planned" | "Actual" | null
+  >(null);
+  const [releasedItemId, setReleasedItemId] = React.useState<number | null>(
+    null,
+  );
 
-  const showNewDeclaration = Boolean(draftItem);
+  // TaxRegimePopup state (used only for Planned path)
+  const [showTaxRegimePopup, setShowTaxRegimePopup] = React.useState(false);
+  const [isSavingRegime, setIsSavingRegime] = React.useState(false);
 
-  const handleRegimeSubmit = async (regime: string) => {
-    if (!draftItem) return;
-    setIsSubmitting(true);
+  // Fetch Released record from both Planned and Actual lists on mount / user change
+  React.useEffect(() => {
+    if (!user?.Email) return;
+
+    const check = async () => {
+      try {
+        const sp = getSP();
+        const email = user.Email.toLowerCase();
+        const fy = curFinanicalYear;
+        const baseFilter = `EmployeeEmail eq '${email}' and FinancialYear eq '${fy}' and Status eq 'Released' and IsDelete eq false`;
+
+        // Check Planned first
+        const plannedItems = await sp.web.lists
+          .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
+          .items.select("Id", "TaxRegime")
+          .filter(baseFilter)
+          .top(1)();
+
+        if (plannedItems.length > 0 && !plannedItems[0].TaxRegime) {
+          setReleasedDeclarationType("Planned");
+          setReleasedItemId(plannedItems[0].Id);
+          return;
+        }
+
+        // Check Actual
+        const actualItems = await sp.web.lists
+          .getByTitle(LIST_NAMES.ACTUAL_DECLARATION)
+          .items.select("Id")
+          .filter(baseFilter)
+          .top(1)();
+
+        if (actualItems.length > 0) {
+          setReleasedDeclarationType("Actual");
+          setReleasedItemId(actualItems[0].Id);
+          return;
+        }
+
+        // No released record found
+        setReleasedDeclarationType(null);
+        setReleasedItemId(null);
+      } catch (e) {
+        console.error("SideNav: failed to check released declarations", e);
+      }
+    };
+
+    void check();
+  }, [user]);
+
+  const showNewDeclaration = releasedDeclarationType !== null;
+
+  // Handle Tax Regime submit (Planned path)
+  const handleTaxRegimeSubmit = async (regime: string) => {
+    if (!releasedItemId) return;
+    setIsSavingRegime(true);
     try {
-      await updateListItem(LIST_NAMES.INCOME_TAX, draftItem.Id, {
-        RegimeType: regime,
-        // Optional: Update status to "In Progress" or similar if required
+      await updateListItem(LIST_NAMES.PLANNED_DECLARATION, releasedItemId, {
+        TaxRegime: regime,
       });
-      setShowTaxPopup(false);
-      // Refresh data
+      setShowTaxRegimePopup(false);
+      // Refresh redux store
       void dispatch(
-        fetchIncomeTaxItems({ getItems: () => Promise.resolve([]) }),
+        fetchIncomeTaxItems({
+          getItems: () => {
+            const filterStr = `EmployeeEmail eq '${user!.Email}'`;
+            return getListItems(LIST_NAMES.PLANNED_DECLARATION, filterStr);
+          },
+        }),
       );
-      // Navigate to the declaration screen
-      navigate("/it-declaration");
-    } catch (error) {
-      console.error("Error updating tax regime", error);
+      navigate("/itDeclaration");
+    } catch (e) {
+      console.error("Failed to save TaxRegime", e);
     } finally {
-      setIsSubmitting(false);
+      setIsSavingRegime(false);
+    }
+  };
+
+  // Handle button click based on declaration type
+  const handleNewDeclarationClick = () => {
+    if (releasedDeclarationType === "Planned") {
+      setShowTaxRegimePopup(true);
+    } else if (releasedDeclarationType === "Actual") {
+      navigate("/actualItDeclaration");
     }
   };
 
@@ -242,12 +230,13 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
     return (
       <nav className={`${styles.sideNav} ${styles.sideNavCollapsed}`}>
         {/* Expand button */}
-        <ActionButton
+        <button
           className={`${styles.toggleBtn} rounded`}
           onClick={() => setCollapsed(false)}
           title="Expand"
-          variant="expand"
-        />
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} size={14} strokeWidth={2.5} />
+        </button>
 
         <ul className={`${styles.navList} ${styles.collapsed}`}>
           {visibleGroups.map((group) => {
@@ -284,21 +273,32 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
   return (
     <nav className={styles.sideNav}>
       {/* Collapse button */}
-      <ActionButton
-        variant="collapse"
+      <button
         className={`${styles.toggleBtn} rounded`}
         onClick={() => setCollapsed(true)}
         title="Collapse"
-      />
+      >
+        <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2.5} />
+      </button>
 
       <div className={styles["buttonContainer" as keyof typeof styles]}>
         {showNewDeclaration && (
           <ActionButton
             variant="newDeclaration"
-            onClick={() => setShowTaxPopup(true)}
+            onClick={handleNewDeclarationClick}
           />
         )}
       </div>
+
+      {/* Tax Regime Popup — shown only for Planned declaration path */}
+      <TaxRegimePopup
+        visible={showTaxRegimePopup}
+        onHide={() => setShowTaxRegimePopup(false)}
+        onSubmit={(regime) => {
+          void handleTaxRegimeSubmit(regime);
+        }}
+        isLoading={isSavingRegime}
+      />
 
       <ul className={styles.navList}>
         {visibleGroups.map((group) => {
@@ -362,13 +362,6 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
           );
         })}
       </ul>
-
-      <TaxRegimePopup
-        visible={showTaxPopup}
-        onHide={() => setShowTaxPopup(false)}
-        onSubmit={handleRegimeSubmit}
-        isLoading={isSubmitting}
-      />
     </nav>
   );
 };

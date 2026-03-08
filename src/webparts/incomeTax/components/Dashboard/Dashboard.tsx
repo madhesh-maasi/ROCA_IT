@@ -15,9 +15,11 @@ import ExportDeclaration from "../screens/ExportDeclaration/ExportDeclaration";
 import TaxRegimeUpdate from "../screens/TaxRegimeUpdate/TaxRegimeUpdate";
 import ITCalculatorUpload from "../screens/ITCalculatorUpload/ITCalculatorUpload";
 import ITDeclaration from "../screens/ITDeclaration/ITDeclaration";
+import ActualITDeclaration from "../screens/ActualITDeclaration/ITDeclaration";
 import PlaceholderScreen from "../screens/PlaceholderScreen/PlaceholderScreen";
-import { useAppDispatch } from "../../../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../../../store/hooks";
 import { fetchIncomeTaxItems } from "../../../../store/slices/incomeTaxSlice";
+import { selectUserDetails } from "../../../../store/slices/userSlice";
 import { getListItems } from "../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../common/constants/appConstants";
 import styles from "./Dashboard.module.scss";
@@ -54,14 +56,25 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
     return path || "submittedDeclarations";
   }, [location]);
 
+  const user = useAppSelector(selectUserDetails);
+
   React.useEffect(() => {
+    if (!user) return;
+
     // Fetch income tax items on dashboard load to populate sidebar triggers
     void dispatch(
       fetchIncomeTaxItems({
-        getItems: () => getListItems(LIST_NAMES.INCOME_TAX),
+        getItems: () => {
+          if (role === "Admin" || role === "FinanceApprover") {
+            return getListItems(LIST_NAMES.PLANNED_DECLARATION);
+          } else {
+            const filterStr = `EmployeeEmail eq '${user.Email}'`;
+            return getListItems(LIST_NAMES.PLANNED_DECLARATION, filterStr);
+          }
+        },
       }),
     );
-  }, [dispatch]);
+  }, [dispatch, role, user]);
 
   const renderDashboardContent = (): React.ReactElement => {
     return (
@@ -85,6 +98,7 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
         <Route path="/taxRegimeUpdate" element={<TaxRegimeUpdate />} />
         <Route path="/itCalculatorUpload" element={<ITCalculatorUpload />} />
         <Route path="/itDeclaration" element={<ITDeclaration />} />
+        <Route path="/actualItDeclaration" element={<ActualITDeclaration />} />
         {Object.keys(PLACEHOLDER_SCREENS).map((key) => (
           <Route
             key={key}

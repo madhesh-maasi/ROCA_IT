@@ -7,8 +7,8 @@ import {
   IconButton,
   Popup,
   InputField,
-} from "../../../../../components";
-import { IColumnDef } from "../../../../../components/DataTable/DataTable";
+} from "../../../../../CommonInputComponents";
+import { IColumnDef } from "../../../../../CommonInputComponents/DataTable/DataTable";
 import screenStyles from "../screens.module.scss";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import {

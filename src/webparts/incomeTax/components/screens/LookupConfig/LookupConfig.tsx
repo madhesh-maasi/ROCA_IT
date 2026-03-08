@@ -7,10 +7,10 @@ import {
   IconButton,
   Popup,
   InputField,
-} from "../../../../../components";
-import { AppDropdown } from "../../../../../components";
+  AppDropdown,
+} from "../../../../../CommonInputComponents";
 import { ActionPopup } from "../../../../../common/components";
-import { IColumnDef } from "../../../../../components/DataTable/DataTable";
+import { IColumnDef } from "../../../../../CommonInputComponents/DataTable/DataTable";
 import screenStyles from "../screens.module.scss";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import {
@@ -311,14 +311,12 @@ const LookupConfig: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.tableContainer}>
-        <AppDataTable
-          data={filteredData}
-          columns={columns}
-          paginator={true}
-          rows={10}
-        />
-      </div>
+      <AppDataTable
+        data={filteredData}
+        columns={columns}
+        paginator={true}
+        rows={10}
+      />
 
       {/* ── Add / Edit Popup ── */}
       <Popup

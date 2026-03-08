@@ -6,32 +6,28 @@ import {
   SearchInput,
   AppCalendar,
   ActionButton,
-} from "../../../../../components";
+} from "../../../../../CommonInputComponents";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
 import Loader from "../../../../../common/components/Loader/Loader";
+import {
+  getListItems,
+  updateListItemsBatch,
+} from "../../../../../common/utils/pnpService";
+import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 
-// Using a temporary interface and mock data as per user request
-interface ITempEmployee {
-  id: number;
-  employeeId: string;
-  employeeName: string;
+interface IReleasedItem {
+  Id: number;
+  EmployeeCode: string;
+  EmployeeName: string;
+  DeclarationType: string;
+  DeclarationEndDate: string;
+  Status: string;
 }
 
-const DUMMY_DATA: ITempEmployee[] = [
-  { id: 1, employeeId: "9002094", employeeName: "Ponraju E" },
-  { id: 2, employeeId: "4874413", employeeName: "Dwight" },
-  { id: 3, employeeId: "5586126", employeeName: "Cameron" },
-  { id: 4, employeeId: "6515357", employeeName: "Bruce" },
-  { id: 5, employeeId: "2674003", employeeName: "Mitchell" },
-  { id: 6, employeeId: "2674002", employeeName: "Gregory" },
-  { id: 7, employeeId: "6515356", employeeName: "Jorge" },
-  { id: 8, employeeId: "4874416", employeeName: "Jacob" },
-  { id: 9, employeeId: "6535188", employeeName: "Calvin" },
-  { id: 10, employeeId: "5586129", employeeName: "Harold" },
-];
+// Remove dummy data
 
 const ReleaseExtension: React.FC = () => {
   const toast = React.useRef<PrimeToast>(null);
@@ -42,9 +38,31 @@ const ReleaseExtension: React.FC = () => {
 
   // Form State
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
+
+  // Data State
+  const [releasedList, setReleasedList] = React.useState<IReleasedItem[]>([]);
   const [selectedEmployees, setSelectedEmployees] = React.useState<
-    ITempEmployee[]
+    IReleasedItem[]
   >([]);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const items = await getListItems(LIST_NAMES.PLANNED_DECLARATION);
+      // Filter for active items if necessary, or just all that are not submitted
+      const activeItems = items.filter((i) => i.Status !== "Submitted");
+      setReleasedList(activeItems);
+    } catch (error) {
+      console.error("Error fetching data", error);
+      showToast(toast, "error", "Error", "Failed to load employee data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    void fetchData();
+  }, []);
 
   // Actions
   const handleExtend = async () => {
@@ -69,8 +87,14 @@ const ReleaseExtension: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Simulate API call for extending release logic
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const updates = selectedEmployees.map((emp) => ({
+        id: emp.Id,
+        data: {
+          DeclarationEndDate: selectedDate.toISOString(),
+        },
+      }));
+
+      await updateListItemsBatch(LIST_NAMES.PLANNED_DECLARATION, updates);
 
       showToast(
         toast,
@@ -79,9 +103,10 @@ const ReleaseExtension: React.FC = () => {
         `Successfully extended declaration for ${selectedEmployees.length} employees to ${selectedDate.toLocaleDateString()}.`,
       );
 
-      // Reset selection
+      // Reset selection and refresh data
       setSelectedEmployees([]);
       setSelectedDate(null);
+      await fetchData();
     } catch (error) {
       console.error("Error extending declarations", error);
       showToast(toast, "error", "Error", "Failed to extend declarations.");
@@ -92,18 +117,29 @@ const ReleaseExtension: React.FC = () => {
 
   // Table Config
   const columns: IColumnDef[] = [
-    { field: "employeeId", header: "Employee ID", sortable: true },
-    { field: "employeeName", header: "Employee Name", sortable: true },
+    { field: "EmployeeCode", header: "Employee ID", sortable: true },
+    { field: "EmployeeName", header: "Employee Name", sortable: true },
+    { field: "DeclarationType", header: "Type", sortable: true },
+    {
+      field: "DeclarationEndDate",
+      header: "Due Date",
+      sortable: true,
+      body: (rd: IReleasedItem) =>
+        rd.DeclarationEndDate
+          ? new Date(rd.DeclarationEndDate).toLocaleDateString("en-IN")
+          : "-",
+    },
+    { field: "Status", header: "Status", sortable: true },
   ];
 
   const filteredData = React.useMemo(() => {
     const lowerSearch = searchTerm.toLowerCase();
-    return DUMMY_DATA.filter(
+    return releasedList.filter(
       (emp) =>
-        emp.employeeId.toLowerCase().includes(lowerSearch) ||
-        emp.employeeName.toLowerCase().includes(lowerSearch),
+        emp.EmployeeCode?.toLowerCase().includes(lowerSearch) ||
+        emp.EmployeeName?.toLowerCase().includes(lowerSearch),
     );
-  }, [searchTerm]);
+  }, [searchTerm, releasedList]);
 
   return (
     <div className={styles.screen}>

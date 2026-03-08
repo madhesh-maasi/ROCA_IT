@@ -12,7 +12,7 @@
     transform 0.1s;
 
   i {
-    font-size: 16px;
+    font-size: 12px;
   }
 
   svg {
@@ -41,6 +41,14 @@
     color: #ef4444; // Red
     &:hover:not(:disabled) {
       background-color: rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  // ── Download Variant (Green) ───────────────────────────────────────────
+  &.download {
+    color: #4b55c9;
+    &:hover:not(:disabled) {
+      background-color: rgba(75, 85, 201, 0.1);
     }
   }
 

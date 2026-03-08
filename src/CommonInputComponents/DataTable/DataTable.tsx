@@ -32,6 +32,9 @@ export interface IDataTableProps {
   onSelectionChange?: (e: { value: any }) => void;
   /** Additional class for the outer wrapper div. */
   className?: string;
+  /** Callback fired when a row is clicked */
+  onRowClick?: (e: { data: any; originalEvent: React.MouseEvent }) => void;
+  cursor?: boolean;
 }
 
 /**
@@ -63,6 +66,8 @@ const AppDataTable: React.FC<IDataTableProps> = ({
   selection,
   onSelectionChange,
   className,
+  onRowClick,
+  cursor = false,
 }) => {
   return (
     <div className={`${styles.dataTableContainer} ${className || ""}`}>
@@ -79,7 +84,8 @@ const AppDataTable: React.FC<IDataTableProps> = ({
         responsiveLayout="scroll"
         selection={selection}
         onSelectionChange={onSelectionChange}
-        className={styles.dataTable}
+        onRowClick={onRowClick}
+        className={`${styles.dataTable} ${cursor ? styles.cursor : ""}`}
       >
         {onSelectionChange && (
           <Column selectionMode="multiple" headerStyle={{ width: "3rem" }} />

@@ -4,16 +4,15 @@ import {
   AppRadioButton,
   AppDropdown,
 } from "../../../../../../CommonInputComponents";
+import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
 
 interface IHousingLoanData {
   propertyType: "None" | "Self Occupied" | "Let Out Property";
-  interestAmount: string; // Used for Self Occupied
-  // Let Out Property Fields
+  interestAmount: string;
   finalLettableValue: string;
   letOutInterestAmount: string;
   otherDeductionsUs24: string;
-
   lenderName: string;
   lenderAddress: string;
   lenderPan: string;
@@ -28,7 +27,14 @@ interface IHousingLoanStepProps {
   approverComments?: string;
   onCommentChange?: (val: string) => void;
   readOnly?: boolean;
+  // ── Document upload ──────────────────────────────────────────────
+  attachments?: Record<string, any[]>;
+  onUpload?: (key: string, file: File) => Promise<void>;
+  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
+
+const UPLOAD_KEY_SELF = "housing-self";
+const UPLOAD_KEY_LETOUT = "housing-letout";
 
 const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   data,
@@ -37,6 +43,9 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   approverComments,
   onCommentChange,
   readOnly,
+  attachments = {},
+  onUpload,
+  onDeleteAttachment,
 }) => {
   const lenderTypeOptions = [
     { label: "Financial Institution", value: "Financial Institution" },
@@ -44,6 +53,84 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
     { label: "Employer", value: "Employer" },
     { label: "Others", value: "Others" },
   ];
+
+  /** Single inline row: [AppFilePicker] [📄 filename.pdf 🗑] ... */
+  const renderUploadRow = (key: string) => {
+    const files = attachments[key] || [];
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
+          marginTop: "10px",
+        }}
+      >
+        {!readOnly && onUpload && files.length === 0 && (
+          <AppFilePicker
+            buttonLabel="Upload PDF"
+            accept=".pdf"
+            onChange={(selectedFiles) => {
+              const file = selectedFiles[0];
+              if (file && onUpload) void onUpload(key, file);
+            }}
+          />
+        )}
+        {files.map((att) => (
+          <div
+            key={att.Id}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "4px 10px",
+              borderRadius: "20px",
+              background: "#f1f5f9",
+              border: "1px solid #e2e8f0",
+              fontSize: "12px",
+              color: "#475569",
+              maxWidth: "260px",
+            }}
+          >
+            <i
+              className="pi pi-file-pdf"
+              style={{ color: "#e11d48", fontSize: "12px" }}
+            />
+            <a
+              href={att.FileRef}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: "#334155",
+                textDecoration: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "180px",
+              }}
+              title={att.FileLeafRef}
+            >
+              {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+            </a>
+            {!readOnly && onDeleteAttachment && (
+              <i
+                className="pi pi-trash"
+                style={{
+                  color: "#e11d48",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  flexShrink: 0,
+                }}
+                onClick={() => onDeleteAttachment(key, att.Id)}
+                title="Remove attachment"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className={styles.stepContent}>
@@ -99,6 +186,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               </div>
             </div>
           </div>
+          {/* Upload below Self Occupied section */}
+          {renderUploadRow(UPLOAD_KEY_SELF)}
         </div>
       )}
 
@@ -143,6 +232,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
           </div>
+          {/* Upload below Let Out Property section */}
+          {renderUploadRow(UPLOAD_KEY_LETOUT)}
         </div>
       )}
 

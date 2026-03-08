@@ -1,5 +1,5 @@
 import * as React from "react";
-import { InputField } from "../../../../../../components";
+import { InputField } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
 
 interface I80DItem {
@@ -12,21 +12,29 @@ interface I80DItem {
 
 interface ISection80DStepProps {
   items: I80DItem[];
+  sectionMaxAmount: number;
+  showApproverComments?: boolean;
   approverComments: string;
   onAmountChange: (id: number, val: string) => void;
   onCommentChange: (val: string) => void;
+  readOnly?: boolean;
 }
 
 const Section80DStep: React.FC<ISection80DStepProps> = ({
   items,
+  sectionMaxAmount,
+  showApproverComments,
   approverComments,
   onAmountChange,
   onCommentChange,
+  readOnly,
 }) => {
   return (
     <div className={styles.stepContent}>
       <div className={styles.noteBox}>
-        Note : Only <strong>Rs 50,000</strong> is deductible under this section
+        Note : Only{" "}
+        <strong>Rs {sectionMaxAmount?.toLocaleString() || "50,000"}</strong> is
+        deductible under this section
       </div>
 
       <div className={styles.tableContainer}>
@@ -37,7 +45,6 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
               <th style={{ width: "40%" }}>Type of Investments</th>
               <th>Max Amount</th>
               <th>Amount</th>
-              <th>Document</th>
             </tr>
           </thead>
           <tbody>
@@ -73,22 +80,14 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                     id={`80d-amt-${item.id}`}
                     value={item.declaredAmount}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onAmountChange(item.id, e.target.value)
+                      onAmountChange(
+                        item.id,
+                        e.target.value.replace(/[^0-9]/g, ""),
+                      )
                     }
                     placeholder="0"
+                    disabled={readOnly}
                   />
-                </td>
-                <td>
-                  <div
-                    className={styles.readonlyValue}
-                    style={{
-                      color: "#3d4db7",
-                      cursor: "pointer",
-                      background: "#f5f7ff",
-                    }}
-                  >
-                    Document.pdf
-                  </div>
                 </td>
               </tr>
             ))}
@@ -96,26 +95,31 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
         </table>
       </div>
 
-      <div style={{ marginTop: "30px" }}>
-        <div className={styles.formGroup}>
-          <label>Approver Comments</label>
-          <textarea
-            className={styles.commentArea || ""}
-            style={{
-              width: "100%",
-              height: "100px",
-              padding: "16px",
-              borderRadius: "12px",
-              border: "1px solid #e2e8f0",
-              resize: "none",
-              fontSize: "14px",
-            }}
-            placeholder="Enter here"
-            value={approverComments}
-            onChange={(e) => onCommentChange(e.target.value)}
-          />
+      {showApproverComments && onCommentChange && (
+        <div style={{ marginTop: "30px" }}>
+          <div className={styles.formGroup}>
+            <label>Approver Comments</label>
+            <textarea
+              className={styles.commentArea || ""}
+              style={{
+                width: "100%",
+                height: "100px",
+                padding: "16px",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+                resize: "none",
+                fontSize: "14px",
+                pointerEvents: "auto",
+                opacity: 1,
+              }}
+              disabled={readOnly}
+              placeholder="Enter here"
+              value={approverComments}
+              onChange={(e) => onCommentChange(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

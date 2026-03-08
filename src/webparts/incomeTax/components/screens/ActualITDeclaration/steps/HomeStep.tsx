@@ -1,4 +1,5 @@
 import * as React from "react";
+import { InputField } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
 
 interface IHomeStepProps {

@@ -1,5 +1,8 @@
 import * as React from "react";
-import { InputField } from "../../../../../../CommonInputComponents";
+import {
+  ActionButton,
+  InputField,
+} from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
 
 interface ISummaryStepProps {
@@ -24,6 +27,7 @@ interface ISummaryStepProps {
   onDeclarationChange: (field: "agreed" | "place", val: any) => void;
   onSaveAsDraft: () => void;
   onSubmit: () => void;
+  onDownloadAttachments?: () => void;
   readOnly?: boolean;
   taxRegime?: string;
 }
@@ -35,6 +39,7 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
   onDeclarationChange,
   onSaveAsDraft,
   onSubmit,
+  onDownloadAttachments,
   readOnly,
   taxRegime,
 }) => {
@@ -180,6 +185,22 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             <div className={styles.readonlyValue}>{declaration.date}</div>
           </div>
         </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: "30px",
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        {taxRegime === "Old Regime" && onDownloadAttachments && (
+          <ActionButton
+            variant="download"
+            label="Download All Attachments"
+            onClick={onDownloadAttachments}
+          />
+        )}
       </div>
     </div>
   );

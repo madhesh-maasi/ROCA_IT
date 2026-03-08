@@ -5,106 +5,38 @@ import {
   IColumnDef,
   AppDropdown,
   AppRadioButton,
-} from "../../../../../components";
+  ActionButton,
+} from "../../../../../CommonInputComponents";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
+import Loader from "../../../../../common/components/Loader/Loader";
+import {
+  getSP,
+  getListItems,
+  addListItem,
+} from "../../../../../common/utils/pnpService";
+import { LIST_NAMES } from "../../../../../common/constants/appConstants";
+import { exportToExcel } from "../../../../../common/utils/exportUtils";
+import { curFinanicalYear } from "../../../../../common/utils/functions";
+import { useAppSelector } from "../../../../../store/hooks";
+import { selectUserDetails } from "../../../../../store/slices/userSlice";
+import { selectEmployees } from "../../../../../store/slices/employeeSlice";
+import moment from "moment";
 
-const DUMMY_DATA = [
-  {
-    id: 1,
-    employeeId: "9002094",
-    employeeName: "Ponraju E",
-    email: "ponraju@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 2,
-    employeeId: "4490033",
-    employeeName: "Savannah",
-    email: "trungkienspktnd@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 3,
-    employeeId: "2674004",
-    employeeName: "Courtney",
-    email: "manhhachkt08@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 4,
-    employeeId: "5586125",
-    employeeName: "Aubrey",
-    email: "thuhang.nute@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 5,
-    employeeId: "6515356",
-    employeeName: "Serenity",
-    email: "ckctm12@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 6,
-    employeeId: "4874412",
-    employeeName: "Esther",
-    email: "tranthuy.nute@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 7,
-    employeeId: "4490034",
-    employeeName: "Lily",
-    email: "binhan628@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 8,
-    employeeId: "6535185",
-    employeeName: "Kristin",
-    email: "trungkienspktnd@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 9,
-    employeeId: "5586123",
-    employeeName: "Regina",
-    email: "tienlapspktnd@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 10,
-    employeeId: "4490033",
-    employeeName: "Connie",
-    email: "thuhang.nute@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 11,
-    employeeId: "4874412",
-    employeeName: "Arlene",
-    email: "vuhaithuongnute@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 12,
-    employeeId: "6535186",
-    employeeName: "Bessie",
-    email: "nvt.isst.nute@gmail.com",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 13,
-    employeeId: "2674007",
-    employeeName: "Colleen",
-    email: "danghoang87hl@gmail.com",
-    taxRegime: "Old Regime",
-  },
-];
+interface IDeclarationItem {
+  ID: number;
+  EmployeeCode: string;
+  EmployeeName: string;
+  Email: string;
+  TaxRegime: string;
+  FinancialYear: string;
+  DeclarationType: string;
+  Status: string;
+}
 
+// Remove dummy data constants
 const YEAR_OPTIONS = [
   { label: "2024 - 2025", value: "2024-2025" },
   { label: "2025 - 2026", value: "2025-2026" },
@@ -112,13 +44,79 @@ const YEAR_OPTIONS = [
 
 const ExportDeclaration: React.FC = () => {
   const toast = React.useRef<PrimeToast>(null);
+  const userDetails = useAppSelector(selectUserDetails);
+  const employeeMaster = useAppSelector(selectEmployees);
 
   // States initialized to empty strings so radio buttons are unselected
-  const [selectedYear, setSelectedYear] = React.useState<string>("2025-2026");
+  const [selectedYear, setSelectedYear] =
+    React.useState<string>(curFinanicalYear);
   const [declarationType, setDeclarationType] = React.useState<string>("");
   const [taxRegime, setTaxRegime] = React.useState<string>("");
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [rawDeclarations, setRawDeclarations] = React.useState<
+    IDeclarationItem[]
+  >([]);
+  const [lastExportedId, setLastExportedId] = React.useState<number>(0);
 
-  const handleDownload = () => {
+  // Reactively map emails from master data
+  const declarations = React.useMemo(() => {
+    return rawDeclarations.map((item) => {
+      const masterEmp = employeeMaster.find(
+        (e) => e.EmployeeId === item.EmployeeCode,
+      );
+      return {
+        ...item,
+        Email: masterEmp?.Email || item.Email || "-",
+      };
+    });
+  }, [rawDeclarations, employeeMaster]);
+
+  const fetchData = async () => {
+    // Initially page show 0 records. once i select the choice then the respective data show in the table.
+    if (!declarationType || !taxRegime) {
+      setRawDeclarations([]);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // 1. Get last exported ID from Log specifically for this DeclarationType
+      const logs = await getListItems(
+        LIST_NAMES.IT_EXPORT_LOG,
+        `DeclarationType eq '${declarationType}'`,
+      );
+      const lastId = logs.length > 0 ? Number(logs[0].LastExportedId) || 0 : 0;
+      setLastExportedId(lastId);
+
+      // 2. Fetch only from the relevant list based on selected Choice
+      const listName =
+        declarationType === "Planned"
+          ? LIST_NAMES.PLANNED_DECLARATION
+          : LIST_NAMES.ACTUAL_DECLARATION;
+
+      const allDecls: IDeclarationItem[] = await getListItems(listName);
+
+      const filtered = allDecls.filter(
+        (item) =>
+          item.Status === "Approved" &&
+          item.FinancialYear === selectedYear &&
+          item.TaxRegime === taxRegime && // Filter here too for cleaner raw state
+          item.ID > lastId,
+      );
+      setRawDeclarations(filtered);
+    } catch (err) {
+      console.error(err);
+      showToast(toast, "error", "Error", "Failed to load data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    void fetchData();
+  }, [selectedYear, declarationType, taxRegime]);
+
+  const handleDownload = async () => {
     if (!declarationType || !taxRegime) {
       showToast(
         toast,
@@ -128,25 +126,69 @@ const ExportDeclaration: React.FC = () => {
       );
       return;
     }
-    showToast(
-      toast,
-      "success",
-      "Export Started",
-      "Your download will begin shortly.",
+
+    const exportData = declarations.filter(
+      (d) =>
+        d.DeclarationType === declarationType &&
+        (!taxRegime || d.TaxRegime === taxRegime),
     );
-    // Data export logic would go here
+
+    if (exportData.length === 0) {
+      showToast(toast, "warn", "No Data", "No new records found for export.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 1. Export to Excel
+      const excelData = exportData.map((d) => ({
+        "Employee ID": d.EmployeeCode,
+        "Employee Name": d.EmployeeName,
+        "Email Address": d.Email,
+        "Declaration Type": d.DeclarationType,
+        "Tax Regime": d.TaxRegime,
+      }));
+
+      exportToExcel(
+        excelData,
+        `Declarations_${declarationType}_${selectedYear}`,
+      );
+
+      // 2. Log Export
+      const maxIdInBatch = Math.max(...exportData.map((d) => d.ID));
+
+      await addListItem(LIST_NAMES.IT_EXPORT_LOG, {
+        Title: `Export_${declarationType}_${moment().format("YYYY-MM-DD HH:mm")}`,
+        ExportedById: userDetails?.Id || null,
+        ExportedOn: new Date().toISOString(),
+        RecordCount: exportData.length,
+        LastExportedId: maxIdInBatch,
+        DeclarationType: declarationType,
+      });
+
+      showToast(toast, "success", "Success", "Export completed and logged.");
+
+      // 3. Refresh
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      showToast(toast, "error", "Error", "Export failed.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const columns: IColumnDef[] = [
-    { field: "employeeId", header: "Employee ID", sortable: true },
-    { field: "employeeName", header: "Employee Name", sortable: true },
-    { field: "email", header: "Email Address", sortable: true },
-    { field: "taxRegime", header: "Tax Regime Type", sortable: true },
+    { field: "EmployeeCode", header: "Employee ID", sortable: true },
+    { field: "EmployeeName", header: "Employee Name", sortable: true },
+    { field: "Email", header: "Email Address", sortable: true },
+    { field: "TaxRegime", header: "Tax Regime Type", sortable: true },
   ];
 
   return (
     <div className={styles.screen}>
       <AppToast toastRef={toast} />
+      {isLoading && <Loader fullScreen label="Processing Export..." />}
 
       <div className={styles.header}>
         <h2>Export Declaration</h2>
@@ -212,14 +254,28 @@ const ExportDeclaration: React.FC = () => {
         </div>
 
         <div className={styles.actionsGroup}>
-          <button className={styles.downloadBtn} onClick={handleDownload}>
-            Download
-          </button>
+          <ActionButton
+            variant="download"
+            label="Download"
+            onClick={() => {
+              void handleDownload();
+            }}
+            disabled={declarations.length === 0}
+          />
         </div>
       </div>
 
       <div className={styles.tableCard}>
-        <AppDataTable columns={columns} data={DUMMY_DATA} paginator rows={10} />
+        <AppDataTable
+          columns={columns}
+          data={declarations.filter(
+            (d) =>
+              (!declarationType || d.DeclarationType === declarationType) &&
+              (!taxRegime || d.TaxRegime === taxRegime),
+          )}
+          paginator
+          rows={10}
+        />
       </div>
     </div>
   );

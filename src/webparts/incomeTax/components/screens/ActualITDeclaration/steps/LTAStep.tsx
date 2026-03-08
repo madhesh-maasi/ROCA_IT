@@ -5,6 +5,7 @@ import {
   AppDropdown,
   AppRadioButton,
 } from "../../../../../../CommonInputComponents";
+import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
 
 interface ICoTraveller {
@@ -39,7 +40,12 @@ interface ILTAStepProps {
   showApproverComments?: boolean;
   approverComments?: string;
   readOnly?: boolean;
+  attachments?: Record<string, any[]>;
+  onUpload?: (key: string, file: File) => Promise<void>;
+  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
+
+const UPLOAD_KEY = "lta";
 
 const LTAStep: React.FC<ILTAStepProps> = ({
   ltaData,
@@ -52,7 +58,18 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   approverComments,
   onCommentChange,
   readOnly,
+  attachments = {},
+  onUpload,
+  onDeleteAttachment,
 }) => {
+  const ltaAttachments = attachments[UPLOAD_KEY] || [];
+
+  const handleFilesPicked = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    if (onUpload) await onUpload(UPLOAD_KEY, file);
+  };
+
   return (
     <div className={styles.stepContent}>
       <div className={styles.stepGrid}>
@@ -238,6 +255,77 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Inline upload row (below co-travellers) ── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
+          marginTop: "24px",
+        }}
+      >
+        {!readOnly && onUpload && ltaAttachments.length === 0 && (
+          <AppFilePicker
+            buttonLabel="Upload PDF"
+            accept=".pdf"
+            onChange={handleFilesPicked}
+          />
+        )}
+
+        {ltaAttachments.map((att) => (
+          <div
+            key={att.Id}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "4px 10px",
+              borderRadius: "20px",
+              background: "#f1f5f9",
+              border: "1px solid #e2e8f0",
+              fontSize: "12px",
+              color: "#475569",
+              maxWidth: "260px",
+            }}
+          >
+            <i
+              className="pi pi-file-pdf"
+              style={{ color: "#e11d48", fontSize: "12px" }}
+            />
+            <a
+              href={att.FileRef}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: "#334155",
+                textDecoration: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "180px",
+              }}
+              title={att.FileLeafRef}
+            >
+              {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+            </a>
+            {!readOnly && onDeleteAttachment && (
+              <i
+                className="pi pi-trash"
+                style={{
+                  color: "#e11d48",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  flexShrink: 0,
+                }}
+                onClick={() => onDeleteAttachment(UPLOAD_KEY, att.Id)}
+                title="Remove attachment"
+              />
+            )}
+          </div>
+        ))}
       </div>
 
       {showApproverComments && onCommentChange && (
