@@ -4,7 +4,7 @@ import { classNames } from "primereact/utils";
 import {
   ActionButton,
   ActionVariant,
-} from "../../../components/ActionButton/ActionButton";
+} from "../../../CommonInputComponents/ActionButton/ActionButton";
 import styles from "./ActionPopup.module.scss";
 
 export type PopupActionType =

@@ -15,10 +15,17 @@ export interface IListItem {
  * Extend this with your actual list columns.
  */
 export interface IIncomeTaxItem extends IListItem {
+  EmployeeName: string;
   Status?: string;
   EmployeeID?: string;
+  EmployeeEmail?: string;
+  PAN?: string;
   RegimeType?: string;
+  TaxRegime?: string;
+  FinancialYear?: string;
   DeclarationType?: string;
+  RentDetailsJSON?: string;
+  ApproverCommentsJson?: string;
   Author?: {
     Email: string;
     Title: string;
@@ -39,6 +46,8 @@ export interface IEmployee {
   Email?: string;
   Department?: string;
   Designation?: string;
+  Location?: string;
+  DOJ?: string;
 }
 
 /**

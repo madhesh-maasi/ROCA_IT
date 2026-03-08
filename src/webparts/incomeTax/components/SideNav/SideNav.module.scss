@@ -16,6 +16,14 @@
 .sideNavCollapsed {
   width: 56px;
   min-width: 56px;
+
+  .toggleBtn {
+    right: 14px; // Center horizontally ( (56 - 28) / 2 = 14 )
+  }
+
+  .navList {
+    padding-top: 45px; // Clear the toggle button space
+  }
 }
 
 .toggleBtn {

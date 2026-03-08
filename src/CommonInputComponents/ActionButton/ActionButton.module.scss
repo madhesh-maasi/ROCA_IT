@@ -2,11 +2,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 8px 18px;
-  border-radius: 6px;
-  gap: 8px;
+  padding: 6px 20px;
+  border-radius: 4px;
+  // gap: 8px;
   border: none;
   transition:
     background-color 0.2s,
@@ -15,12 +15,26 @@
     box-shadow 0.15s,
     transform 0.1s;
 
+  &:has(i) {
+    gap: 8px;
+  }
+
   &:has(.rounded) {
     gap: 0px !important;
   }
 
   &:not(:disabled):active {
     transform: scale(0.97);
+  }
+
+  &:disabled {
+    background-color: #e5e7eb !important;
+    border-color: #e5e7eb !important;
+    color: #9ca3af !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+    box-shadow: none !important;
+    transform: none !important;
   }
 
   // ── Global Standardized Button Classes ────────────────────────────

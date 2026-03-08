@@ -2,18 +2,37 @@ import * as React from "react";
 import {
   StatusBadge,
   StatusVariant,
-} from "../../../../../components/StatusBadge";
+} from "../../../../../CommonInputComponents/StatusBadge";
 import AppDataTable, {
   IColumnDef,
-} from "../../../../../components/DataTable/DataTable";
-import { ActionButton } from "../../../../../components";
-import { SearchInput } from "../../../../../components/SearchInput";
+} from "../../../../../CommonInputComponents/DataTable/DataTable";
+import {
+  ActionButton,
+  AppDropdown,
+  IDropdownOption,
+} from "../../../../../CommonInputComponents";
+import { SearchInput } from "../../../../../CommonInputComponents/SearchInput";
+import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
+import {
+  fetchIncomeTaxItems,
+  fetchActualIncomeTaxItems,
+  selectIncomeTaxItems,
+  selectActualIncomeTaxItems,
+  setSelectedItem,
+} from "../../../../../store/slices/incomeTaxSlice";
+import { useEffect } from "react";
+import { getListItems } from "../../../../../common/utils/pnpService";
+import { LIST_NAMES } from "../../../../../common/constants/appConstants";
+import { curFinanicalYear } from "../../../../../common/utils/functions";
+import { useNavigate } from "react-router-dom";
+import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import styles from "../screens.module.scss";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
 interface IEmployeeRow {
   requestId: string;
+  financialYear: string;
   taxRegimeType: string;
   investmentType: string;
   employeeId: string;
@@ -22,37 +41,13 @@ interface IEmployeeRow {
   status: StatusVariant;
 }
 
-const MOCK_DATA: IEmployeeRow[] = [
-  {
-    requestId: "6960164",
-    taxRegimeType: "Old Regime",
-    investmentType: "Planned",
-    employeeId: "9002094",
-    employeeName: "Ponraju E",
-    dateOfSubmission: "06/01/2026",
-    status: "submitted",
-  },
-  {
-    requestId: "6965487",
-    taxRegimeType: "New Regime",
-    investmentType: "Planned",
-    employeeId: "9002584",
-    employeeName: "Ramesh",
-    dateOfSubmission: "05/01/2026",
-    status: "approved",
-  },
-  {
-    requestId: "8516485",
-    taxRegimeType: "Old Regime",
-    investmentType: "Planned",
-    employeeId: "9001258",
-    employeeName: "Madhesh",
-    dateOfSubmission: "03/01/2026",
-    status: "approved",
-  },
-];
-
-const FY_OPTIONS = ["2025 – 2026", "2024 – 2025", "2023 – 2024"];
+const FY_OPTIONS: IDropdownOption[] = [
+  curFinanicalYear,
+  ...(() => {
+    const start = parseInt(curFinanicalYear.split("-")[0]);
+    return [`${start - 1}-${start}`, `${start - 2}-${start - 1}`];
+  })(),
+].map((yr) => ({ label: yr, value: yr }));
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
@@ -73,19 +68,83 @@ const COLUMNS: IColumnDef[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const EmployeeDeclarations: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const items = useAppSelector(selectIncomeTaxItems);
+  const actualItems = useAppSelector(selectActualIncomeTaxItems);
+
   const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(
     "Planned",
   );
   const [search, setSearch] = React.useState("");
-  const [fy, setFy] = React.useState("2025 – 2026");
+  const [fy, setFy] = React.useState(curFinanicalYear);
 
-  const filtered = MOCK_DATA.filter(
+  useEffect(() => {
+    const fetchItems = async () => {
+      await dispatch(
+        fetchIncomeTaxItems({
+          getItems: () => getListItems(LIST_NAMES.PLANNED_DECLARATION),
+        }),
+      );
+    };
+    const fetchActualItems = async () => {
+      await dispatch(
+        fetchActualIncomeTaxItems({
+          getItems: () => getListItems(LIST_NAMES.ACTUAL_DECLARATION),
+        }),
+      );
+    };
+    void fetchItems();
+    void fetchActualItems();
+  }, []);
+
+  const tableData: IEmployeeRow[] = React.useMemo(() => {
+    const sourceItems = activeTab === "Planned" ? items : actualItems;
+
+    return sourceItems
+      .filter((item) => {
+        const isSubmitted =
+          item.Status === "Submitted" || item.Status === "Approved";
+        return isSubmitted;
+      })
+      .map((item: any) => ({
+        requestId: item.Title || `REQ-${item.Id}`,
+        financialYear: item.FinancialYear || "",
+        taxRegimeType: item.TaxRegime || "-",
+        investmentType: item.DeclarationType || "",
+        employeeId: item.EmployeeCode || "-",
+        employeeName: item.EmployeeName || "-",
+        dateOfSubmission: item.SubmittedDate
+          ? new Date(item.SubmittedDate).toLocaleDateString("en-IN")
+          : "-",
+        status: (item.Status || "Submitted").toLowerCase() as StatusVariant,
+      }));
+  }, [items, activeTab]);
+
+  const refined = tableData.filter(
     (row) =>
-      search === "" ||
-      row.requestId.includes(search) ||
-      row.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-      row.employeeId.includes(search),
+      row.financialYear === fy &&
+      (search === "" ||
+        row.requestId.toLowerCase().includes(search.toLowerCase()) ||
+        row.employeeName.toLowerCase().includes(search.toLowerCase()) ||
+        row.employeeId.toLowerCase().includes(search.toLowerCase())),
   );
+
+  const handleExport = () => {
+    const dataToExport = refined.map((row) => ({
+      "Request ID": row.requestId,
+      "Financial Year": row.financialYear,
+      "Tax Regime": row.taxRegimeType,
+      "Investment Type": row.investmentType,
+      "Employee ID": row.employeeId,
+      "Employee Name": row.employeeName,
+      "Submission Date": row.dateOfSubmission,
+      Status: row.status.toUpperCase(),
+    }));
+
+    const fileName = `${activeTab}_Declarations_${fy}`;
+    exportToExcel(dataToExport, fileName);
+  };
 
   return (
     <div className={styles.screen}>
@@ -104,27 +163,46 @@ const EmployeeDeclarations: React.FC = () => {
             />
           ))}
         </div>
-        <div className={styles.spacer} />
-        <SearchInput value={search} onChange={(val) => setSearch(val)} />
-        <select
-          className={styles.fySelect}
-          value={fy}
-          onChange={(e) => setFy(e.target.value)}
-        >
-          {FY_OPTIONS.map((o) => (
-            <option key={o}>{o}</option>
-          ))}
-        </select>
-        <ActionButton variant="export" icon="pi pi-download" label="Export" />
+        <div className={styles.rightSide}>
+          <SearchInput value={search} onChange={(val) => setSearch(val)} />
+          <AppDropdown
+            value={fy}
+            onChange={(e) => setFy(e.target.value)}
+            options={FY_OPTIONS}
+          />
+          <ActionButton
+            variant="export"
+            icon="pi pi-download"
+            label="Export"
+            onClick={handleExport}
+          />
+        </div>
       </div>
 
       {/* DataTable */}
       <AppDataTable
-        data={filtered}
+        data={refined}
         columns={COLUMNS}
         paginator
         rows={10}
         emptyMessage="No records found."
+        cursor={true}
+        onRowClick={(e: any) => {
+          const rowData = e.data as IEmployeeRow;
+          const sourceItems = activeTab === "Planned" ? items : actualItems;
+          const originalItem = sourceItems.find(
+            (item) => (item.Title || `REQ-${item.Id}`) === rowData.requestId,
+          );
+          if (originalItem) {
+            if (activeTab == "Planned") {
+              dispatch(setSelectedItem(originalItem));
+              navigate("/itDeclaration");
+            } else {
+              dispatch(setSelectedItem(originalItem));
+              navigate("/actualItDeclaration");
+            }
+          }
+        }}
       />
     </div>
   );

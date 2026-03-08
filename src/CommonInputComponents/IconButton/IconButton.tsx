@@ -6,7 +6,7 @@ export interface IIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonE
   /** The icon class string (e.g. 'pi pi-pencil') OR a Hugeicons icon object */
   icon: string | any;
   /** The visual variant applied to the icon button */
-  variant?: "edit" | "delete" | "default";
+  variant?: "edit" | "delete" | "default" | "download";
   /** Size for Hugeicons (if applicable). Defaults to 18. */
   iconSize?: number;
 }

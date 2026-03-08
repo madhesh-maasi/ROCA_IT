@@ -11,8 +11,9 @@ import {
   ExcelImport,
   IImportResult,
   IExcelColumn,
-} from "../../../../../components";
-import { AppFilePicker } from "../../../../../components/FilePicker/FilePicker";
+  StatusBadge,
+  StatusVariant,
+} from "../../../../../CommonInputComponents";
 import { IEmployee } from "../../../../../common/models";
 import AppToast, {
   showToast,
@@ -22,15 +23,14 @@ import { useAppSelector } from "../../../../../store/hooks";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
 import {
   getSP,
-  addListItem,
   getListItems,
   addListItemsBatch,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import Loader from "../../../../../common/components/Loader/Loader";
-import * as XLSX from "xlsx";
-import moment from "moment";
+import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import { curFinanicalYear } from "../../../../../common/utils/functions";
+import RequiredSympol from "../../../../../common/components/RequiredSympol/RequiredSympol";
 
 interface IReleaseData {
   DeclarationType: string;
@@ -40,15 +40,15 @@ interface IReleaseData {
 }
 
 interface IReleasedItem {
-  id: number;
   employeeId: string;
   employeeName: string;
   declarationType: string;
   releasedDate: string;
-  status: string;
+  status: StatusVariant | string;
 }
 
 const ReleaseDeclaration: React.FC = () => {
+  const _financialYear = curFinanicalYear;
   const toast = React.useRef<PrimeToast>(null);
   const employeeMaster: IEmployee[] = useAppSelector(selectEmployees) || [];
 
@@ -59,6 +59,8 @@ const ReleaseDeclaration: React.FC = () => {
     SelectedUsers: [],
     OnOrBefore: null,
   });
+
+  const [excelEmployees, setExcelEmployees] = React.useState<any[]>([]);
 
   // UI State
   const [isLoading, setIsLoading] = React.useState(false);
@@ -82,21 +84,19 @@ const ReleaseDeclaration: React.FC = () => {
     try {
       // In this demo, we assume "Status = Draft" items in IncomeTax imply they were just released
       // We'll also fetch items from IncomeTax for this view.
-      const items = await getListItems(LIST_NAMES.INCOME_TAX);
+      const items = await getListItems(LIST_NAMES.PLANNED_DECLARATION);
       const mapped = items.map((item) => ({
-        id: item.Id,
-        employeeId: item.EmployeeID || "-", // Adjust based on actual field names
-        employeeName: item.Title || "-", // Assuming Title holds Name or similar
+        employeeId: item.EmployeeCode || "-", // Adjust based on actual field names
+        employeeName: item.EmployeeName || "-", // Assuming Title holds Name or similar
         declarationType: item.DeclarationType || "Planned",
         releasedDate: item.Created
           ? new Date(item.Created).toLocaleDateString("en-IN")
           : "",
-        status: item.Status || "Draft",
+        status: (item.Status || "Draft").toLowerCase(),
       }));
       setReleasedList(mapped);
     } catch (error) {
       console.error("Error fetching released declarations", error);
-      showToast(toast, "error", "Error", "Failed to load released items.");
     }
   };
 
@@ -117,14 +117,9 @@ const ReleaseDeclaration: React.FC = () => {
   const handleExcelImport = (result: IImportResult) => {
     setImportResult(result);
     if (result.validData.length > 0) {
-      const logins = result.validData
-        .map((row) => row.EmployeeID)
-        .filter((email): email is string => Boolean(email));
-
-      setFormData((p) => ({
-        ...p,
-        SelectedUsers: Array.from(new Set([...p.SelectedUsers, ...logins])),
-      }));
+      setExcelEmployees(result.validData);
+    } else {
+      setExcelEmployees([]);
     }
 
     if (result.errors.length > 0) {
@@ -134,13 +129,28 @@ const ReleaseDeclaration: React.FC = () => {
         "Validation",
         `Found ${result.errors.length} errors in Excel file.`,
       );
-    } else {
-      showToast(toast, "success", "Success", "Excel file parsed successfully.");
     }
+  };
+
+  const removeExcelEmployee = (empId: string) => {
+    setExcelEmployees((prev) => prev.filter((p) => p.EmployeeID !== empId));
   };
 
   const handleRelease = async () => {
     // Basic validation
+    if (!formData.DeclarationType) {
+      showToast(
+        toast,
+        "warn",
+        "Validation",
+        "Please select a Declaration Type.",
+      );
+      return;
+    }
+    if (!formData.ReleaseType) {
+      showToast(toast, "warn", "Validation", "Please select a Release Type.");
+      return;
+    }
     if (
       formData.ReleaseType === "Release Selected" &&
       formData.SelectedUsers.length === 0
@@ -150,6 +160,18 @@ const ReleaseDeclaration: React.FC = () => {
         "warn",
         "Validation",
         "Please select employees to release.",
+      );
+      return;
+    }
+    if (
+      formData.ReleaseType === "Upload Excel" &&
+      excelEmployees.length === 0
+    ) {
+      showToast(
+        toast,
+        "warn",
+        "Validation",
+        "Please upload valid excel data to release.",
       );
       return;
     }
@@ -168,9 +190,117 @@ const ReleaseDeclaration: React.FC = () => {
       const sp = getSP();
       let itemsToRelease: any[] = [];
       const targetEmails = formData.SelectedUsers;
-      const _financialYear = curFinanicalYear;
+      const isActual = formData.DeclarationType === "Actual";
 
-      // Duplicate Check: Fetch existing records for current FY
+      if (formData.ReleaseType === "Release All") {
+        itemsToRelease = employeeMaster.map((emp) => ({
+          EmployeeName: emp.Title || emp.Name,
+          EmployeeCode: emp.EmployeeId,
+          EmployeeEmail: emp.Email,
+          FinancialYear: _financialYear,
+          Status: "Released",
+          DeclarationType: formData.DeclarationType,
+          DeclarationEndDate: formData.OnOrBefore?.toISOString(),
+          IsDelete: false,
+        }));
+      } else if (formData.ReleaseType === "Release Selected") {
+        targetEmails.forEach((email: string) => {
+          const matchedEmp = employeeMaster.find((e) => e.Email === email);
+          itemsToRelease.push({
+            EmployeeName: matchedEmp
+              ? matchedEmp.Title || matchedEmp.Name
+              : email,
+            EmployeeCode: matchedEmp ? matchedEmp.EmployeeId : "",
+            EmployeeEmail: matchedEmp ? matchedEmp.Email : "",
+            Status: "Released",
+            FinancialYear: _financialYear,
+            DeclarationType: formData.DeclarationType,
+            DeclarationEndDate: formData.OnOrBefore?.toISOString(),
+            IsDelete: false,
+          });
+        });
+      } else if (formData.ReleaseType === "Upload Excel") {
+        excelEmployees.forEach((row) => {
+          itemsToRelease.push({
+            EmployeeName: row.Title,
+            EmployeeCode: row.EmployeeID.toString(),
+            EmployeeEmail: row.Email,
+            Status: "Released",
+            FinancialYear: _financialYear,
+            DeclarationType: formData.DeclarationType,
+            DeclarationEndDate: formData.OnOrBefore?.toISOString(),
+            IsDelete: false,
+          });
+        });
+      }
+
+      // ─── Actual Declaration: validate approved planned declarations ────────────
+      if (isActual) {
+        // Fetch all planned declarations for the current FY
+        const plannedRecords = await sp.web.lists
+          .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
+          .items.select("Id", "EmployeeCode", "Status")
+          .filter(
+            `FinancialYear eq '${_financialYear}' and IsDelete eq false`,
+          )();
+
+        // Build a map: EmployeeCode → { Id, Status }
+        const plannedMap = new Map<string, { Id: number; Status: string }>();
+        plannedRecords.forEach((r: any) => {
+          if (r.EmployeeCode) {
+            plannedMap.set(r.EmployeeCode, { Id: r.Id, Status: r.Status });
+          }
+        });
+
+        // Identify employees without an Approved planned declaration
+        const notApproved = itemsToRelease.filter((item) => {
+          const record = plannedMap.get(item.EmployeeCode);
+          return !record || record.Status !== "Approved";
+        });
+
+        if (notApproved.length > 0) {
+          const names = notApproved
+            .map((item) => `${item.EmployeeName} (${item.EmployeeCode})`)
+            .join(", ");
+          showToast(
+            toast,
+            "error",
+            "Validation Failed",
+            `The following employees do not have an Approved Planned Declaration for FY ${_financialYear}: ${names}`,
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        // Attach PlannedDeclarationId (lookup) to each item and write to Actual list
+        const actualItems = itemsToRelease.map((item) => ({
+          ...item,
+          PlannedDeclarationId: plannedMap.get(item.EmployeeCode)!.Id,
+        }));
+
+        await addListItemsBatch(LIST_NAMES.ACTUAL_DECLARATION, actualItems);
+
+        showToast(
+          toast,
+          "success",
+          "Success",
+          `Released ${actualItems.length} Actual Declaration(s) successfully.`,
+        );
+
+        // Reset form & refresh
+        setFormData({
+          DeclarationType: "",
+          ReleaseType: "",
+          SelectedUsers: [],
+          OnOrBefore: null,
+        });
+        setExcelEmployees([]);
+        setActiveIndex(0);
+        await fetchReleasedData();
+        return;
+      }
+
+      // ─── Planned Declaration: existing duplicate-check logic ──────────────────
       const existingRecords = await sp.web.lists
         .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
         .items.select("EmployeeCode")
@@ -180,34 +310,6 @@ const ReleaseDeclaration: React.FC = () => {
         existingRecords.map((r: any) => r.EmployeeCode),
       );
 
-      if (formData.ReleaseType === "Release All") {
-        itemsToRelease = employeeMaster.map((emp) => ({
-          EmployeeName: emp.Title || emp.Name,
-          EmployeeCode: emp.EmployeeId,
-          FinancialYear: _financialYear,
-          Status: "Draft",
-          // DeclarationType: formData.DeclarationType,
-          DeclarationEndDate: formData.OnOrBefore?.toISOString(),
-          IsDelete: false,
-        }));
-      } else {
-        targetEmails.forEach((email: string) => {
-          const matchedEmp = employeeMaster.find((e) => e.Email === email);
-          itemsToRelease.push({
-            EmployeeName: matchedEmp
-              ? matchedEmp.Title || matchedEmp.Name
-              : email,
-            EmployeeCode: matchedEmp ? matchedEmp.EmployeeId : "",
-            Status: "Draft",
-            FinancialYear: _financialYear,
-            // DeclarationType: formData.DeclarationType,
-            DeclarationEndDate: formData.OnOrBefore?.toISOString(),
-            IsDelete: false,
-          });
-        });
-      }
-
-      // Filter out existing records
       const finalItems = itemsToRelease.filter(
         (item) => item.EmployeeCode && !existingCodes.has(item.EmployeeCode),
       );
@@ -240,14 +342,15 @@ const ReleaseDeclaration: React.FC = () => {
 
       // Reset form
       setFormData({
-        DeclarationType: "Planned",
-        ReleaseType: "Release Selected",
+        DeclarationType: "",
+        ReleaseType: "",
         SelectedUsers: [],
         OnOrBefore: null,
       });
+      setExcelEmployees([]);
 
       // Switch tab and refresh data
-      setActiveIndex(1);
+      setActiveIndex(0);
       await fetchReleasedData();
     } catch (err) {
       console.error(err);
@@ -265,7 +368,6 @@ const ReleaseDeclaration: React.FC = () => {
   const employeeTableData = React.useMemo(() => {
     return employeeMaster
       .map((emp: IEmployee) => ({
-        id: emp.Id,
         employeeId: emp.EmployeeId || "N/A",
         employeeName: emp.Name || emp.Title || "N/A",
       }))
@@ -300,23 +402,23 @@ const ReleaseDeclaration: React.FC = () => {
       header: "Status",
       sortable: true,
       body: (rd: IReleasedItem) => (
-        <span
-          className={
-            rd.status === "Submitted"
-              ? styles.statusSubmitted
-              : styles.statusDraft
-          }
-        >
-          {rd.status}
-        </span>
+        <StatusBadge status={rd.status as StatusVariant} />
       ),
     },
   ];
 
+  const handleExport = () => {
+    const dataToExport =
+      activeIndex === 0 ? employeeTableData : releasedTableData;
+    const fileName = activeIndex === 0 ? "Employee_List" : "Released_List";
+
+    exportToExcel(dataToExport, fileName);
+  };
+
   // ─── Render ──────────────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.screen}>
+    <div>
       <AppToast toastRef={toast} />
       {isLoading && <Loader fullScreen label="Processing Release..." />}
 
@@ -327,7 +429,9 @@ const ReleaseDeclaration: React.FC = () => {
       <div className={styles.formCard}>
         <div className={styles.row}>
           <div className={styles.col}>
-            <label>Declaration Type</label>
+            <label>
+              Declaration Type <RequiredSympol />
+            </label>
             <div className={styles.radioGroup}>
               <AppRadioButton
                 name="declarationType"
@@ -353,7 +457,9 @@ const ReleaseDeclaration: React.FC = () => {
 
         <div className={styles.row}>
           <div className={styles.col}>
-            <label>Release Type </label>
+            <label>
+              Release Type <RequiredSympol />
+            </label>
             <div className={styles.radioGroup}>
               <AppRadioButton
                 name="releaseType"
@@ -367,6 +473,7 @@ const ReleaseDeclaration: React.FC = () => {
                     ReleaseType: val,
                     SelectedUsers: [],
                   }));
+                  setExcelEmployees([]);
                 }}
               />
               <AppRadioButton
@@ -381,6 +488,7 @@ const ReleaseDeclaration: React.FC = () => {
                     ReleaseType: val,
                     SelectedUsers: [],
                   }));
+                  setExcelEmployees([]);
                 }}
               />
               <AppRadioButton
@@ -394,6 +502,7 @@ const ReleaseDeclaration: React.FC = () => {
                     ReleaseType: val,
                     SelectedUsers: [],
                   }));
+                  setExcelEmployees([]);
                   setImportResult(null);
                 }}
               />
@@ -401,31 +510,50 @@ const ReleaseDeclaration: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.rowWrapper}>
-          {formData.ReleaseType === "Release Selected" && (
-            <div className={styles.peoplePickerWrapper}>
-              <AppPeoplePicker
-                titleText="Choose Employees"
-                selectedUsers={employeeMaster.filter(
-                  (emp) =>
-                    emp.Email && formData.SelectedUsers.includes(emp.Email),
+        {formData.ReleaseType && (
+          <div className={styles.rowWrapper}>
+            {formData.ReleaseType === "Release Selected" && (
+              <div className={styles.peoplePickerWrapper}>
+                <AppPeoplePicker
+                  titleText="Choose Employees"
+                  selectedUsers={employeeMaster.filter(
+                    (emp) =>
+                      emp.Email && formData.SelectedUsers.includes(emp.Email),
+                  )}
+                  onChange={handlePeoplePickerChange}
+                  personSelectionLimit={100}
+                  source="EmployeeMaster"
+                />
+              </div>
+            )}
+            {formData.ReleaseType === "Upload Excel" && (
+              <div className={styles.filePickerWrapper}>
+                <ExcelImport
+                  columns={excelColumns}
+                  onImport={handleExcelImport}
+                  buttonLabel="Upload Excel File"
+                />
+                {excelEmployees.length > 0 && (
+                  <div className={styles.chipArea}>
+                    {excelEmployees.map((emp, idx) => (
+                      <div key={idx} className={styles.chip}>
+                        <span className={styles.chipLabel}>
+                          {emp.Title} ({emp.EmployeeID})
+                        </span>
+                        <span
+                          className={styles.chipRemove}
+                          onClick={() => removeExcelEmployee(emp.EmployeeID)}
+                        >
+                          ×
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                onChange={handlePeoplePickerChange}
-                personSelectionLimit={100}
-                source="EmployeeMaster"
-              />
-            </div>
-          )}
-          {formData.ReleaseType === "Upload Excel" && (
-            <div className={styles.filePickerWrapper}>
-              <ExcelImport
-                columns={excelColumns}
-                onImport={handleExcelImport}
-                buttonLabel="Upload Excel File"
-              />
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {importResult && importResult.errors.length > 0 && (
           <div className={styles.errorSummary}>
@@ -471,8 +599,10 @@ const ReleaseDeclaration: React.FC = () => {
             label="Release"
             icon="pi pi-check-square"
             disabled={
-              formData.ReleaseType === "Upload Excel" &&
-              (importResult === null || importResult.errors.length > 0)
+              (formData.ReleaseType === "Upload Excel" &&
+                excelEmployees.length === 0) ||
+              (formData.ReleaseType === "Release Selected" &&
+                formData.SelectedUsers.length === 0)
             }
             onClick={() => {
               void handleRelease();
@@ -509,7 +639,11 @@ const ReleaseDeclaration: React.FC = () => {
                 />
               </div>
               <div className={styles.actions}>
-                <ActionButton variant="export" className="secondaryBtn" />
+                <ActionButton
+                  variant="export"
+                  className="secondaryBtn"
+                  onClick={handleExport}
+                />
               </div>
             </div>
           </div>

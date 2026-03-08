@@ -1,18 +1,18 @@
 import * as React from "react";
 import AppDataTable, {
   IColumnDef,
-} from "../../../../../components/DataTable/DataTable";
+} from "../../../../../CommonInputComponents/DataTable/DataTable";
 import screenStyles from "../screens.module.scss";
 import styles from "./FinanceApprover.module.scss";
-import { ActionButton, IconButton } from "../../../../../components";
-import { SearchInput } from "../../../../../components/SearchInput";
+import { ActionButton, IconButton } from "../../../../../CommonInputComponents";
+import { SearchInput } from "../../../../../CommonInputComponents/SearchInput";
 import ActionPopup from "../../../../../common/components/ActionPopup/ActionPopup";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Popup } from "../../../../../components/Popup";
-import { AppPeoplePicker } from "../../../../../components/PeoplePicker";
+import { Popup } from "../../../../../CommonInputComponents/Popup";
+import { AppPeoplePicker } from "../../../../../CommonInputComponents/PeoplePicker";
 import { IEmployee } from "../../../../../common/models";
 import {
   getSiteAdminsGroupUsers,
@@ -24,7 +24,6 @@ import { useAppSelector } from "../../../../../store/hooks";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
 import Loader from "../../../../../common/components/Loader/Loader";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
-import { AppFilePicker } from "../../../../../components/FilePicker";
 import { handleError } from "../../../../../common/utils/errorUtils";
 
 interface IAdminUser {

@@ -7,13 +7,14 @@ import {
   SearchInput,
   ActionButton,
   AppDropdown,
-} from "../../../../../components";
+  IconButton,
+} from "../../../../../CommonInputComponents";
 import { ActionPopup } from "../../../../../common/components";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
-import { AppFilePicker } from "../../../../../components/FilePicker";
+import { AppFilePicker } from "../../../../../CommonInputComponents/FilePicker";
 import {
   getLibraryFilesWithMetadata,
   uploadFileWithMetadata,
@@ -233,22 +234,22 @@ const ITCalculatorUpload: React.FC = () => {
       header: "Action",
       body: (rowData: ICalculatorFile) => (
         <div className={styles.actionCell}>
-          <a
-            href={rowData.FileRef}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.iconBtn}
+          <IconButton
+            variant="download"
+            icon="pi pi-download"
             title="Download"
-          >
-            <i className="pi pi-download" />
-          </a>
-          <button
-            className={styles.iconBtnDelete}
+            onClick={() => {
+              window.open(rowData.FileRef, "_blank");
+            }}
+          />
+          <IconButton
+            variant="delete"
+            icon="pi pi-trash"
             title="Delete"
-            onClick={() => handleDeletePrompt(rowData)}
-          >
-            <i className="pi pi-trash" />
-          </button>
+            onClick={() => {
+              handleDeletePrompt(rowData);
+            }}
+          />
         </div>
       ),
     },

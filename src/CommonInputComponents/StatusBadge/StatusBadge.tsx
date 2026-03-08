@@ -9,7 +9,8 @@ export type StatusVariant =
   | "cancelled"
   | "pending"
   | "draft"
-  | "completed";
+  | "completed"
+  | "released";
 
 const STATUS_CONFIG: Record<
   StatusVariant,
@@ -41,6 +42,11 @@ const STATUS_CONFIG: Record<
     label: "Completed",
     icon: "pi pi-verified",
     colorClass: styles.completed,
+  },
+  released: {
+    label: "Released",
+    icon: "pi pi-check-circle",
+    colorClass: styles.released,
   },
 };
 

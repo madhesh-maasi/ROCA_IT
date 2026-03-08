@@ -7,15 +7,19 @@ import { handleError } from "../../common/utils/errorUtils";
  */
 export interface IIncomeTaxState {
   items: IIncomeTaxItem[];
+  actualItems: IIncomeTaxItem[];
   selectedItem: IIncomeTaxItem | undefined;
   isLoading: boolean;
+  actualIsLoading: boolean;
   error: string | undefined;
 }
 
 const initialState: IIncomeTaxState = {
   items: [],
+  actualItems: [],
   selectedItem: undefined,
   isLoading: false,
+  actualIsLoading: false,
   error: undefined,
 };
 
@@ -40,6 +44,23 @@ export const fetchIncomeTaxItems = createAsyncThunk<
       error instanceof Error
         ? error.message
         : "Failed to fetch income tax items";
+    return rejectWithValue(message);
+  }
+});
+
+export const fetchActualIncomeTaxItems = createAsyncThunk<
+  IIncomeTaxItem[],
+  { getItems: () => Promise<IIncomeTaxItem[]> }
+>("incomeTax/fetchActualItems", async ({ getItems }, { rejectWithValue }) => {
+  try {
+    const items = await getItems();
+    return items;
+  } catch (error) {
+    await handleError(error, "Fetching actual income tax items");
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch actual income tax items";
     return rejectWithValue(message);
   }
 });
@@ -75,6 +96,18 @@ const incomeTaxSlice = createSlice({
       .addCase(fetchIncomeTaxItems.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchActualIncomeTaxItems.pending, (state) => {
+        state.actualIsLoading = true;
+        state.error = undefined;
+      })
+      .addCase(fetchActualIncomeTaxItems.fulfilled, (state, action) => {
+        state.actualIsLoading = false;
+        state.actualItems = action.payload;
+      })
+      .addCase(fetchActualIncomeTaxItems.rejected, (state, action) => {
+        state.actualIsLoading = false;
+        state.error = action.payload as string;
       });
   },
 });
@@ -87,6 +120,9 @@ export const { setSelectedItem, clearError, resetState } =
 export const selectIncomeTaxItems = (state: {
   incomeTax: IIncomeTaxState;
 }): IIncomeTaxItem[] => state.incomeTax.items;
+export const selectActualIncomeTaxItems = (state: {
+  incomeTax: IIncomeTaxState;
+}): IIncomeTaxItem[] => state.incomeTax.actualItems;
 export const selectSelectedItem = (state: {
   incomeTax: IIncomeTaxState;
 }): IIncomeTaxItem | undefined => state.incomeTax.selectedItem;

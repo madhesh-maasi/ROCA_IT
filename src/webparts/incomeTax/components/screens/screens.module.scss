@@ -3,18 +3,19 @@
 }
 
 .pageTitle {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 500;
   color: #111827;
-  margin: 0 0 16px 0;
+  margin: 0 0 6px 0;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
+  justify-content: space-between;
 }
 
 .tabGroup {
@@ -52,16 +53,14 @@
 .spacer {
   flex: 1;
 }
+.rightSide {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
 
 .fySelect {
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #374151;
-  background: #ffffff;
-  cursor: pointer;
-  outline: none;
+  width: 140px;
 }
 
 .exportBtn {

@@ -3,8 +3,7 @@ import {
   InputField,
   AppRadioButton,
 } from "../../../../../../CommonInputComponents";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
+import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
 
 interface IRentRow {
@@ -15,6 +14,7 @@ interface IRentRow {
 }
 
 interface ILandlord {
+  Id?: number;
   name: string;
   pan: string;
   address: string;
@@ -32,6 +32,9 @@ interface IHouseRentalStepProps {
   approverComments?: string;
   onCommentChange?: (val: string) => void;
   readOnly?: boolean;
+  attachments?: Record<string, any[]>;
+  onUpload?: (key: string, file: File) => Promise<void>;
+  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
 
 const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
@@ -45,7 +48,20 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   approverComments,
   onCommentChange,
   readOnly,
+  attachments = {},
+  onUpload,
+  onDeleteAttachment,
 }) => {
+  const activeLandlordsWithIdx = landlords
+    .map((ll, idx) => ({ ll, idx }))
+    .filter(({ ll }) => !ll.isDeleted);
+
+  const handleFilesPicked = async (key: string, files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    if (onUpload) await onUpload(key, file);
+  };
+
   return (
     <div className={styles.stepContent}>
       <div className={styles.tableContainer}>
@@ -122,10 +138,19 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
             alignItems: "center",
           }}
         >
-          <h3>Landlord Deatils</h3>
+          <h3>Landlord Details</h3>
           {!readOnly && (
-            <div className={styles.addMoreBtn} onClick={onAddLandlord}>
-              <HugeiconsIcon icon={PlusSignIcon} size={16} />
+            <div
+              className={styles.addMoreBtn}
+              onClick={onAddLandlord}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+              }}
+            >
+              <i className="pi pi-plus" style={{ fontSize: "14px" }} />
               <span>Add More</span>
             </div>
           )}
@@ -136,9 +161,11 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
           <strong>Rs 8,333</strong>
         </div>
 
-        {landlords
-          .filter((ll) => !ll.isDeleted)
-          .map((ll, idx) => (
+        {activeLandlordsWithIdx.map(({ ll, idx }) => {
+          const uploadKey = `landlord-${idx}`;
+          const rowAttachments = attachments[uploadKey] || [];
+
+          return (
             <div
               key={idx}
               style={{
@@ -150,16 +177,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
             >
               <div className={styles.stepGrid} style={{ alignItems: "center" }}>
                 <div className={styles.formGroup}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    <label>Landlord's Name</label>
-                  </div>
+                  <label>Landlord's Name</label>
                   <InputField
                     id={`ll-name-${idx}`}
                     value={ll.name}
@@ -196,7 +214,6 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                 </div>
                 {!readOnly && (
                   <div>
-                    {" "}
                     <i
                       className="pi pi-trash"
                       style={{
@@ -209,8 +226,80 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* ── Inline upload row ── */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "12px",
+                }}
+              >
+                {!readOnly && onUpload && rowAttachments.length === 0 && (
+                  <AppFilePicker
+                    buttonLabel="Upload PDF"
+                    accept=".pdf"
+                    onChange={(files) => handleFilesPicked(uploadKey, files)}
+                  />
+                )}
+
+                {rowAttachments.map((att) => (
+                  <div
+                    key={att.Id}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px",
+                      borderRadius: "20px",
+                      background: "#f1f5f9",
+                      border: "1px solid #e2e8f0",
+                      fontSize: "12px",
+                      color: "#475569",
+                      maxWidth: "260px",
+                    }}
+                  >
+                    <i
+                      className="pi pi-file-pdf"
+                      style={{ color: "#e11d48", fontSize: "12px" }}
+                    />
+                    <a
+                      href={att.FileRef}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        color: "#334155",
+                        textDecoration: "none",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: "180px",
+                      }}
+                      title={att.FileLeafRef}
+                    >
+                      {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+                    </a>
+                    {!readOnly && onDeleteAttachment && (
+                      <i
+                        className="pi pi-trash"
+                        style={{
+                          color: "#e11d48",
+                          cursor: "pointer",
+                          fontSize: "11px",
+                          flexShrink: 0,
+                        }}
+                        onClick={() => onDeleteAttachment(uploadKey, att.Id)}
+                        title="Remove attachment"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          );
+        })}
       </div>
 
       {showApproverComments && onCommentChange && (

@@ -6,40 +6,19 @@ import {
   SearchInput,
   ActionButton,
   AppDropdown,
-} from "../../../../../components";
+} from "../../../../../CommonInputComponents";
 import { ActionPopup } from "../../../../../common/components";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
-
-interface ITempEmployee {
-  id: number;
-  employeeId: string;
-  employeeName: string;
-  taxRegime: string;
-}
-
-const DUMMY_DATA: ITempEmployee[] = [
-  {
-    id: 1,
-    employeeId: "9002094",
-    employeeName: "Ponraju E",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 2,
-    employeeId: "9002087",
-    employeeName: "Madhesh",
-    taxRegime: "Old Regime",
-  },
-  {
-    id: 3,
-    employeeId: "9002055",
-    employeeName: "Ramesh",
-    taxRegime: "New Regime",
-  },
-];
+import {
+  getListItems,
+  updateListItem,
+  updateListItemsBatch,
+} from "../../../../../common/utils/pnpService";
+import { LIST_NAMES } from "../../../../../common/constants/appConstants";
+import { exportToExcel } from "../../../../../common/utils/exportUtils";
 
 const REGIME_OPTIONS = [
   { label: "Old Regime", value: "Old Regime" },
@@ -51,17 +30,38 @@ const TaxRegimeUpdate: React.FC = () => {
 
   // States
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [data, setData] = React.useState<ITempEmployee[]>(DUMMY_DATA);
+  const [data, setData] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   // Popup States
   const [showPopup, setShowPopup] = React.useState(false);
-  const [selectedEmployee, setSelectedEmployee] =
-    React.useState<ITempEmployee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = React.useState<any | null>(
+    null,
+  );
   const [selectedRegime, setSelectedRegime] = React.useState<string>("");
 
-  const handleEdit = (employee: ITempEmployee) => {
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const items = await getListItems(
+        LIST_NAMES.PLANNED_DECLARATION,
+        `Status eq 'Submitted'`,
+      );
+      setData(items);
+    } catch (err) {
+      showToast(toast, "error", "Fetch Failed", "Could not load declarations.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    void fetchData();
+  }, []);
+
+  const handleEdit = (employee: any) => {
     setSelectedEmployee(employee);
-    setSelectedRegime(employee.taxRegime);
+    setSelectedRegime(employee.TaxRegime || "Old Regime");
     setShowPopup(true);
   };
 
@@ -71,7 +71,7 @@ const TaxRegimeUpdate: React.FC = () => {
     setSelectedRegime("");
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!selectedRegime) {
       showToast(
         toast,
@@ -83,32 +83,77 @@ const TaxRegimeUpdate: React.FC = () => {
     }
 
     if (selectedEmployee) {
-      // Update local state
-      setData((prev) =>
-        prev.map((emp) =>
-          emp.id === selectedEmployee.id
-            ? { ...emp, taxRegime: selectedRegime }
-            : emp,
-        ),
-      );
-      showToast(
-        toast,
-        "success",
-        "Updated",
-        `Tax regime updated for ${selectedEmployee.employeeName}.`,
-      );
-      handleClosePopup();
+      try {
+        setIsLoading(true);
+        const oldRegime = selectedEmployee.TaxRegime;
+        const newRegime = selectedRegime;
+
+        // 1. Update main declaration record
+        await updateListItem(
+          LIST_NAMES.PLANNED_DECLARATION,
+          selectedEmployee.Id,
+          {
+            TaxRegime: newRegime,
+            PAN: "",
+            IsAcknowledged: false,
+            Place: "",
+            SubmittedDate: null,
+            ApproverCommentsJson: "",
+            Status: "Released",
+          },
+        );
+
+        // 2. If changing from Old to New, soft-delete child lists
+        if (oldRegime === "Old Regime" && newRegime === "New Regime") {
+          const childLists = [
+            LIST_NAMES.IT_LANDLORD_DETAILS,
+            LIST_NAMES.IT_LTA,
+            LIST_NAMES.IT_80C_SECTION,
+            LIST_NAMES.IT_80,
+            LIST_NAMES.IT_HOUSING_LOAN,
+            LIST_NAMES.IT_PREVIOUS_EMPLOYER,
+          ];
+
+          for (const listName of childLists) {
+            const items = await getListItems(
+              listName,
+              `PlannedDeclarationId eq ${selectedEmployee.Id}`,
+            );
+            if (items.length > 0) {
+              await updateListItemsBatch(
+                listName,
+                items.map((i) => ({ id: i.Id, data: { IsDelete: true } })),
+              );
+            }
+          }
+        }
+
+        showToast(
+          toast,
+          "success",
+          "Updated",
+          `Tax regime updated effectively for ${selectedEmployee.EmployeeName || "Employee"}.`,
+        );
+
+        await fetchData();
+        handleClosePopup();
+      } catch (err) {
+        console.error(err);
+        showToast(toast, "error", "Update Failed", "Could not update regime.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   const columns: IColumnDef[] = [
-    { field: "employeeId", header: "Employee ID", sortable: true },
-    { field: "employeeName", header: "Employee Name", sortable: true },
-    { field: "taxRegime", header: "Tax Regime Type", sortable: true },
+    { field: "EmployeeCode", header: "Employee ID", sortable: true },
+    { field: "EmployeeName", header: "Employee Name", sortable: true },
+    { field: "TaxRegime", header: "Tax Regime Type", sortable: true },
     {
       field: "action",
       header: "Action",
-      body: (rowData: ITempEmployee) => (
+      body: (rowData: any) => (
         <button
           className={styles.editBtn}
           title="Edit Tax Regime"
@@ -124,10 +169,19 @@ const TaxRegimeUpdate: React.FC = () => {
     const lowerSearch = searchTerm.toLowerCase();
     return data.filter(
       (emp) =>
-        emp.employeeId.toLowerCase().includes(lowerSearch) ||
-        emp.employeeName.toLowerCase().includes(lowerSearch),
+        (emp.EmployeeCode || "").toLowerCase().includes(lowerSearch) ||
+        (emp.EmployeeName || "").toLowerCase().includes(lowerSearch),
     );
   }, [searchTerm, data]);
+
+  const handleExport = () => {
+    const dataToExport = filteredData.map((emp) => ({
+      "Employee ID": emp.EmployeeCode,
+      "Employee Name": emp.EmployeeName,
+      "Tax Regime Type": emp.TaxRegime,
+    }));
+    exportToExcel(dataToExport, "Tax_Regime_Updates");
+  };
 
   return (
     <div className={styles.screen}>
@@ -148,9 +202,7 @@ const TaxRegimeUpdate: React.FC = () => {
             variant="download"
             label="Export"
             icon="pi pi-file-export"
-            onClick={() => {
-              showToast(toast, "info", "Export", "Exporting data...");
-            }}
+            onClick={handleExport}
           />
         </div>
       </div>
@@ -161,6 +213,7 @@ const TaxRegimeUpdate: React.FC = () => {
           data={filteredData}
           paginator
           rows={10}
+          loading={isLoading}
         />
       </div>
 
@@ -180,8 +233,8 @@ const TaxRegimeUpdate: React.FC = () => {
               <div className={styles.employeeDetails}>
                 <span className={styles.detailLabel}>Employee Details</span> -{" "}
                 <span className={styles.detailText}>
-                  {selectedEmployee.employeeName}
-                  {selectedEmployee.employeeId}
+                  {selectedEmployee.EmployeeName} (
+                  {selectedEmployee.EmployeeCode})
                 </span>
               </div>
 

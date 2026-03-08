@@ -1,5 +1,9 @@
 import * as React from "react";
-import { Popup, AppDropdown, ActionButton } from "../../../../../components";
+import {
+  Popup,
+  AppDropdown,
+  ActionButton,
+} from "../../../../../CommonInputComponents";
 import styles from "./TaxRegimePopup.module.scss";
 
 export interface ITaxRegimePopupProps {
