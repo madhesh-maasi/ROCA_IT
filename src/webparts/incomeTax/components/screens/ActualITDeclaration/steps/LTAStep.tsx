@@ -26,9 +26,9 @@ interface ILTAStepProps {
     classOfTravel: string;
     ticketNumbers: string;
     lastClaimedYear: string;
+    attachments: any[];
   };
   modeOptions: any[];
-  classOptions: any[];
   coTravellers: ICoTraveller[];
   onLtaChange: (field: string, val: any) => void;
   onCoTravellerChange: (
@@ -39,8 +39,8 @@ interface ILTAStepProps {
   onCommentChange?: (val: string) => void;
   showApproverComments?: boolean;
   approverComments?: string;
+  status?: string;
   readOnly?: boolean;
-  attachments?: Record<string, any[]>;
   onUpload?: (key: string, file: File) => Promise<void>;
   onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
@@ -51,18 +51,17 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   ltaData,
   coTravellers,
   modeOptions,
-  classOptions,
   onLtaChange,
   onCoTravellerChange,
   showApproverComments,
   approverComments,
   onCommentChange,
+  status,
   readOnly,
-  attachments = {},
   onUpload,
   onDeleteAttachment,
 }) => {
-  const ltaAttachments = attachments[UPLOAD_KEY] || [];
+  const ltaAttachments = ltaData.attachments || [];
 
   const handleFilesPicked = async (files: File[]) => {
     const file = files[0];
@@ -71,8 +70,11 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   };
 
   return (
-    <div className={styles.stepContent}>
-      <div className={styles.stepGrid}>
+    <div>
+      <div className={styles.stepHeader}>
+        Leave and Travel Allowance Details
+      </div>
+      <div className={styles.basicInfoGrid}>
         <div className={styles.formGroup}>
           <label>Exemption Amount</label>
           <InputField
@@ -144,7 +146,17 @@ const LTAStep: React.FC<ILTAStepProps> = ({
           />
         </div>
         <div className={styles.formGroup}>
-          <AppDropdown
+          <label>Class of Travel</label>
+          <InputField
+            id="lta-class"
+            value={ltaData.classOfTravel}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onLtaChange("classOfTravel", e.target.value)
+            }
+            placeholder="Enter class of travel"
+            disabled={readOnly}
+          />
+          {/* <AppDropdown
             id="lta-class"
             label="Class of Travel"
             options={classOptions}
@@ -152,7 +164,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: any) => onLtaChange("classOfTravel", e.value)}
             placeholder="Select"
             disabled={readOnly}
-          />
+          /> */}
         </div>
         <div className={styles.formGroup}>
           <label>Ticket Numbers</label>
@@ -172,7 +184,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             id="lta-last-year"
             value={ltaData.lastClaimedYear}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onLtaChange("lastClaimedYear", e.target.value)
+              onLtaChange(
+                "lastClaimedYear",
+                e.target.value.replace(/[^0-9]/g, ""),
+              )
             }
             placeholder="Enter year"
             disabled={readOnly}
@@ -180,25 +195,29 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         </div>
       </div>
 
-      <div style={{ marginTop: "40px" }}>
-        <h3>Co-Travellers Details</h3>
-        <div className={styles.tableContainer}>
-          <table className={styles.customTable}>
+      <div style={{ marginTop: 20 }}>
+        <div className={styles.stepHeader}>Co-Travellers Details</div>
+        <div className={styles.tableContainer} style={{ marginTop: 10 }}>
+          <table className={styles.coTravellerTable}>
             <thead>
               <tr>
-                <th>Relationship</th>
-                <th>Name</th>
-                <th>Date of Birth</th>
-                <th>Gender</th>
+                <th style={{ width: "20%" }}>Relationship</th>
+                <th style={{ width: "25%" }}>Name</th>
+                <th style={{ width: "25%" }}>Date of Birth</th>
+                <th style={{ width: "30%" }}>Gender</th>
               </tr>
             </thead>
             <tbody>
               {coTravellers.map((person, idx) => (
                 <tr key={person.relationship}>
-                  <td>
-                    <div className={styles.readonlyValue}>
-                      {person.relationship}
-                    </div>
+                  <td
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#374151",
+                    }}
+                  >
+                    {person.relationship}
                   </td>
                   <td>
                     <InputField
@@ -208,6 +227,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                         onCoTravellerChange(idx, "name", e.target.value)
                       }
                       disabled={readOnly}
+                      placeholder="Enter Name"
                     />
                   </td>
                   <td>
@@ -222,7 +242,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                     />
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: "10px" }}>
+                    <div className={styles.genderGroup}>
                       {person.relationship !== "Dependent Mother" && (
                         <AppRadioButton
                           label="Male"
@@ -235,19 +255,18 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                           disabled={readOnly}
                         />
                       )}
-                      {person.relationship !== "Dependent Mother" &&
-                        person.relationship !== "Dependent Father" && (
-                          <AppRadioButton
-                            label="Female"
-                            name={`gender-${idx}`}
-                            value="Female"
-                            selectedValue={person.gender}
-                            onChange={(val: string) =>
-                              onCoTravellerChange(idx, "gender", val)
-                            }
-                            disabled={readOnly}
-                          />
-                        )}
+                      {person.relationship !== "Dependent Father" && (
+                        <AppRadioButton
+                          label="Female"
+                          name={`gender-${idx}`}
+                          value="Female"
+                          selectedValue={person.gender}
+                          onChange={(val: string) =>
+                            onCoTravellerChange(idx, "gender", val)
+                          }
+                          disabled={readOnly}
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -329,9 +348,9 @@ const LTAStep: React.FC<ILTAStepProps> = ({
       </div>
 
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
+            <div className={styles.stepHeader}>Approver Comments</div>
             <textarea
               className={styles.commentArea || ""}
               style={{
@@ -339,15 +358,15 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
-                pointerEvents: "auto",
-                opacity: 1,
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
-              disabled={readOnly}
               placeholder="Enter here"
               value={approverComments}
+              disabled={status === "Approved"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

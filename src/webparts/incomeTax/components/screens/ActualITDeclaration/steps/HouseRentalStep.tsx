@@ -19,6 +19,7 @@ interface ILandlord {
   pan: string;
   address: string;
   isDeleted?: boolean;
+  attachments?: any[];
 }
 
 interface IHouseRentalStepProps {
@@ -31,8 +32,8 @@ interface IHouseRentalStepProps {
   showApproverComments?: boolean;
   approverComments?: string;
   onCommentChange?: (val: string) => void;
+  status?: string;
   readOnly?: boolean;
-  attachments?: Record<string, any[]>;
   onUpload?: (key: string, file: File) => Promise<void>;
   onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
@@ -47,8 +48,8 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   showApproverComments,
   approverComments,
   onCommentChange,
+  status,
   readOnly,
-  attachments = {},
   onUpload,
   onDeleteAttachment,
 }) => {
@@ -63,21 +64,22 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   };
 
   return (
-    <div className={styles.stepContent}>
-      <div className={styles.tableContainer}>
-        <table className={styles.customTable}>
+    <div>
+      <div className={styles.stepHeader}>House Rental Information</div>
+      <div className={styles.tableContainer} style={{ marginTop: "10px" }}>
+        <table className={styles.houseRentalTable}>
           <thead>
             <tr>
-              <th>Month</th>
-              <th>Metro/Non Metro</th>
-              <th>City</th>
-              <th>Monthly Rent</th>
+              <th style={{ width: "15%" }}>Month</th>
+              <th style={{ width: "25%" }}>Metro/Non Metro</th>
+              <th style={{ width: "20%" }}>City</th>
+              <th style={{ width: "20%" }}>Monthly Rent</th>
             </tr>
           </thead>
           <tbody>
             {rentDetails.map((row, idx) => (
               <tr key={row.month}>
-                <td>
+                <td style={{ paddingLeft: 0 }}>
                   <div className={styles.readonlyValue}>{row.month}</div>
                 </td>
                 <td>
@@ -112,16 +114,22 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                       onRentChange(idx, "city", e.target.value)
                     }
                     disabled={readOnly}
+                    placeholder="Enter City"
                   />
                 </td>
-                <td>
+                <td style={{ paddingRight: 0 }}>
                   <InputField
                     id={`rent-${idx}`}
                     value={row.rent}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onRentChange(idx, "rent", e.target.value)
+                      onRentChange(
+                        idx,
+                        "rent",
+                        e.target.value.replace(/[^0-9]/g, ""),
+                      )
                     }
                     disabled={readOnly}
+                    placeholder="Enter Rent"
                   />
                 </td>
               </tr>
@@ -136,46 +144,30 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            marginBottom: 6,
           }}
         >
-          <h3>Landlord Details</h3>
+          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>
+            Landlord Details
+          </h3>
           {!readOnly && (
-            <div
-              className={styles.addMoreBtn}
-              onClick={onAddLandlord}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                cursor: "pointer",
-              }}
-            >
-              <i className="pi pi-plus" style={{ fontSize: "14px" }} />
+            <div className={styles.addMoreBtn} onClick={onAddLandlord}>
+              <i className="pi pi-plus-circle" style={{ fontSize: "16px" }} />
               <span>Add More</span>
             </div>
           )}
         </div>
 
-        <div className={styles.noteBox}>
-          Note: Landlord Information is Mandatory if the monthly rental exceeds{" "}
-          <strong>Rs 8,333</strong>
-        </div>
-
         {activeLandlordsWithIdx.map(({ ll, idx }) => {
           const uploadKey = `landlord-${idx}`;
-          const rowAttachments = attachments[uploadKey] || [];
 
           return (
-            <div
-              key={idx}
-              style={{
-                padding: "20px",
-                border: "1px solid #f1f5f9",
-                borderRadius: "12px",
-                marginBottom: "15px",
-              }}
-            >
-              <div className={styles.stepGrid} style={{ alignItems: "center" }}>
+            <div key={idx} className={styles.landlordCard}>
+              <div className={styles.noteBox} style={{ marginTop: 0 }}>
+                Note: Landlord Information is Mandatory if the monthly rental
+                exceeds <strong>Rs 8,333</strong>
+              </div>
+              <div className={styles.landlordGrid}>
                 <div className={styles.formGroup}>
                   <label>Landlord's Name</label>
                   <InputField
@@ -213,7 +205,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 {!readOnly && (
-                  <div>
+                  <div style={{ paddingBottom: "10px" }}>
                     <i
                       className="pi pi-trash"
                       style={{
@@ -237,7 +229,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   marginTop: "12px",
                 }}
               >
-                {!readOnly && onUpload && rowAttachments.length === 0 && (
+                {!readOnly && onUpload && ll.attachments?.length === 0 && (
                   <AppFilePicker
                     buttonLabel="Upload PDF"
                     accept=".pdf"
@@ -245,7 +237,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 )}
 
-                {rowAttachments.map((att) => (
+                {ll.attachments?.map((att: any) => (
                   <div
                     key={att.Id}
                     style={{
@@ -303,9 +295,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
       </div>
 
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
+            <div className={styles.stepHeader}>Approver Comments</div>
             <textarea
               className={styles.commentArea || ""}
               style={{
@@ -313,15 +305,15 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
-                pointerEvents: "auto",
-                opacity: 1,
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
-              disabled={readOnly}
               placeholder="Enter here"
               value={approverComments}
+              disabled={status === "Approved"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

@@ -20,8 +20,6 @@ export const handleError = async (
 
   // Parse error details
   const errorMessage = error instanceof Error ? error.message : String(error);
-  const stackTrace =
-    error instanceof Error ? error.stack : "No stack trace available";
 
   // Display user-friendly UI toast (if ref provided)
   if (toastRef) {
@@ -38,7 +36,6 @@ export const handleError = async (
     await addItem(LIST_NAMES.ERROR_LOG, {
       Title: actionName,
       Error: errorMessage,
-      FunctionName: stackTrace || "",
     });
   } catch (logErr) {
     console.error("Failed to write to ErrorLog SharePoint list.", logErr);

@@ -60,6 +60,22 @@
       box-shadow: 0 0 0 0.1rem rgba(0, 0, 0, 0.4);
       border-color: #000000;
     }
+
+    &:global(.p-disabled) {
+      background: #f6f6f6 !important;
+      opacity: 1 !important;
+      cursor: not-allowed !important;
+      border-color: #ced4da !important;
+      pointer-events: none;
+
+      :global(.p-dropdown-label) {
+        color: #495057 !important;
+      }
+
+      :global(.p-dropdown-trigger) {
+        color: #495057 !important;
+      }
+    }
   }
 
   .errorMessage {

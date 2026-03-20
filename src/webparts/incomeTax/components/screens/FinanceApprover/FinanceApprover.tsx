@@ -4,34 +4,39 @@ import AppDataTable, {
 } from "../../../../../CommonInputComponents/DataTable/DataTable";
 import screenStyles from "../screens.module.scss";
 import styles from "./FinanceApprover.module.scss";
-import { ActionButton, IconButton } from "../../../../../CommonInputComponents";
-import { SearchInput } from "../../../../../CommonInputComponents/SearchInput";
-import ActionPopup from "../../../../../common/components/ActionPopup/ActionPopup";
+import {
+  ActionButton,
+  IconButton,
+  StatusPopup,
+  Popup,
+  SearchInput,
+} from "../../../../../CommonInputComponents";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Popup } from "../../../../../CommonInputComponents/Popup";
 import { AppPeoplePicker } from "../../../../../CommonInputComponents/PeoplePicker";
 import { IEmployee } from "../../../../../common/models";
 import {
-  getSiteAdminsGroupUsers,
-  addUserToGroupById,
-  removeUserFromGroupById,
-  getSiteOwnersGroup,
+  addItem,
+  getAllItems,
+  getSP,
+  updateItem,
 } from "../../../../../common/utils/pnpService";
+import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { useAppSelector } from "../../../../../store/hooks";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
 import Loader from "../../../../../common/components/Loader/Loader";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import { handleError } from "../../../../../common/utils/errorUtils";
+import { ActionPopup } from "../../../../../common/components";
 
 interface IAdminUser {
   Id: number;
   Title: string;
   Email: string;
-  LoginName: string;
   EmployeeId?: string;
+  UserId: number;
 }
 
 const FinanceApprover: React.FC = () => {
@@ -39,7 +44,6 @@ const FinanceApprover: React.FC = () => {
 
   // ─── Site Admin Users ─────────────────────────────────────────────────────
   const [adminUsers, setAdminUsers] = React.useState<IAdminUser[]>([]);
-  const [adminGroupId, setAdminGroupId] = React.useState<number | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const masterEmployees = useAppSelector(selectEmployees);
 
@@ -56,40 +60,36 @@ const FinanceApprover: React.FC = () => {
     null,
   );
   const [isDeleting, setIsDeleting] = React.useState(false);
-
-  // ─── Success confirmation popup ───────────────────────────────────────────
-  const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+  const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   // ─── Toast Ref for notifications ──────────────────────────────────────────
   const toast = React.useRef<PrimeToast>(null);
 
-  // ─── Load admin group users on mount ──────────────────────────────────────
+  // ─── Load finance approvers from list on mount ────────────────────────────
 
   const init = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const [group, users] = await Promise.all([
-        getSiteOwnersGroup(),
-        getSiteAdminsGroupUsers(),
-      ]);
+      const users = await getAllItems(
+        LIST_NAMES.FINANCE_APPROVER,
+        ["User/Title", "User/EMail"],
+        "User",
+        "Id",
+        false,
+        "IsDelete ne 1",
+      );
 
-      const mergedUsers = (users as any[]).map((u) => {
-        const empMatch = masterEmployees.find(
-          (e) => e.Email?.toLowerCase() === u.Email?.toLowerCase(),
-        );
-        return {
-          Id: u.Id,
-          Title: u.Title,
-          Email: u.Email,
-          LoginName: u.LoginName,
-          EmployeeId: empMatch?.EmployeeId ?? "N/A",
-        };
-      });
+      const mappedUsers = users.map((u: any) => ({
+        Id: u.Id,
+        Title: u.User.Title, // Support either column if existing
+        Email: u.User.EMail,
+        EmployeeId: u.EmployeeId,
+        UserId: u.UserId,
+      }));
 
-      setAdminGroupId(group?.Id ?? null);
-      setAdminUsers(mergedUsers);
+      setAdminUsers(mappedUsers);
     } catch (err) {
-      await handleError(err, "Loading admin group data", toast);
+      await handleError(err, "Loading finance approvers list", toast);
     } finally {
       setIsLoading(false);
     }
@@ -116,26 +116,18 @@ const FinanceApprover: React.FC = () => {
     }
 
     const emp = selectedEmployee[0];
-    const loginName = emp.Email
-      ? `i:0#.f|membership|${emp.Email.toLowerCase()}`
-      : "";
+
+    const matchedEmp = masterEmployees.find(
+      (e) => e.Email?.toLowerCase() === emp.Email?.toLowerCase(),
+    );
+    const employeeIdToSave = matchedEmp ? matchedEmp.EmployeeId : "";
 
     // ─── Duplicate check (local) ───────────────────────────────────────────
     const isDuplicate = adminUsers.some(
       (u) => u.Email?.toLowerCase() === emp.Email?.toLowerCase(),
     );
     if (isDuplicate) {
-      showToast(toast, "error", "Validation", `The user already exists`, 4000);
-      return;
-    }
-
-    if (!adminGroupId) {
-      showToast(
-        toast,
-        "error",
-        "Error",
-        "Could not determine site admin group. Please try again.",
-      );
+      showToast(toast, "error", "Validation", "The user already exists", 4000);
       return;
     }
 
@@ -145,14 +137,19 @@ const FinanceApprover: React.FC = () => {
     setIsAdding(true);
 
     try {
-      await addUserToGroupById(adminGroupId, loginName);
+      await addItem(LIST_NAMES.FINANCE_APPROVER, {
+        EmployeeId: employeeIdToSave,
+        UserId: emp.Id,
+      });
+      showToast(
+        toast,
+        "success",
+        "Added",
+        "Finance approver successfully added",
+      );
       await init();
-      setShowSuccessPopup(true);
-      setTimeout(() => {
-        setShowSuccessPopup(false);
-      }, 3000);
     } catch (err) {
-      await handleError(err, "Adding user to group", toast);
+      await handleError(err, "Adding user to list", toast);
     } finally {
       setIsAdding(false);
     }
@@ -160,9 +157,7 @@ const FinanceApprover: React.FC = () => {
 
   // ─── Handle Delete User ─────────────────────────────────────────────────
   const handleDeleteUser = async (): Promise<void> => {
-    if (!userToDelete || !adminGroupId) return;
-
-    const userLoginName = userToDelete.LoginName;
+    if (!userToDelete) return;
 
     // Close popup and clear selection immediately
     setShowDeletePopup(false);
@@ -170,7 +165,9 @@ const FinanceApprover: React.FC = () => {
     setIsDeleting(true);
 
     try {
-      await removeUserFromGroupById(adminGroupId, userLoginName);
+      await updateItem(LIST_NAMES.FINANCE_APPROVER, userToDelete.Id, {
+        IsDelete: true,
+      });
       await init();
       showToast(
         toast,
@@ -186,8 +183,8 @@ const FinanceApprover: React.FC = () => {
   };
 
   // ─── Column definitions ───────────────────────────────────────────────────
-  const actionTemplate = (rowData: IAdminUser) => {
-    return (
+  const actionTemplate = (rowData: IAdminUser, index: any) => {
+    return index.rowIndex >= 1 ? (
       <IconButton
         variant="delete"
         icon="pi pi-trash"
@@ -197,7 +194,7 @@ const FinanceApprover: React.FC = () => {
           setShowDeletePopup(true);
         }}
       />
-    );
+    ) : null;
   };
 
   const COLUMNS: IColumnDef[] = [
@@ -213,6 +210,11 @@ const FinanceApprover: React.FC = () => {
 
   return (
     <div className={screenStyles.screen}>
+      <StatusPopup
+        visible={showDownloadPopup}
+        onHide={() => setShowDownloadPopup(false)}
+        type="download"
+      />
       {(isAdding || isDeleting) && <Loader fullScreen label="Processing..." />}
       <AppToast toastRef={toast} />
       <div className={screenStyles.toolbar} style={{ alignItems: "center" }}>
@@ -226,7 +228,7 @@ const FinanceApprover: React.FC = () => {
         <div className={styles.btnGroup}>
           <ActionButton
             variant="export"
-            icon="pi pi-file-excel"
+            icon="pi pi-download"
             className="primaryBtn"
             onClick={() => {
               const exportData = adminUsers.map((u) => ({
@@ -234,11 +236,14 @@ const FinanceApprover: React.FC = () => {
                 "Employee Name": u.Title,
               }));
               exportToExcel(exportData, "Finance_Approvers");
+              setShowDownloadPopup(true);
             }}
           />
 
           <ActionButton
             variant="add"
+            label="Add New"
+            icon="pi pi-plus-circle"
             className="primaryBtn"
             onClick={() => {
               setSelectedEmployee([]);
@@ -275,7 +280,8 @@ const FinanceApprover: React.FC = () => {
         <div className={styles.addPopupContent}>
           <AppPeoplePicker
             titleText="Select Employee"
-            source="EmployeeMaster"
+            source="SiteMembers"
+            isRequired
             personSelectionLimit={1}
             selectedUsers={selectedEmployee}
             onChange={(users) => {
@@ -284,14 +290,6 @@ const FinanceApprover: React.FC = () => {
           />
         </div>
       </Popup>
-
-      <ActionPopup
-        visible={showSuccessPopup}
-        onHide={() => setShowSuccessPopup(false)}
-        onConfirm={() => setShowSuccessPopup(false)}
-        actionType="Added"
-        message={"Finance Approver has been\nadded successfully."}
-      />
 
       <ActionPopup
         visible={showDeletePopup}

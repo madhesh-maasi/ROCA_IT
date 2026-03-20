@@ -7,6 +7,7 @@ import {
   IconButton,
   Popup,
   InputField,
+  StatusPopup,
 } from "../../../../../CommonInputComponents";
 import { IColumnDef } from "../../../../../CommonInputComponents/DataTable/DataTable";
 import screenStyles from "../screens.module.scss";
@@ -56,6 +57,7 @@ const SectionConfig: React.FC = () => {
 
   // Consolidated Form State
   const [formData, setFormData] = React.useState({ name: "", maxAmount: "" });
+  const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const fetchSections = async () => {
     setUiState((p) => ({ ...p, isLoading: true }));
@@ -94,6 +96,10 @@ const SectionConfig: React.FC = () => {
       })),
       "Section_Configuration",
     );
+    setShowDownloadPopup(true);
+    setTimeout(() => {
+      setShowDownloadPopup(false);
+    }, 3000);
   };
 
   // ─── Dialog Triggers ────────────────────────────────────────────────────────
@@ -208,6 +214,11 @@ const SectionConfig: React.FC = () => {
   return (
     <div className={screenStyles.screen}>
       <AppToast toastRef={toast} />
+      <StatusPopup
+        visible={showDownloadPopup}
+        onHide={() => setShowDownloadPopup(false)}
+        type="download"
+      />
       {uiState.isLoading && <Loader fullScreen label="Loading Sections..." />}
 
       <div className={styles.header}>
@@ -222,6 +233,7 @@ const SectionConfig: React.FC = () => {
           <ActionButton
             variant="export"
             className="secondaryBtn"
+            icon="pi pi-download"
             onClick={handleExport}
           />
           {/* <ActionButton
@@ -232,7 +244,9 @@ const SectionConfig: React.FC = () => {
           <ActionButton
             variant="add"
             className="primaryBtn"
+            icon="pi pi-plus-circle"
             onClick={openAddPopup}
+            label="Add New"
           />
         </div>
       </div>

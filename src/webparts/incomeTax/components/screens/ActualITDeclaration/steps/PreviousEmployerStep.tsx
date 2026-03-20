@@ -19,6 +19,7 @@ interface IPreviousEmployerData {
   vpfContribution: string;
   professionalTax: string;
   taxDeductedAtSource: string;
+  attachments?: any[];
 }
 
 interface IPreviousEmployerStepProps {
@@ -27,9 +28,8 @@ interface IPreviousEmployerStepProps {
   showApproverComments?: boolean;
   approverComments?: string;
   onCommentChange?: (val: string) => void;
+  status?: string;
   readOnly?: boolean;
-  // ── Document upload ──────────────────────────────────────────────
-  attachments?: Record<string, any[]>;
   onUpload?: (key: string, file: File) => Promise<void>;
   onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
@@ -42,12 +42,12 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
   showApproverComments,
   approverComments,
   onCommentChange,
+  status,
   readOnly,
-  attachments = {},
   onUpload,
   onDeleteAttachment,
 }) => {
-  const peAttachments = attachments[UPLOAD_KEY] || [];
+  const peAttachments = data.attachments || [];
 
   const handleFilesPicked = async (files: File[]) => {
     const file = files[0];
@@ -56,7 +56,8 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
   };
 
   return (
-    <div className={styles.stepContent}>
+    <div>
+      <div className={styles.stepHeader}>Previous Employer Details</div>
       <div className={styles.stepGrid}>
         <div className={styles.formGroup}>
           <label>Name of Employer</label>
@@ -258,7 +259,8 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
       </div>
 
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: 10 }}>
+          <div className={styles.stepHeader}>Approver Comments</div>
           <div className={styles.formGroup}>
             <label>Approver Comments</label>
             <textarea
@@ -268,12 +270,14 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
               placeholder="Enter here"
-              disabled={readOnly}
+              disabled={status === "Approved"}
               value={approverComments}
               onChange={(e) => onCommentChange(e.target.value)}
             />

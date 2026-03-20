@@ -30,6 +30,7 @@ export interface IIncomeTaxItem extends IListItem {
     Email: string;
     Title: string;
   };
+  IsExported?: boolean;
 }
 
 /**

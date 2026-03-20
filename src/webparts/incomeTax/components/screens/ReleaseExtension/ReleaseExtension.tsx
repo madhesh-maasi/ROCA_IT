@@ -12,6 +12,11 @@ import AppToast, {
 } from "../../../../../common/components/Toast/Toast";
 import { Toast as PrimeToast } from "primereact/toast";
 import Loader from "../../../../../common/components/Loader/Loader";
+import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
+import {
+  fetchEmployeeMaster,
+  selectEmployees,
+} from "../../../../../store/slices/employeeSlice";
 import {
   getListItems,
   updateListItemsBatch,
@@ -22,6 +27,7 @@ interface IReleasedItem {
   Id: number;
   EmployeeCode: string;
   EmployeeName: string;
+  Location: string;
   DeclarationType: string;
   DeclarationEndDate: string;
   Status: string;
@@ -30,7 +36,9 @@ interface IReleasedItem {
 // Remove dummy data
 
 const ReleaseExtension: React.FC = () => {
+  const dispatch = useAppDispatch();
   const toast = React.useRef<PrimeToast>(null);
+  const employeeMaster = useAppSelector(selectEmployees);
 
   // UI State
   const [isLoading, setIsLoading] = React.useState(false);
@@ -39,7 +47,7 @@ const ReleaseExtension: React.FC = () => {
   // Form State
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
 
-  // Data State
+  const [activeIndex, setActiveIndex] = React.useState(0);
   const [releasedList, setReleasedList] = React.useState<IReleasedItem[]>([]);
   const [selectedEmployees, setSelectedEmployees] = React.useState<
     IReleasedItem[]
@@ -48,21 +56,49 @@ const ReleaseExtension: React.FC = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const items = await getListItems(LIST_NAMES.PLANNED_DECLARATION);
-      // Filter for active items if necessary, or just all that are not submitted
-      const activeItems = items.filter((i) => i.Status !== "Submitted");
+      const listName =
+        activeIndex === 0
+          ? LIST_NAMES.PLANNED_DECLARATION
+          : LIST_NAMES.ACTUAL_DECLARATION;
+      const items = await getListItems(listName);
+
+      const activeItems = items
+        .filter(
+          (i) =>
+            i.Status == "Draft" ||
+            i.Status == "Rework" ||
+            i.Status == "Released",
+        )
+        .map((item: any) => {
+          const empMaster = employeeMaster.find(
+            (e) => e.EmployeeId === item.EmployeeCode,
+          );
+          return {
+            Id: item.Id,
+            EmployeeCode: item.EmployeeCode || "-",
+            EmployeeName: item.EmployeeName || "-",
+            Location: empMaster?.Location || "-",
+            DeclarationType: item.DeclarationType || "-",
+            DeclarationEndDate: item.DeclarationEndDate || "",
+            Status: item.Status || "-",
+          };
+        });
       setReleasedList(activeItems);
     } catch (error) {
-      console.error("Error fetching data", error);
-      showToast(toast, "error", "Error", "Failed to load employee data.");
+      showToast(toast, "error", "Error", "Failed to load employee data");
     } finally {
       setIsLoading(false);
     }
   };
 
   React.useEffect(() => {
-    void fetchData();
+    void dispatch(fetchEmployeeMaster());
   }, []);
+
+  React.useEffect(() => {
+    void fetchData();
+    setSelectedEmployees([]); // Clear selection on tab change
+  }, [activeIndex, employeeMaster]);
 
   // Actions
   const handleExtend = async () => {
@@ -94,7 +130,12 @@ const ReleaseExtension: React.FC = () => {
         },
       }));
 
-      await updateListItemsBatch(LIST_NAMES.PLANNED_DECLARATION, updates);
+      const listName =
+        activeIndex === 0
+          ? LIST_NAMES.PLANNED_DECLARATION
+          : LIST_NAMES.ACTUAL_DECLARATION;
+
+      await updateListItemsBatch(listName, updates);
 
       showToast(
         toast,
@@ -119,17 +160,18 @@ const ReleaseExtension: React.FC = () => {
   const columns: IColumnDef[] = [
     { field: "EmployeeCode", header: "Employee ID", sortable: true },
     { field: "EmployeeName", header: "Employee Name", sortable: true },
-    { field: "DeclarationType", header: "Type", sortable: true },
-    {
-      field: "DeclarationEndDate",
-      header: "Due Date",
-      sortable: true,
-      body: (rd: IReleasedItem) =>
-        rd.DeclarationEndDate
-          ? new Date(rd.DeclarationEndDate).toLocaleDateString("en-IN")
-          : "-",
-    },
-    { field: "Status", header: "Status", sortable: true },
+    { field: "Location", header: "Location", sortable: true },
+    // { field: "DeclarationType", header: "Type", sortable: true },
+    // {
+    //   field: "DeclarationEndDate",
+    //   header: "Due Date",
+    //   sortable: true,
+    //   body: (rd: IReleasedItem) =>
+    //     rd.DeclarationEndDate
+    //       ? new Date(rd.DeclarationEndDate).toLocaleDateString("en-IN")
+    //       : "-",
+    // },
+    // { field: "Status", header: "Status", sortable: true },
   ];
 
   const filteredData = React.useMemo(() => {
@@ -137,7 +179,8 @@ const ReleaseExtension: React.FC = () => {
     return releasedList.filter(
       (emp) =>
         emp.EmployeeCode?.toLowerCase().includes(lowerSearch) ||
-        emp.EmployeeName?.toLowerCase().includes(lowerSearch),
+        emp.EmployeeName?.toLowerCase().includes(lowerSearch) ||
+        emp.Location?.toLowerCase().includes(lowerSearch),
     );
   }, [searchTerm, releasedList]);
 
@@ -146,9 +189,22 @@ const ReleaseExtension: React.FC = () => {
       <AppToast toastRef={toast} />
       {isLoading && <Loader fullScreen label="Extending Release..." />}
 
-      <div className={styles.headerToolbar}>
+      <div className={styles.titleBlock}>
         <h2>Release Extension</h2>
+      </div>
 
+      <div className={styles.headerToolbar}>
+        <div className={styles.tabToggle}>
+          {(["Planned", "Actual"] as const).map((tab, index) => (
+            <button
+              key={tab}
+              className={`${styles.tabBtn} ${activeIndex === index ? styles.active : ""}`}
+              onClick={() => setActiveIndex(index)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
         <div className={styles.actions}>
           <div>
             <SearchInput

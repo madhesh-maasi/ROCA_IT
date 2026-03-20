@@ -15,7 +15,7 @@ export const NAV_CONFIG: INavGroup[] = [
         label: "Submitted Declarations",
         icon: "submittedDeclarations",
       },
-      { key: "itCalculator", label: "IT Calculator", icon: "itCalculator" },
+      { key: "itCalculator", label: "IT Computation", icon: "itCalculator" },
     ],
   },
   {
@@ -68,7 +68,7 @@ export const NAV_CONFIG: INavGroup[] = [
       },
       {
         key: "itCalculatorUpload",
-        label: "IT Calculator Upload",
+        label: "IT Computation Upload",
         icon: "itCalculatorUpload",
         allowedRoles: ["FinanceApprover"],
       },
@@ -91,7 +91,6 @@ export const LIST_NAMES = {
   ERROR_LOG: "IT_ErrorLog",
   PLANNED_DECLARATION: "IT_Planned_Declarations",
   ACTUAL_DECLARATION: "IT_Actual_Declarations",
-  IT_EXPORT_LOG: "IT_Export_Log",
   IT_LANDLORD_DETAILS: "IT_Planned_Landlord_Details",
   IT_LANDLORD_DETAILS_Actual: "IT_Actual_Landlord_Details",
   IT_LTA: "IT_Planned_LTA",
@@ -105,6 +104,7 @@ export const LIST_NAMES = {
   IT_PREVIOUS_EMPLOYER: "IT_Planned_PreviousEmployer_Details",
   IT_PREVIOUS_EMPLOYER_Actual: "IT_Actual_PreviousEmployer_Details",
   IT_DOCUMENTS: "IT_Documents",
+  FINANCE_APPROVER: "IT_FinanceApprover",
 } as const;
 
 /**

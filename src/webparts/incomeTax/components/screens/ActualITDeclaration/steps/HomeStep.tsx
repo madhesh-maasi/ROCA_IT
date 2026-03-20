@@ -14,25 +14,20 @@ const HomeStep: React.FC<IHomeStepProps> = ({
   taxRegime,
 }) => {
   return (
-    <div className={styles.stepContent}>
-      <div className={styles.stepGrid}>
+    <div>
+      <div className={styles.stepHeader}>IT Details</div>
+      <div className={styles.homeGrid}>
         <div className={styles.formGroup}>
           <label>Declaration Type</label>
-          <div className={styles.readonlyValue}>
-            {declarationType || "Planned"}
-          </div>
+          <div className={styles.readonlyValue}>{declarationType || "-"}</div>
         </div>
         <div className={styles.formGroup}>
           <label>Financial Year</label>
-          <div className={styles.readonlyValue}>
-            {financialYear || "2025 - 2026"}
-          </div>
+          <div className={styles.readonlyValue}>{financialYear || "-"}</div>
         </div>
         <div className={styles.formGroup}>
           <label>Tax Regime</label>
-          <div className={styles.readonlyValue}>
-            {taxRegime || "Old Regime"}
-          </div>
+          <div className={styles.readonlyValue}>{taxRegime || "-"}</div>
         </div>
       </div>
     </div>

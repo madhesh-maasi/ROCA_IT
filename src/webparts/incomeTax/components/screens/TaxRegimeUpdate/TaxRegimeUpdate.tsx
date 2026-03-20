@@ -6,8 +6,10 @@ import {
   SearchInput,
   ActionButton,
   AppDropdown,
+  Popup,
+  StatusPopup,
+  IconButton,
 } from "../../../../../CommonInputComponents";
-import { ActionPopup } from "../../../../../common/components";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
@@ -19,6 +21,7 @@ import {
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
+import { ActionPopup, Loader } from "../../../../../common/components";
 
 const REGIME_OPTIONS = [
   { label: "Old Regime", value: "Old Regime" },
@@ -30,6 +33,7 @@ const TaxRegimeUpdate: React.FC = () => {
 
   // States
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [activeIndex, setActiveIndex] = React.useState(0);
   const [data, setData] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -39,13 +43,20 @@ const TaxRegimeUpdate: React.FC = () => {
     null,
   );
   const [selectedRegime, setSelectedRegime] = React.useState<string>("");
+  const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+  const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      const listName =
+        activeIndex === 0
+          ? LIST_NAMES.PLANNED_DECLARATION
+          : LIST_NAMES.ACTUAL_DECLARATION;
+
       const items = await getListItems(
-        LIST_NAMES.PLANNED_DECLARATION,
-        `Status eq 'Submitted'`,
+        listName,
+        `Status eq 'Draft' or Status eq 'Rework' or Status eq 'Released' and IsExported ne 1`,
       );
       setData(items);
     } catch (err) {
@@ -57,7 +68,8 @@ const TaxRegimeUpdate: React.FC = () => {
 
   React.useEffect(() => {
     void fetchData();
-  }, []);
+    setData([]); // Clear old data visually
+  }, [activeIndex]);
 
   const handleEdit = (employee: any) => {
     setSelectedEmployee(employee);
@@ -88,36 +100,51 @@ const TaxRegimeUpdate: React.FC = () => {
         const oldRegime = selectedEmployee.TaxRegime;
         const newRegime = selectedRegime;
 
+        const mainListName =
+          activeIndex === 0
+            ? LIST_NAMES.PLANNED_DECLARATION
+            : LIST_NAMES.ACTUAL_DECLARATION;
+
         // 1. Update main declaration record
-        await updateListItem(
-          LIST_NAMES.PLANNED_DECLARATION,
-          selectedEmployee.Id,
-          {
-            TaxRegime: newRegime,
-            PAN: "",
-            IsAcknowledged: false,
-            Place: "",
-            SubmittedDate: null,
-            ApproverCommentsJson: "",
-            Status: "Released",
-          },
-        );
+        await updateListItem(mainListName, selectedEmployee.Id, {
+          TaxRegime: newRegime,
+          PAN: "",
+          IsAcknowledged: false,
+          Place: "",
+          SubmittedDate: null,
+          ApproverCommentsJson: "",
+          Status: "Released",
+        });
 
         // 2. If changing from Old to New, soft-delete child lists
         if (oldRegime === "Old Regime" && newRegime === "New Regime") {
-          const childLists = [
-            LIST_NAMES.IT_LANDLORD_DETAILS,
-            LIST_NAMES.IT_LTA,
-            LIST_NAMES.IT_80C_SECTION,
-            LIST_NAMES.IT_80,
-            LIST_NAMES.IT_HOUSING_LOAN,
-            LIST_NAMES.IT_PREVIOUS_EMPLOYER,
-          ];
+          const childLists =
+            activeIndex === 0
+              ? [
+                  LIST_NAMES.IT_LANDLORD_DETAILS,
+                  LIST_NAMES.IT_LTA,
+                  LIST_NAMES.IT_80C_SECTION,
+                  LIST_NAMES.IT_80,
+                  LIST_NAMES.IT_HOUSING_LOAN,
+                  LIST_NAMES.IT_PREVIOUS_EMPLOYER,
+                ]
+              : [
+                  LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
+                  LIST_NAMES.IT_LTA_Actual,
+                  LIST_NAMES.IT_80C_SECTION_Actual,
+                  LIST_NAMES.IT_80_Actual,
+                  LIST_NAMES.IT_HOUSING_LOAN_Actual,
+                  LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
+                  LIST_NAMES.IT_DOCUMENTS,
+                ];
+
+          const lookupCol =
+            activeIndex === 0 ? "PlannedDeclarationId" : "ActualDeclarationId";
 
           for (const listName of childLists) {
             const items = await getListItems(
               listName,
-              `PlannedDeclarationId eq ${selectedEmployee.Id}`,
+              `${lookupCol} eq ${selectedEmployee.Id}`,
             );
             if (items.length > 0) {
               await updateListItemsBatch(
@@ -128,12 +155,7 @@ const TaxRegimeUpdate: React.FC = () => {
           }
         }
 
-        showToast(
-          toast,
-          "success",
-          "Updated",
-          `Tax regime updated effectively for ${selectedEmployee.EmployeeName || "Employee"}.`,
-        );
+        setShowSuccessPopup(true);
 
         await fetchData();
         handleClosePopup();
@@ -180,15 +202,52 @@ const TaxRegimeUpdate: React.FC = () => {
       "Employee Name": emp.EmployeeName,
       "Tax Regime Type": emp.TaxRegime,
     }));
-    exportToExcel(dataToExport, "Tax_Regime_Updates");
+    if (dataToExport.length) {
+      exportToExcel(dataToExport, "Tax_Regime_Updates");
+      setShowDownloadPopup(true);
+      setTimeout(() => {
+        setShowDownloadPopup(false);
+      }, 3000);
+    } else {
+      showToast(toast, "warn", "No Data", "No records found for export.");
+    }
   };
 
   return (
     <div className={styles.screen}>
       <AppToast toastRef={toast} />
+      {isLoading && <Loader fullScreen label="Processing..." />}
 
-      <div className={styles.headerToolbar}>
+      {/* <StatusPopup
+        visible={showSuccessPopup}
+        onHide={() => {
+          setShowSuccessPopup(false);
+          void fetchData();
+        }}
+        type="success"
+        description="Action completed successfully."
+      /> */}
+      <StatusPopup
+        visible={showDownloadPopup}
+        onHide={() => setShowDownloadPopup(false)}
+        type="download"
+      />
+
+      <div className={styles.titleBlock}>
         <h2>Tax Regime Update</h2>
+      </div>
+      <div className={styles.headerToolbar} style={{ margin: 0 }}>
+        <div className={styles.tabToggle}>
+          {(["Planned", "Actual"] as const).map((tab, index) => (
+            <button
+              key={tab}
+              className={`${styles.tabBtn} ${activeIndex === index ? styles.active : ""}`}
+              onClick={() => setActiveIndex(index)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
         <div className={styles.actions}>
           <div className={styles.searchBlock}>
@@ -201,7 +260,7 @@ const TaxRegimeUpdate: React.FC = () => {
           <ActionButton
             variant="download"
             label="Export"
-            icon="pi pi-file-export"
+            icon="pi pi-download"
             onClick={handleExport}
           />
         </div>
@@ -213,7 +272,6 @@ const TaxRegimeUpdate: React.FC = () => {
           data={filteredData}
           paginator
           rows={10}
-          loading={isLoading}
         />
       </div>
 

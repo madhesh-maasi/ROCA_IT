@@ -13,8 +13,9 @@ const HomeStep: React.FC<IHomeStepProps> = ({
   taxRegime,
 }) => {
   return (
-    <div className={styles.stepContent}>
-      <div className={styles.stepGrid}>
+    <div>
+      <div className={styles.stepHeader}>IT Details</div>
+      <div className={styles.homeGrid}>
         <div className={styles.formGroup}>
           <label>Declaration Type</label>
           <div className={styles.readonlyValue}>

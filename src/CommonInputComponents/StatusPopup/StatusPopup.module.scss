@@ -1,0 +1,119 @@
+.statusPopup {
+  background-color: #fff;
+  border-radius: 20px;
+  max-width: 25%;
+  width: 90% !important;
+  padding: 20px;
+
+  :global(.p-dialog-header) {
+    border: none;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #333;
+    :global(.p-dialog-title) {
+      text-align: center;
+    }
+  }
+
+  :global(.p-dialog-content) {
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  :global(.p-dialog-footer) {
+    border: none;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+}
+
+.popupMask {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.imageWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .image {
+    height: 150px;
+    width: 150px;
+    object-fit: cover;
+  }
+}
+
+.description {
+  font-size: 1.1rem;
+  color: #555;
+  margin-top: 1rem;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.successText {
+  color: #2c7a8a; // Primary theme color or similar to the text in images
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.footerActions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  justify-content: center;
+
+  button {
+    min-width: 120px;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+.cancelBtn {
+  background: #ffffff !important;
+  color: #2c7a8a !important;
+  border: 1px solid #2c7a8a !important;
+
+  &:hover {
+    background: #f0f7f8 !important;
+  }
+}
+
+.confirmBtn {
+  background: #2c7a8a !important;
+  color: #ffffff !important;
+
+  &:hover {
+    background: #23616d !important;
+  }
+}
+
+.okBtn {
+  background: #2c7a8a !important;
+  color: #ffffff !important;
+  min-width: 150px !important;
+
+  &:hover {
+    background: #23616d !important;
+  }
+}

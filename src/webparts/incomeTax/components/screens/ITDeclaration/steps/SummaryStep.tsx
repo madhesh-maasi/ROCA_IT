@@ -1,6 +1,7 @@
 import * as React from "react";
 import { InputField } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
+import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
 
 interface ISummaryStepProps {
   employeeInfo: {
@@ -15,6 +16,7 @@ interface ISummaryStepProps {
     section80C: string;
     houseRental: string;
     housingLoan: string;
+    section80D: string;
   };
   declaration: {
     agreed: boolean;
@@ -26,6 +28,10 @@ interface ISummaryStepProps {
   onSubmit: () => void;
   readOnly?: boolean;
   taxRegime?: string;
+  showApproverComments?: boolean;
+  approverComments?: string;
+  onCommentChange?: (val: string) => void;
+  status?: string;
 }
 
 const SummaryStep: React.FC<ISummaryStepProps> = ({
@@ -37,10 +43,15 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
   onSubmit,
   readOnly,
   taxRegime,
+  showApproverComments,
+  approverComments,
+  onCommentChange,
+  status,
 }) => {
   return (
-    <div className={styles.stepContent}>
-      <div className={styles.stepGrid} style={{ marginBottom: "30px" }}>
+    <div>
+      <div className={styles.stepHeader}>Basic Details</div>
+      <div className={styles.summaryGrid} style={{ marginBottom: "10px" }}>
         <div className={styles.formGroup}>
           <label>Financial Year</label>
           <div className={styles.readonlyValue}>{employeeInfo.fy}</div>
@@ -62,66 +73,122 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
           <div className={styles.readonlyValue}>{employeeInfo.doj}</div>
         </div>
       </div>
-      {taxRegime === "Old Regime" && (
-        <div
-          className={styles.stepGrid}
-          style={{ marginBottom: "40px", columnGap: "60px" }}
-        >
+      {taxRegime?.trim() === "Old Regime" && (
+        <div style={{ marginBottom: "40px" }}>
+          <div className={styles.stepHeader}>Overall</div>
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "center",
               alignItems: "center",
+              gap: "24px",
+              marginBottom: 10,
             }}
           >
-            <label style={{ fontWeight: 700 }}>LTA</label>
-            <div className={styles.readonlyValue} style={{ minWidth: "200px" }}>
+            <label
+              style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
+            >
+              LTA
+            </label>
+            <div className={styles.readonlyValue} style={{ width: "250px" }}>
               {totals.lta || "-"}
             </div>
           </div>
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "center",
               alignItems: "center",
+              gap: "24px",
+              marginBottom: 10,
             }}
           >
-            <label style={{ fontWeight: 700 }}>Section 80C Deductions</label>
-            <div className={styles.readonlyValue} style={{ minWidth: "200px" }}>
-              {totals.section80C}
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <label style={{ fontWeight: 700 }}>House Rental</label>
-            <div className={styles.readonlyValue} style={{ minWidth: "200px" }}>
+            <label
+              style={{
+                fontWeight: 700,
+                width: "23%",
+                textAlign: "right",
+                marginBottom: 10,
+              }}
+            >
+              House Rental
+            </label>
+            <div className={styles.readonlyValue} style={{ width: "250px" }}>
               {totals.houseRental || "-"}
             </div>
           </div>
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "center",
               alignItems: "center",
+              gap: "24px",
+              marginBottom: 10,
             }}
           >
-            <label style={{ fontWeight: 700 }}>
-              Housing Loan Repayment - Self Occupied
+            <label
+              style={{
+                fontWeight: 700,
+                width: "23%",
+                textAlign: "right",
+              }}
+            >
+              Section 80C Deductions
             </label>
-            <div className={styles.readonlyValue} style={{ minWidth: "200px" }}>
+            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+              {totals.section80C}
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "24px",
+              marginBottom: 10,
+            }}
+          >
+            <label
+              style={{
+                fontWeight: 700,
+                width: "23%",
+                textAlign: "right",
+              }}
+            >
+              Section 80 Deduction
+            </label>
+            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+              {totals.section80D || "-"}
+              {/* To track 80D totals? Currently not passed. We can just add it later or hardcode dash for now, but design has it */}
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "24px",
+              marginBottom: 10,
+            }}
+          >
+            <label
+              style={{
+                fontWeight: 700,
+                width: "23%",
+                textAlign: "right",
+              }}
+            >
+              Housing Loan Repayment
+            </label>
+            <div className={styles.readonlyValue} style={{ width: "250px" }}>
               {totals.housingLoan || "-"}
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ marginTop: "40px" }}>
-        <h3 style={{ marginBottom: "16px" }}>Declaration</h3>
+      <div style={{ marginTop: 10 }}>
+        <div className={styles.stepHeader}>Declaration</div>
         <p
           style={{
             fontSize: "14px",
@@ -153,18 +220,15 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
           />
           <label
             htmlFor="agree-declaration"
-            style={{ fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+            style={{ fontSize: "14px", cursor: "pointer" }}
           >
             Yes, I agree
           </label>
         </div>
 
-        <div
-          className={styles.stepGrid}
-          style={{ gridTemplateColumns: "1fr 1fr" }}
-        >
+        <div className={styles.stepGrid}>
           <div className={styles.formGroup}>
-            <label>Place</label>
+            <label>Place {RequiredSympol()}</label>
             <InputField
               id="decl-place"
               value={declaration.place}
@@ -181,6 +245,58 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
           </div>
         </div>
       </div>
+      {showApproverComments && onCommentChange && (
+        <div style={{ marginTop: 20 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <div className={styles.stepHeader} style={{ marginBottom: 0 }}>
+              Approver Comments
+            </div>
+            <div
+              style={{
+                background:
+                  status === "Approved" || status === "Rework"
+                    ? "#f1f5f9"
+                    : "#f8fafc",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                color: "#64748b",
+              }}
+            >
+              {status === "Approved"
+                ? "Note : Comments are disabled after approval."
+                : "Note : Comment is mandatory when selecting rework."}
+            </div>
+          </div>
+          <div className={styles.formGroup}>
+            <textarea
+              className={styles.commentArea || ""}
+              style={{
+                width: "100%",
+                height: "100px",
+                padding: "16px",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+                resize: "none",
+                fontSize: "14px",
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.7 : 1,
+              }}
+              placeholder="Enter here"
+              value={approverComments}
+              disabled={status == "Approved" || status == "Rework"}
+              onChange={(e) => onCommentChange(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

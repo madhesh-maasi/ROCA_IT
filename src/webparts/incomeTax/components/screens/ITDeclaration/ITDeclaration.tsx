@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Home01Icon,
   InformationCircleIcon,
@@ -21,18 +21,24 @@ import {
 } from "../../../../../store/slices/incomeTaxSlice";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
 import {
-  getSP,
   getListItems,
-  addListItem,
   getMyPlannedDeclaration,
+  getMyActualDeclaration,
   getRelatedListItems,
   getFieldChoices,
   upsertRelatedListBatch,
   updateListItem,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
-import { curFinanicalYear } from "../../../../../common/utils/functions";
-import { ActionButton } from "../../../../../CommonInputComponents";
+import {
+  curFinanicalYear,
+  getPreviousFinancialYear,
+} from "../../../../../common/utils/functions";
+import {
+  ActionButton,
+  StatusPopup,
+  StatusPopupType,
+} from "../../../../../CommonInputComponents";
 import ITStepper from "./ITStepper";
 import HomeStep from "./steps/HomeStep";
 import BasicInfoStep from "./steps/BasicInfoStep";
@@ -46,8 +52,13 @@ import SummaryStep from "./steps/SummaryStep";
 import TaxRegimePopup from "../SubmittedDeclarations/TaxRegimePopup";
 import styles from "./ITDeclaration.module.scss";
 import { Toast as PrimeToast } from "primereact/toast";
-import { AppToast, showToast } from "../../../../../common/components";
+import { AppToast, showToast, Loader } from "../../../../../common/components";
 import { useRef } from "react";
+import { validatePAN } from "../../../../../common/utils/validationUtils";
+import {
+  sendApprovalEmail,
+  sendReworkEmail,
+} from "../../../../../common/utils/emailService";
 
 // ── Mapping section names to icons ───────────────────────────────
 const ICON_MAP: Record<string, any> = {
@@ -65,6 +76,7 @@ const ICON_MAP: Record<string, any> = {
 const ITDeclaration: React.FC = () => {
   const toast = useRef<PrimeToast>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectUserDetails);
   const userRole = useAppSelector((state: any) => state.user.role);
@@ -89,6 +101,7 @@ const ITDeclaration: React.FC = () => {
 
   // Form States
   const [pan, setPan] = React.useState("");
+  const [mobile, setMobile] = React.useState("");
   const [rentDetails, setRentDetails] = React.useState<any[]>([
     { month: "April", isMetro: true, city: "", rent: "" },
     { month: "May", isMetro: true, city: "", rent: "" },
@@ -108,8 +121,8 @@ const ITDeclaration: React.FC = () => {
   ]);
   const [ltaData, setLtaData] = React.useState({
     exemptionAmount: "",
-    journeyStartDate: null as Date | null,
-    journeyEndDate: null as Date | null,
+    journeyStartDate: new Date(),
+    journeyEndDate: new Date(),
     journeyStartPlace: "",
     journeyDestination: "",
     modeOfTravel: "",
@@ -127,7 +140,7 @@ const ITDeclaration: React.FC = () => {
   const [items80C, setItems80C] = React.useState<any[]>([]);
   const [items80D, setItems80D] = React.useState<any[]>([]);
   const [housingLoanData, setHousingLoanData] = React.useState({
-    propertyType: "None" as const,
+    propertyType: "None" as "None" | "Self Occupied" | "Let Out Property",
     interestAmount: "",
     finalLettableValue: "",
     letOutInterestAmount: "",
@@ -164,13 +177,17 @@ const ITDeclaration: React.FC = () => {
   const [comments80D, setComments80D] = React.useState("");
   const [commentsPE, setCommentsPE] = React.useState("");
   const [commentsHousingLoan, setCommentsHousingLoan] = React.useState("");
+  const [commentsSummary, setCommentsSummary] = React.useState("");
+  const [showPopup, setShowPopup] = React.useState<{
+    visible: boolean;
+    type: StatusPopupType;
+    description?: string;
+    onConfirm?: () => void;
+  }>({ visible: false, type: "success" });
 
   const [maxAmount80C, setMaxAmount80C] = React.useState<number>(150000);
   const [maxAmount80D, setMaxAmount80D] = React.useState<number>(50000);
   const [modeOfTravelChoices, setModeOfTravelChoices] = React.useState<any[]>(
-    [],
-  );
-  const [classOfTravelChoices, setClassOfTravelChoices] = React.useState<any[]>(
     [],
   );
 
@@ -200,12 +217,8 @@ const ITDeclaration: React.FC = () => {
       setIsLoading(true);
 
       try {
-        const [modes, classes] = await Promise.all([
-          getFieldChoices(LIST_NAMES.IT_LTA, "ModeOfTravel"),
-          getFieldChoices(LIST_NAMES.IT_LTA, "ClassOfTravel"),
-        ]);
+        const modes = await getFieldChoices(LIST_NAMES.IT_LTA, "ModeOfTravel");
         setModeOfTravelChoices(modes.map((m) => ({ label: m, value: m })));
-        setClassOfTravelChoices(classes.map((c) => ({ label: c, value: c })));
       } catch (err) {
         console.error("Error loading choices", err);
       }
@@ -222,7 +235,6 @@ const ITDeclaration: React.FC = () => {
       const isSubmittingReview =
         item?.Status === "Submitted" || item?.Status === "Approved";
 
-      // Popup logic: only show if regime is missing AND it's not a submitted item being reviewed by Admin
       if (
         !item?.TaxRegime &&
         item?.DeclarationType == "Planned" &&
@@ -352,7 +364,24 @@ const ITDeclaration: React.FC = () => {
   };
 
   const loadSavedData = async (mainItem: any) => {
-    setPan(mainItem.PAN || "");
+    let panToSet = mainItem.PAN || "";
+
+    // If PAN is empty, try to fetch from previous year
+    if (!panToSet && user?.Email) {
+      const prevFY = getPreviousFinancialYear(
+        mainItem.FinancialYear || curFinanicalYear,
+      );
+      if (prevFY) {
+        // Try Planned if Actual not found/has no PAN
+        const prevPlanned = await getMyPlannedDeclaration(user.Email, prevFY);
+        if (prevPlanned?.PAN) {
+          panToSet = prevPlanned.PAN;
+        }
+      }
+    }
+
+    setPan(panToSet);
+    setMobile(mobile || mainItem.MobileNumber);
     setDeclarationAgreement({
       agreed: mainItem.IsAcknowledged,
       place: mainItem.Place || "",
@@ -524,6 +553,7 @@ const ITDeclaration: React.FC = () => {
         setComments80D(cMap.Section80D || "");
         setCommentsPE(cMap.PreviousEmployer || "");
         setCommentsHousingLoan(cMap.HousingLoan || "");
+        setCommentsSummary(cMap.Summary || "");
       } catch (e) {
         console.error("Error parsing Comments JSON", e);
       }
@@ -539,7 +569,7 @@ const ITDeclaration: React.FC = () => {
         Status: "Draft",
       });
       setShowRegimePopup(false);
-      setDeclarationItem({ ...declarationItem, RegimeType: regime });
+      setDeclarationItem({ ...declarationItem, TaxRegime: regime });
       await loadDynamicSteps(regime);
       void dispatch(
         fetchIncomeTaxItems({ getItems: () => Promise.resolve([]) }),
@@ -551,6 +581,155 @@ const ITDeclaration: React.FC = () => {
     }
   };
 
+  const validation = async (): Promise<boolean> => {
+    let _errMsg: string = "";
+    const activeLls = landlords.filter((ll) => !ll.isDeleted);
+    const isLandlordRequired = rentDetails.some((r) => Number(r.rent) > 8333);
+    const isLandlordNameAndAdd = rentDetails.some((r) => Number(r.rent) > 0);
+
+    let filledMonthsIdx = rentDetails
+      .map((r, i) => (r.isMetro !== "" && r.isMetro !== null ? i : -1))
+      .filter((idx) => idx !== -1);
+
+    const minIdx = Math.min(...filledMonthsIdx);
+    const maxIdx = Math.max(...filledMonthsIdx);
+
+    const curHRADetails = rentDetails.filter(
+      (row, idx) => idx >= minIdx && idx <= maxIdx && row.isMetro === "",
+    );
+
+    // validation condition
+    if (!pan.trim()) {
+      _errMsg = "PAN is required";
+    } else if (!validatePAN(pan)) {
+      _errMsg = "Invalid PAN format";
+    } else if (declarationItem.TaxRegime == "Old Regime") {
+      if (curHRADetails.length > 0) {
+        for (let i = minIdx; i <= maxIdx; i++) {
+          if (rentDetails[i].isMetro === "") {
+            _errMsg =
+              "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
+            break;
+          }
+          if (!rentDetails[i].city.trim()) {
+            _errMsg = `City is required for ${rentDetails[i]}`;
+            break;
+          }
+          if (!rentDetails[i].rent.trim()) {
+            _errMsg = `Rent is required for ${rentDetails[i]}`;
+            break;
+          }
+        }
+      }
+      //  else if (isLandlordRequired && !hasValidLandlord) {
+      //   _errMsg =
+      //     "Landlord details are mandatory when the individual monthly rent exceeds Rs 8,333.";
+      // }
+      else if (
+        isLandlordNameAndAdd &&
+        (activeLls.some((ll) => !ll.name?.trim()) ||
+          activeLls.some((ll) => !ll.address?.trim()))
+      ) {
+        if (activeLls.some((ll) => !ll.name?.trim())) {
+          _errMsg = "Landlord name is required";
+        } else if (activeLls.some((ll) => !ll.address?.trim())) {
+          _errMsg = "Landlord address is required";
+        }
+      } else if (
+        isLandlordRequired &&
+        activeLls.some((ll) => !ll.pan?.trim())
+      ) {
+        _errMsg = "Landlord PAN is required";
+      } else if (
+        isLandlordRequired &&
+        activeLls.some((r) => !validatePAN(r.pan?.trim()))
+      ) {
+        _errMsg = "Invalid Landlord PAN format";
+      } else if (
+        Number(ltaData.exemptionAmount) > 0 &&
+        (!ltaData.journeyStartDate ||
+          !ltaData.journeyEndDate ||
+          !ltaData.journeyStartPlace ||
+          !ltaData.journeyDestination ||
+          !ltaData.modeOfTravel ||
+          !ltaData.classOfTravel ||
+          !ltaData.ticketNumbers ||
+          !ltaData.lastClaimedYear)
+      ) {
+        if (!ltaData.journeyStartDate) {
+          _errMsg = "Journey start date is required";
+        } else if (!ltaData.journeyEndDate) {
+          _errMsg = "Journey end date is required";
+        } else if (ltaData.journeyEndDate < ltaData.journeyStartDate) {
+          _errMsg =
+            "Journey end date should be greater than journey start date";
+        } else if (!ltaData.journeyStartPlace.trim()) {
+          _errMsg = "Journey start place is required";
+        } else if (!ltaData.journeyDestination.trim()) {
+          _errMsg = "Journey destination is required";
+        } else if (!ltaData.modeOfTravel) {
+          _errMsg = "Mode of travel is required";
+        } else if (!ltaData.classOfTravel.trim()) {
+          _errMsg = "Class of travel is required";
+        } else if (!ltaData.ticketNumbers.trim()) {
+          _errMsg = "Ticket number is required";
+        } else if (!ltaData.lastClaimedYear) {
+          _errMsg = "Last claimed year is required";
+        }
+      } else if (
+        housingLoanData.propertyType != "None" &&
+        ((housingLoanData.propertyType == "Let Out Property" &&
+          !housingLoanData.finalLettableValue) ||
+          !housingLoanData.letOutInterestAmount ||
+          !housingLoanData.otherDeductionsUs24) &&
+        (!housingLoanData.interestAmount ||
+          !housingLoanData.lenderName ||
+          !housingLoanData.lenderAddress ||
+          !housingLoanData.lenderType)
+      ) {
+        if (housingLoanData.propertyType == "Let Out Property") {
+          if (!housingLoanData.finalLettableValue) {
+            _errMsg = "Final lettable value is required";
+          } else if (!housingLoanData.letOutInterestAmount) {
+            _errMsg = "Let out interest amount is required";
+          } else if (!housingLoanData.otherDeductionsUs24) {
+            _errMsg = "Other deductions u/s 24 is required";
+          }
+        } else if (!housingLoanData.interestAmount) {
+          _errMsg = "Interest amount is required";
+        } else if (!housingLoanData.lenderName) {
+          _errMsg = "Lender name is required";
+        } else if (!housingLoanData.lenderAddress) {
+          _errMsg = "Lender address is required";
+        } else if (!housingLoanData.lenderPan) {
+          _errMsg = "Lender PAN is required";
+        } else if (!validatePAN(housingLoanData.lenderPan)) {
+          _errMsg = "Invalid Lender PAN format";
+        } else if (!housingLoanData.lenderType) {
+          _errMsg = "Lender type is required";
+        }
+      } else if (
+        previousEmployerData.employerPan?.trim() &&
+        !validatePAN(previousEmployerData.employerPan.trim())
+      ) {
+        _errMsg = "Invalid Previous Employer PAN format";
+      } else if (!declarationAgreement.agreed) {
+        _errMsg = "Declaration agreement is not agreed";
+      } else if (!declarationAgreement.place.trim()) {
+        _errMsg = "Place is required";
+      }
+    } else if (!declarationAgreement.agreed) {
+      _errMsg = "Declaration agreement is not agreed";
+    } else if (!declarationAgreement.place.trim()) {
+      _errMsg = "Place is required";
+    }
+
+    if (_errMsg) {
+      showToast(toast, "error", "Error", _errMsg);
+      return true;
+    }
+    return false;
+  };
   const handleSaveStep = async (stepToSave?: string) => {
     const step = stepToSave || activeStep;
     if (!declarationItem) return;
@@ -569,42 +748,23 @@ const ITDeclaration: React.FC = () => {
       });
 
       switch (step) {
-        case "Basic Information":
+        case "Basic Information": {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             PAN: pan,
             ApproverCommentsJson: commentsJSON,
+            MobileNumber: mobile,
           });
           break;
-
-        case "House Rental":
-          const activeLls = landlords.filter((ll) => !ll.isDeleted);
-          const isLandlordRequired = rentDetails.some(
-            (r) => Number(r.rent) > 8333,
-          );
-          const hasValidLandlord = activeLls.some(
-            (ll) => ll.name && ll.pan && ll.address,
-          );
-          if (isLandlordRequired && !hasValidLandlord) {
-            showToast(
-              toast,
-              "error",
-              "Error",
-              "Landlord details are mandatory when the individual monthly rent exceeds Rs 8,333.",
-            );
-            setIsLoading(false);
-          }
-
+        }
+        case "House Rental": {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             RentDetailsJSON: JSON.stringify(rentDetails),
             ApproverCommentsJson: commentsJSON,
           });
-          const llsToSave = landlords.filter(
-            (ll) => (ll.name && ll.pan && ll.address) || ll.isDeleted,
-          );
           await upsertRelatedListBatch(
             LIST_NAMES.IT_LANDLORD_DETAILS,
             mainId,
-            llsToSave,
+            landlords,
             (ll) => ({
               Title: ll.name,
               PAN: ll.pan,
@@ -613,29 +773,33 @@ const ITDeclaration: React.FC = () => {
             }),
           );
           break;
+        }
 
-        case "LTA":
-          await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-          });
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_LTA,
-            mainId,
-            [ltaData],
-            (lta) => ({
-              ExemptionAmount: Number(lta.exemptionAmount || 0),
-              JourneyStartDate: lta.journeyStartDate,
-              JourneyEndDate: lta.journeyEndDate,
-              StartPlace: lta.journeyStartPlace,
-              Destination: lta.journeyDestination,
-              ModeOfTravel: lta.modeOfTravel,
-              ClassOfTravel: lta.classOfTravel,
-              TicketNumbers: lta.ticketNumbers,
-              LastLTAYear: lta.lastClaimedYear,
-              COTravellerJSON: JSON.stringify(coTravellers),
-            }),
-          );
+        case "LTA": {
+          if (ltaData.exemptionAmount.trim()) {
+            await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
+              ApproverCommentsJson: commentsJSON,
+            });
+            await upsertRelatedListBatch(
+              LIST_NAMES.IT_LTA,
+              mainId,
+              [ltaData],
+              (lta) => ({
+                ExemptionAmount: Number(lta.exemptionAmount || 0),
+                JourneyStartDate: lta.journeyStartDate,
+                JourneyEndDate: lta.journeyEndDate,
+                StartPlace: lta.journeyStartPlace,
+                Destination: lta.journeyDestination,
+                ModeOfTravel: lta.modeOfTravel,
+                ClassOfTravel: lta.classOfTravel,
+                TicketNumbers: lta.ticketNumbers,
+                LastLTAYear: lta.lastClaimedYear,
+                COTravellerJSON: JSON.stringify(coTravellers),
+              }),
+            );
+          }
           break;
+        }
 
         case "Section 80C Deductions":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
@@ -675,7 +839,7 @@ const ITDeclaration: React.FC = () => {
           );
           break;
 
-        case "Housing Loan Repayment":
+        case "Housing Loan Repayment": {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
           });
@@ -697,6 +861,7 @@ const ITDeclaration: React.FC = () => {
             }),
           );
           break;
+        }
 
         case "Previous Employer Details":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
@@ -708,7 +873,7 @@ const ITDeclaration: React.FC = () => {
             mainId,
             [previousEmployerData],
             (pe) => ({
-              Title: pe.employerName || "Previous Employer",
+              Title: pe.employerName,
               EmployeePAN: pe.employerPan,
               TAN: pe.employerTan,
               EmploymentFrom: pe.periodFrom,
@@ -721,6 +886,11 @@ const ITDeclaration: React.FC = () => {
               Address: pe.employerAddress,
             }),
           );
+          break;
+        case "Declaration & Summary":
+          await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
+            ApproverCommentsJson: commentsJSON,
+          });
           break;
       }
     } catch (err) {
@@ -741,7 +911,18 @@ const ITDeclaration: React.FC = () => {
         Section80D: comments80D,
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,
+        Summary: commentsSummary,
       });
+
+      if (newStatus === "Rework" && !commentsSummary.trim()) {
+        showToast(
+          toast,
+          "error",
+          "Error",
+          "Approver comment is mandatory for Rework.",
+        );
+        return;
+      }
 
       let _res: any = {
         Status: newStatus,
@@ -762,13 +943,63 @@ const ITDeclaration: React.FC = () => {
         declarationItem.Id,
         _res,
       );
-      showToast(toast, "success", "Success", `Status updated to ${newStatus}`);
-      navigate(-1);
+
+      // Send email notification
+      const empEmail =
+        declarationItem.EmployeeEmail || matchedEmployee?.Email || "";
+      const empName =
+        declarationItem.EmployeeName ||
+        matchedEmployee?.Title ||
+        matchedEmployee?.Name ||
+        "";
+      const empId =
+        declarationItem.EmployeeCode || matchedEmployee?.EmployeeId || "";
+      const fy = declarationItem.FinancialYear || "";
+
+      if (newStatus === "Approved" && empEmail) {
+        void sendApprovalEmail(
+          empName,
+          empId,
+          empEmail,
+          "Planned",
+          fy,
+          declarationItem.Title,
+        );
+      } else if (newStatus === "Rework" && empEmail) {
+        void sendReworkEmail(
+          empName,
+          empId,
+          empEmail,
+          "Planned",
+          fy,
+          declarationItem.Title,
+          commentsSummary,
+        );
+      }
+
+      setShowPopup({
+        visible: true,
+        type: "success",
+        description: `${newStatus == "Draft" ? "Reopened" : newStatus} successfully.`,
+      });
+
+      // Wait 3 seconds then navigate back
+      setTimeout(() => {
+        setShowPopup((prev) => ({ ...prev, visible: false }));
+        handleNavigateBack();
+      }, 3000);
     } catch (error) {
       console.error("Error updating status:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleNavigateBack = () => {
+    const returnUrl = location.state?.from
+      ? "/" + location.state.from
+      : "/submittedDeclarations";
+    navigate(returnUrl, { state: { tab: location.state?.tab } });
   };
 
   const renderCurrentStep = () => {
@@ -778,9 +1009,9 @@ const ITDeclaration: React.FC = () => {
       case "Home":
         return (
           <HomeStep
-            declarationType={declarationItem?.DeclarationType || "Planned"}
-            financialYear={declarationItem?.FinancialYear || "2025 - 2026"}
-            taxRegime={declarationItem?.RegimeType || "Old Regime"}
+            declarationType={declarationItem?.DeclarationType || "-"}
+            financialYear={declarationItem?.FinancialYear || "-"}
+            taxRegime={declarationItem?.TaxRegime || "-"}
           />
         );
       case "Basic Information":
@@ -798,6 +1029,8 @@ const ITDeclaration: React.FC = () => {
               email: matchedEmployee?.Email || user?.Email || "",
               mobile: matchedEmployee?.PhoneNo || "-",
             }}
+            mobile={mobile || matchedEmployee?.PhoneNo!}
+            onMobileChange={setMobile}
             pan={pan}
             onPanChange={setPan}
             readOnly={readOnly}
@@ -809,9 +1042,28 @@ const ITDeclaration: React.FC = () => {
             rentDetails={rentDetails}
             landlords={landlords}
             onRentChange={(idx, field, val) => {
-              const newDetails = [...rentDetails];
-              newDetails[idx] = { ...newDetails[idx], [field]: val };
-              setRentDetails(newDetails);
+              // if (field === "isMetro" && (val === "" || val === null)) {
+              //   const newDetails = rentDetails.map((item, i) => {
+              //     if (i >= idx) {
+              //       return { ...item, isMetro: "", city: "", rent: "" };
+              //     }
+              //     return item;
+              //   });
+              //   setRentDetails(newDetails);
+              // }4
+              if (field == "isMetro") {
+                const newDetails = rentDetails.map((item, i) => {
+                  if (i >= idx) {
+                    return { ...item, isMetro: val, city: "", rent: "" };
+                  }
+                  return item;
+                });
+                setRentDetails(newDetails);
+              } else {
+                const newDetails = [...rentDetails];
+                newDetails[idx] = { ...newDetails[idx], [field]: val };
+                setRentDetails(newDetails);
+              }
             }}
             onLandlordChange={(idx, field, val) => {
               const newLls = [...landlords];
@@ -826,9 +1078,14 @@ const ITDeclaration: React.FC = () => {
               newLls[idx].isDeleted = true;
               setLandlords(newLls);
             }}
-            showApproverComments={isAdmin && status != "Draft"}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
             approverComments={commentsHR}
             onCommentChange={setCommentsHR}
+            status={status}
             readOnly={readOnly}
           />
         );
@@ -837,19 +1094,50 @@ const ITDeclaration: React.FC = () => {
           <LTAStep
             ltaData={ltaData}
             modeOptions={modeOfTravelChoices}
-            classOptions={classOfTravelChoices}
             coTravellers={coTravellers}
-            onLtaChange={(field, val) =>
-              setLtaData((prev) => ({ ...prev, [field]: val }))
-            }
+            onLtaChange={(field, val) => {
+              if (field === "exemptionAmount" && (val === "" || val === "0")) {
+                setLtaData({
+                  exemptionAmount: val,
+                  journeyStartDate: new Date(),
+                  journeyEndDate: new Date(),
+                  journeyStartPlace: "",
+                  journeyDestination: "",
+                  modeOfTravel: "",
+                  classOfTravel: "",
+                  ticketNumbers: "",
+                  lastClaimedYear: "",
+                });
+                setCoTravellers((prev) =>
+                  prev.map((ct) => ({
+                    ...ct,
+                    name: "",
+                    dob: null,
+                    gender:
+                      ct.relationship === "Dependent Father"
+                        ? "Male"
+                        : ct.relationship === "Dependent Mother"
+                          ? "Female"
+                          : "",
+                  })),
+                );
+              } else {
+                setLtaData((prev) => ({ ...prev, [field]: val }));
+              }
+            }}
             onCoTravellerChange={(idx, field, val) => {
               const newCo = [...coTravellers];
               newCo[idx] = { ...newCo[idx], [field]: val };
               setCoTravellers(newCo);
             }}
-            showApproverComments={isAdmin && status != "Draft"}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
             approverComments={commentsLTA}
             onCommentChange={setCommentsLTA}
+            status={status}
             readOnly={readOnly}
           />
         );
@@ -866,9 +1154,14 @@ const ITDeclaration: React.FC = () => {
                 setItems80C(newItems);
               }
             }}
-            showApproverComments={isAdmin && status != "Draft"}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
             approverComments={comments80C}
             onCommentChange={setComments80C}
+            status={status}
             readOnly={readOnly}
           />
         );
@@ -877,7 +1170,11 @@ const ITDeclaration: React.FC = () => {
           <Section80DStep
             items={items80D}
             sectionMaxAmount={maxAmount80D}
-            showApproverComments={isAdmin && status != "Draft"}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
             approverComments={comments80D}
             onAmountChange={(id, val) => {
               const newItems = [...items80D];
@@ -888,6 +1185,7 @@ const ITDeclaration: React.FC = () => {
               }
             }}
             onCommentChange={setComments80D}
+            status={status}
             readOnly={readOnly}
           />
         );
@@ -898,9 +1196,14 @@ const ITDeclaration: React.FC = () => {
             onChange={(field, val) =>
               setHousingLoanData((prev) => ({ ...prev, [field]: val }))
             }
-            showApproverComments={isAdmin && status != "Draft"}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
             approverComments={commentsHousingLoan}
             onCommentChange={setCommentsHousingLoan}
+            status={status}
             readOnly={readOnly}
           />
         );
@@ -911,9 +1214,14 @@ const ITDeclaration: React.FC = () => {
             onChange={(field, val) =>
               setPreviousEmployerData((prev) => ({ ...prev, [field]: val }))
             }
-            showApproverComments={isAdmin && status != "Draft"}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
             approverComments={commentsPE}
             onCommentChange={setCommentsPE}
+            status={status}
             readOnly={readOnly}
           />
         );
@@ -942,6 +1250,12 @@ const ITDeclaration: React.FC = () => {
                 Number(housingLoanData.interestAmount || 0) +
                 Number(housingLoanData.letOutInterestAmount || 0)
               ).toLocaleString(),
+              section80D: items80D
+                .reduce(
+                  (acc, curr) => acc + Number(curr.declaredAmount || 0),
+                  0,
+                )
+                .toLocaleString(),
             }}
             declaration={declarationAgreement}
             onDeclarationChange={(field: "agreed" | "place", val: any) =>
@@ -951,11 +1265,21 @@ const ITDeclaration: React.FC = () => {
             onSubmit={() => console.log("Submitting...")}
             readOnly={readOnly}
             taxRegime={declarationItem?.TaxRegime}
+            showApproverComments={
+              (isAdmin && status == "Submitted") ||
+              status == "Approved" ||
+              status == "Rework"
+            }
+            approverComments={commentsSummary}
+            onCommentChange={setCommentsSummary}
+            status={status}
           />
         );
       default:
         return (
-          <div className={styles.stepContent}>
+          <div
+          // className={styles.stepContent}
+          >
             <h3>{activeStep}</h3>
             <p>
               Form fields for {activeStep} will be dynamically loaded from
@@ -969,198 +1293,275 @@ const ITDeclaration: React.FC = () => {
   return (
     <div className={styles.container}>
       <AppToast toastRef={toast} />
+      {isLoading && <Loader label="Loading declaration details..." />}
+
+      <StatusPopup
+        visible={showPopup.visible}
+        onHide={() => {
+          setShowPopup({ ...showPopup, visible: false });
+          if (
+            showPopup.type === "success" ||
+            showPopup.type === "download" ||
+            showPopup.type === "extend"
+          ) {
+            handleNavigateBack();
+          }
+        }}
+        type={showPopup.type}
+        description={showPopup.description}
+        onConfirm={showPopup.onConfirm}
+      />
 
       <TaxRegimePopup
         visible={showRegimePopup}
         onHide={() => {
           setShowRegimePopup(false);
+          handleNavigateBack();
         }} // Block closing without selection
         onSubmit={handleRegimeSubmit}
         isLoading={isSubmittingRegime}
       />
 
-      <div className={styles.header}>
-        <h1>IT Declaration</h1>
-        <div className={styles.metaInfo}>
-          <div className={styles.infoBox}>
-            <label>Declaration Type</label>
-            <span>{declarationItem?.DeclarationType || "Planned"}</span>
-          </div>
-          <div className={styles.infoBox}>
-            <label>Financial Year</label>
-            <span>{declarationItem?.FinancialYear || curFinanicalYear}</span>
+      <div className={styles.contentWrapper}>
+        <div className={styles.header}>
+          <h1>IT Declaration</h1>
+          <div className={styles.declarationTag}>
+            {declarationItem?.DeclarationType || "Planned"} (
+            {declarationItem?.FinancialYear || curFinanicalYear})
           </div>
         </div>
+
+        {!showRegimePopup && steps.length > 0 && (
+          <>
+            <ITStepper
+              steps={steps}
+              activeStep={activeStep}
+              onStepClick={async (key) => {
+                await handleSaveStep();
+                setActiveStep(key);
+                setIsEditMode(false);
+              }}
+            />
+
+            <div>{renderCurrentStep()}</div>
+          </>
+        )}
       </div>
 
       {!showRegimePopup && steps.length > 0 && (
-        <>
-          <ITStepper
-            steps={steps}
-            activeStep={activeStep}
-            onStepClick={async (key) => {
-              await handleSaveStep();
-              setActiveStep(key);
-              setIsEditMode(false);
+        <div className={styles.footerActions}>
+          <ActionButton
+            variant="cancel"
+            label="Cancel"
+            icon=""
+            onClick={() => {
+              const returnUrl = location.state?.from
+                ? "/" + location.state.from
+                : "/submittedDeclarations";
+              navigate(returnUrl, { state: { tab: location.state?.tab } });
+            }}
+            style={{
+              background: "#fff",
+              border: "1px solid #94a3b8",
+              color: "#94a3b8",
+              fontWeight: 500,
+              fontSize: "13px",
+              padding: "6px 16px",
+              boxShadow: "none",
             }}
           />
-
-          <div className={styles.stepContent}>
-            <div
-              style={{
-                pointerEvents:
-                  isFormReadOnly ||
-                  (isAdmin && status === "Submitted" && !isEditMode)
-                    ? "none"
-                    : "auto",
-                opacity:
-                  isFormReadOnly ||
-                  (isAdmin && status === "Submitted" && !isEditMode)
-                    ? 0.7
-                    : 1,
-              }}
-            >
-              {renderCurrentStep()}
-            </div>
-
-            <div className={styles.footerActions}>
+          <div style={{ display: "flex", gap: "12px" }}>
+            {activeStep !== "Home" && (
               <ActionButton
-                variant="collapse"
-                label="Cancel"
-                onClick={() => navigate(-1)}
+                variant="continue"
+                label="Previous"
+                onClick={async () => {
+                  const idx = steps.findIndex((s) => s.key === activeStep);
+                  if (idx > 0) {
+                    await handleSaveStep();
+                    setActiveStep(steps[idx - 1].key);
+                    setIsEditMode(false);
+                  }
+                }}
                 style={{
-                  minWidth: "120px",
                   background: "white",
-                  color: "#64748b",
-                  border: "1px solid #e2e8f0",
+                  color: "#307a8a",
+                  border: "1px solid #307a8a",
                 }}
               />
-              <div style={{ display: "flex", gap: "12px" }}>
-                {activeStep !== "Home" && (
+            )}
+            {/* Workflow Buttons */}
+            {isAdmin &&
+              status === "Submitted" &&
+              activeStep === "Declaration & Summary" && (
+                <>
                   <ActionButton
-                    variant="expand"
-                    label="Previous"
-                    onClick={async () => {
-                      const idx = steps.findIndex((s) => s.key === activeStep);
-                      if (idx > 0) {
-                        await handleSaveStep();
-                        setActiveStep(steps[idx - 1].key);
-                        setIsEditMode(false);
-                      }
-                    }}
-                    style={{
-                      minWidth: "120px",
-                      background: "white",
-                      color: "#3d4db7",
-                      border: "1px solid #3d4db7",
-                    }}
-                  />
-                )}
-                {/* Workflow Buttons */}
-                {isAdmin &&
-                  status === "Submitted" &&
-                  activeStep === "Declaration & Summary" && (
-                    <>
-                      <ActionButton
-                        variant="rework"
-                        label="Rework"
-                        onClick={() => handleStatusUpdate("Rework")}
-                      />
-                      <ActionButton
-                        variant="approve"
-                        label="Approve"
-                        onClick={() => handleStatusUpdate("Approved")}
-                      />
-                    </>
-                  )}
-
-                {/* {isAdmin && status === "Approved" && (
-                  <ActionButton
-                    variant="cancel"
-                    label="Cancel"
-                    onClick={() => handleStatusUpdate("Draft")}
-                  />
-                )} */}
-
-                {/* Edit Button */}
-                {isAdmin &&
-                  status === "Submitted" &&
-                  declarationItem?.TaxRegime == "Old Regime" &&
-                  !isEditMode && (
-                    <ActionButton
-                      variant="continue"
-                      label="Edit"
-                      icon="pi pi-pencil"
-                      onClick={() => setIsEditMode(true)}
-                    />
-                  )}
-
-                {/* Next Button for Admin (Reviews) */}
-                {(isAdmin || status != "Draft" || isEditMode) &&
-                  activeStep != "Declaration & Summary" && (
-                    <ActionButton
-                      variant="continue"
-                      label="Next"
-                      onClick={async () => {
-                        const idx = steps.findIndex(
-                          (s) => s.key === activeStep,
+                    variant="rework"
+                    label="Rework"
+                    onClick={() => {
+                      if (!commentsSummary.trim()) {
+                        showToast(
+                          toast,
+                          "error",
+                          "Error",
+                          "Approver comment is mandatory for Rework.",
                         );
-                        if (idx < steps.length - 1) {
-                          await handleSaveStep();
-                          setActiveStep(steps[idx + 1].key);
-                        }
-                      }}
-                    />
-                  )}
-
-                {!isFormReadOnly && (
-                  <ActionButton
-                    variant="save"
-                    className="primaryBtn"
-                    label={
-                      activeStep === "Declaration & Summary"
-                        ? "Submit"
-                        : "Save & Continue"
-                    }
-                    onClick={async () => {
-                      const idx = steps.findIndex((s) => s.key === activeStep);
-                      if (idx < steps.length - 1) {
-                        await handleSaveStep();
-                        setActiveStep(steps[idx + 1].key);
-                      } else {
-                        if (declarationItem) {
-                          await updateListItem(
-                            LIST_NAMES.PLANNED_DECLARATION,
-                            declarationItem.Id,
-                            {
-                              Status: "Submitted",
-                              IsAcknowledged: declarationAgreement.agreed,
-                              Place: declarationAgreement.place,
-                              SubmittedDate: new Date().toISOString(),
-                            },
-                          );
-                          showToast(
-                            toast,
-                            "success",
-                            "Success",
-                            "Declaration submitted successfully",
-                          );
-                          navigate(-1);
-                        }
+                        return;
                       }
+                      setShowPopup({
+                        visible: true,
+                        type: "rework",
+                        onConfirm: () => handleStatusUpdate("Rework"),
+                      });
                     }}
-                    style={{
-                      minWidth: "160px",
-                      background: "#3d4db7",
-                      color: "white",
-                    }}
-                    loading={isLoading}
                   />
-                )}
-              </div>
-            </div>
+                  <ActionButton
+                    variant="approve"
+                    label="Approve"
+                    onClick={async () => {
+                      const isValid = await validation();
+                      if (isValid) return;
+                      setShowPopup({
+                        visible: true,
+                        type: "approve",
+                        onConfirm: () => handleStatusUpdate("Approved"),
+                      });
+                    }}
+                  />
+                </>
+              )}
+
+            {isAdmin &&
+              status == "Approved" &&
+              activeStep == "Declaration & Summary" &&
+              !declarationItem?.IsExported && (
+                <ActionButton
+                  variant="cancel"
+                  label="Reopen"
+                  onClick={() => handleStatusUpdate("Draft")}
+                />
+              )}
+
+            {/* Edit Button */}
+            {isAdmin &&
+              status === "Submitted" &&
+              declarationItem?.TaxRegime == "Old Regime" &&
+              !isEditMode &&
+              activeStep !== "Declaration & Summary" && (
+                <ActionButton
+                  variant="continue"
+                  label="Edit"
+                  icon="pi pi-pencil"
+                  style={{
+                    background: "white",
+                    color: "#307a8a",
+                    border: "1px solid #307a8a",
+                  }}
+                  onClick={() => setIsEditMode(true)}
+                />
+              )}
+
+            {/* Next Button for Admin (Reviews) */}
+            {(status === "Approved" || status === "Submitted") &&
+              activeStep !== "Declaration & Summary" &&
+              !isEditMode && (
+                <ActionButton
+                  variant="continue"
+                  label="Next"
+                  onClick={async () => {
+                    const idx = steps.findIndex((s) => s.key === activeStep);
+
+                    if (idx !== -1 && idx < steps.length - 1) {
+                      await handleSaveStep();
+                      setActiveStep(steps[idx + 1].key);
+                    }
+                  }}
+                  style={{
+                    background: "white",
+                    color: "#307a8a",
+                    border: "1px solid #307a8a",
+                  }}
+                />
+              )}
+
+            {!isFormReadOnly && (
+              <ActionButton
+                variant="draft"
+                className="primaryBtn"
+                label={"Draft"}
+                onClick={async () => {
+                  const idx = steps.findIndex((s) => s.key === activeStep);
+                  if (idx < steps.length - 1) {
+                    await handleSaveStep();
+                    if (userRole == "Admins") {
+                      navigate("/employeeDeclaration", {
+                        state: { tab: location.state?.tab },
+                      });
+                    } else {
+                      navigate("/submittedDeclarations", {
+                        state: { tab: location.state?.tab },
+                      });
+                    }
+                  }
+                }}
+              />
+            )}
+
+            {!isFormReadOnly && (
+              <ActionButton
+                variant="save"
+                label={
+                  activeStep === "Declaration & Summary"
+                    ? "Submit"
+                    : "Save & Continue"
+                }
+                onClick={async () => {
+                  const idx = steps.findIndex((s) => s.key === activeStep);
+                  if (idx < steps.length - 1) {
+                    await handleSaveStep();
+                    setActiveStep(steps[idx + 1].key);
+                  } else {
+                    const isValid = await validation();
+                    if (isValid) return;
+                    setIsLoading(true);
+                    try {
+                      if (declarationItem) {
+                        await updateListItem(
+                          LIST_NAMES.PLANNED_DECLARATION,
+                          declarationItem.Id,
+                          {
+                            Status: "Submitted",
+                            IsAcknowledged: declarationAgreement.agreed,
+                            Place: declarationAgreement.place,
+                            SubmittedDate: new Date().toISOString(),
+                          },
+                        );
+                        setShowPopup({
+                          visible: true,
+                          type: "success",
+                        });
+
+                        // Wait 3 seconds then navigate back
+                        setTimeout(() => {
+                          setShowPopup((prev) => ({
+                            ...prev,
+                            visible: false,
+                          }));
+                          handleNavigateBack();
+                        }, 3000);
+                      }
+                    } catch (error) {
+                      console.error("Error submitting declaration", error);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }
+                }}
+                loading={isLoading}
+              />
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

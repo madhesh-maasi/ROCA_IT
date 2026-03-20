@@ -4,8 +4,8 @@
 
 .pageTitle {
   font-size: 16px;
-  font-weight: 500;
-  color: #111827;
+  font-weight: 600;
+  color: #307a8a;
   margin: 0 0 6px 0;
 }
 
@@ -13,41 +13,39 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
   justify-content: space-between;
 }
 
-.tabGroup {
+.tabToggle {
   display: flex;
-  gap: 4px;
-}
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 
-.tab {
-  padding: 6px 18px;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+  .tabBtn {
+    border: none;
+    background: transparent;
+    padding: 8px 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #495057;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 
-  &:hover {
-    background: #f0f1fb;
-    border-color: #3d4db7;
-    color: #3d4db7;
+    &.active {
+      background-color: #307a8a; // Blue brand background
+      color: white;
+    }
+
+    &:hover:not(.active) {
+      background-color: #f1f3f5;
+    }
   }
-}
-
-.tabActive {
-  background: #3d4db7 !important;
-  color: #ffffff !important;
-  border-color: #3d4db7 !important;
 }
 
 .spacer {
@@ -68,7 +66,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 16px;
-  background: #3d4db7;
+  background: #307a8a;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -78,7 +76,7 @@
   transition: background 0.15s;
 
   &:hover {
-    background: #2e3a9b;
+    background: #307a8a;
   }
 
   i {
@@ -174,9 +172,9 @@
   }
 
   .pageActive {
-    background: #3d4db7 !important;
+    background: #307a8a !important;
     color: #fff !important;
-    border-color: #3d4db7 !important;
+    border-color: #307a8a !important;
   }
 }
 
@@ -185,4 +183,30 @@
   text-align: center;
   color: #9ca3af;
   font-size: 14px;
+}
+.reqID {
+  color: #307a8a;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.noteBox {
+  margin-top: 20px;
+  padding: 8px 16px;
+  background: #e8f4ff;
+  border: 1px solid #c1e2ff;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: #00396b;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  &::before {
+    content: "Note : ";
+    font-weight: 600;
+    margin-right: 4px;
+  }
 }

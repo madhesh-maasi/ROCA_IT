@@ -50,3 +50,8 @@ export const validateField = (value: any, rules: IValidationRule[]): string => {
   }
   return "";
 };
+
+export const validatePAN = (pan: string) => {
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return panRegex.test(pan?.toUpperCase());
+};

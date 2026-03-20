@@ -148,7 +148,7 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
       {titleText && <label className={styles.pickerLabel}>{titleText}</label>}
       <NormalPeoplePicker
         onResolveSuggestions={onResolveSuggestions}
-        onEmptyResolveSuggestions={onEmptyResolveSuggestions}
+        // onEmptyResolveSuggestions={onEmptyResolveSuggestions}
         selectedItems={selectedPersonas}
         onChange={onSelectionChanged}
         itemLimit={personSelectionLimit}

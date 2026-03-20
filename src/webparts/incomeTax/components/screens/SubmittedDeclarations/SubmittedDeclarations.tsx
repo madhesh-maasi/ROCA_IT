@@ -12,17 +12,31 @@ import {
   IDropdownOption,
 } from "../../../../../CommonInputComponents";
 import { SearchInput } from "../../../../../CommonInputComponents/SearchInput";
-import { useAppSelector } from "../../../../../store/hooks";
-import { useNavigate } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
+import { useNavigate, useLocation } from "react-router-dom";
 import styles from "../screens.module.scss";
-import { curFinanicalYear } from "../../../../../common/utils/functions";
-import { getSP } from "../../../../../common/utils/pnpService";
+import {
+  curFinanicalYear,
+  getFYOptions,
+} from "../../../../../common/utils/functions";
+import {
+  getItemById,
+  getListItems,
+  getSP,
+  updateListItem,
+} from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
-import { selectUserDetails } from "../../../../../store/slices";
+import {
+  fetchIncomeTaxItems,
+  selectUserDetails,
+} from "../../../../../store/slices";
+import TaxRegimePopup from "./TaxRegimePopup";
+import { useDispatch } from "react-redux";
 
 // ─── Row definition ─────────────────────────────────────────────────────────────
 
 interface ISubmittedRow {
+  id: number;
   requestId: string;
   financialYear: string;
   regimeType: string;
@@ -31,26 +45,18 @@ interface ISubmittedRow {
   status: StatusVariant | string;
 }
 
-const getPastFYOptions = () => {
-  const current = curFinanicalYear;
-  const start = parseInt(current.split("-")[0]);
-  return [
-    `${start}-${start + 1}`,
-    `${start - 1}-${start}`,
-    `${start - 2}-${start - 1}`,
-    `${start - 3}-${start - 2}`,
-  ];
-};
-
-const FY_OPTIONS: IDropdownOption[] = getPastFYOptions().map((yr) => ({
-  label: yr,
-  value: yr,
-}));
+// Remove static FY_OPTIONS
 
 // ─── Columns ────────────────────────────────────────────────────────────────────
 
 const COLUMNS: IColumnDef[] = [
-  { field: "requestId", header: "Request ID" },
+  {
+    field: "requestId",
+    header: "Request ID",
+    body: (row: ISubmittedRow) => (
+      <span className={styles.reqID}>{row.requestId}</span>
+    ),
+  },
   { field: "financialYear", header: "Financial Year" },
   { field: "regimeType", header: "Regime Type" },
   { field: "dateOfSubmission", header: "Date of Submission" },
@@ -66,6 +72,7 @@ const COLUMNS: IColumnDef[] = [
 // ─── Map a raw SP item to ISubmittedRow ─────────────────────────────────────────
 
 const mapRow = (item: any): ISubmittedRow => ({
+  id: item.Id,
   requestId: item.Title || `REQ-${item.Id}`,
   financialYear: item.FinancialYear || "",
   regimeType: item.TaxRegime || "-",
@@ -82,19 +89,23 @@ const mapRow = (item: any): ISubmittedRow => ({
 
 const SubmittedDeclarations: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const userEmail = useAppSelector(selectUserDetails)?.Email;
 
   const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(
-    "Planned",
+    location.state?.tab || "Planned",
   );
   const [search, setSearch] = React.useState("");
   const [fy, setFy] = React.useState(curFinanicalYear);
 
   const [plannedRows, setPlannedRows] = React.useState<ISubmittedRow[]>([]);
   const [actualRows, setActualRows] = React.useState<ISubmittedRow[]>([]);
+
+  const fyOptions = React.useMemo(() => {
+    return getFYOptions([...plannedRows, ...actualRows]);
+  }, [plannedRows, actualRows]);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Fetch both lists once on mount (or when userEmail is ready)
   React.useEffect(() => {
     if (!userEmail) return;
 
@@ -102,7 +113,8 @@ const SubmittedDeclarations: React.FC = () => {
       setIsLoading(true);
       try {
         const sp = getSP();
-        const emailFilter = `EmployeeEmail eq '${userEmail}' and IsDelete ne 1`;
+        const today = new Date().toISOString().split(".")[0] + "Z";
+        const emailFilter = `EmployeeEmail eq '${userEmail}' and FinancialYear eq '${fy}' and IsDelete ne 1 and datetime'${today}' lt DeclarationEndDate`;
 
         const [plannedItems, actualItems] = await Promise.all([
           sp.web.lists
@@ -110,6 +122,7 @@ const SubmittedDeclarations: React.FC = () => {
             .items.filter(emailFilter)
             .orderBy("Id", false)
             .top(5000)(),
+
           sp.web.lists
             .getByTitle(LIST_NAMES.ACTUAL_DECLARATION)
             .items.filter(emailFilter)
@@ -139,11 +152,15 @@ const SubmittedDeclarations: React.FC = () => {
         row.status.toString().toLowerCase().includes(search.toLowerCase())),
   );
 
-  const handleRowClick = () => {
+  const handleRowClick = (row: any) => {
     if (activeTab === "Planned") {
-      navigate("/itDeclaration");
+      navigate("/itDeclaration", {
+        state: { from: "submittedDeclarations", tab: activeTab },
+      });
     } else {
-      navigate("/actualItDeclaration");
+      navigate("/actualItDeclaration", {
+        state: { from: "submittedDeclarations", tab: activeTab },
+      });
     }
   };
 
@@ -153,25 +170,25 @@ const SubmittedDeclarations: React.FC = () => {
 
       {/* Toolbar */}
       <div className={styles.toolbar}>
-        <div className={styles.tabGroup}>
+        <div className={styles.tabToggle}>
           {(["Planned", "Actual"] as const).map((tab) => (
-            <ActionButton
-              variant="tab"
+            <button
               key={tab}
-              className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ""}`}
+              className={`${styles.tabBtn} ${activeTab === tab ? styles.active : ""}`}
               onClick={() => setActiveTab(tab)}
-              label={tab}
-            />
+            >
+              {tab}
+            </button>
           ))}
         </div>
         <div className={styles.rightSide}>
           <AppDropdown
             className={styles.fySelect}
             value={fy}
-            options={FY_OPTIONS}
+            options={fyOptions}
             onChange={(e) => setFy(e.value)}
           />
-          <SearchInput value={search} onChange={(val) => setSearch(val)} />
+          {/* <SearchInput value={search} onChange={(val) => setSearch(val)} /> */}
         </div>
       </div>
 
@@ -186,8 +203,11 @@ const SubmittedDeclarations: React.FC = () => {
             ? "Loading..."
             : `No ${activeTab} declarations found for FY ${fy}.`
         }
-        onRowClick={handleRowClick}
+        onRowClick={(row) => handleRowClick(row)}
       />
+
+      {/* Note */}
+      <div className={styles.noteBox}>please click on the request ID</div>
     </div>
   );
 };

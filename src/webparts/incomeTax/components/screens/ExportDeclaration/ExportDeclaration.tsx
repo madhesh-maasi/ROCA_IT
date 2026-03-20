@@ -6,6 +6,7 @@ import {
   AppDropdown,
   AppRadioButton,
   ActionButton,
+  StatusPopup,
 } from "../../../../../CommonInputComponents";
 import AppToast, {
   showToast,
@@ -15,15 +16,14 @@ import Loader from "../../../../../common/components/Loader/Loader";
 import {
   getSP,
   getListItems,
-  addListItem,
+  updateListItemsBatch,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
-import { curFinanicalYear } from "../../../../../common/utils/functions";
+import { curFinanicalYear, getFYOptions } from "../../../../../common/utils/functions";
 import { useAppSelector } from "../../../../../store/hooks";
 import { selectUserDetails } from "../../../../../store/slices/userSlice";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
-import moment from "moment";
 
 interface IDeclarationItem {
   ID: number;
@@ -34,13 +34,11 @@ interface IDeclarationItem {
   FinancialYear: string;
   DeclarationType: string;
   Status: string;
+  IsExported?: boolean;
 }
 
 // Remove dummy data constants
-const YEAR_OPTIONS = [
-  { label: "2024 - 2025", value: "2024-2025" },
-  { label: "2025 - 2026", value: "2025-2026" },
-];
+// Remove static YEAR_OPTIONS
 
 const ExportDeclaration: React.FC = () => {
   const toast = React.useRef<PrimeToast>(null);
@@ -52,11 +50,18 @@ const ExportDeclaration: React.FC = () => {
     React.useState<string>(curFinanicalYear);
   const [declarationType, setDeclarationType] = React.useState<string>("");
   const [taxRegime, setTaxRegime] = React.useState<string>("");
+  const [activeTab, setActiveTab] = React.useState<"Incremental" | "Complete">(
+    "Incremental",
+  );
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [rawDeclarations, setRawDeclarations] = React.useState<
     IDeclarationItem[]
   >([]);
-  const [lastExportedId, setLastExportedId] = React.useState<number>(0);
+  const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
+
+  const yearOptions = React.useMemo(() => {
+    return getFYOptions(rawDeclarations);
+  }, [rawDeclarations]);
 
   // Reactively map emails from master data
   const declarations = React.useMemo(() => {
@@ -80,28 +85,24 @@ const ExportDeclaration: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // 1. Get last exported ID from Log specifically for this DeclarationType
-      const logs = await getListItems(
-        LIST_NAMES.IT_EXPORT_LOG,
-        `DeclarationType eq '${declarationType}'`,
-      );
-      const lastId = logs.length > 0 ? Number(logs[0].LastExportedId) || 0 : 0;
-      setLastExportedId(lastId);
 
-      // 2. Fetch only from the relevant list based on selected Choice
+      // 1. Fetch only from the relevant list based on selected Choice, filtering by IsExported
       const listName =
         declarationType === "Planned"
           ? LIST_NAMES.PLANNED_DECLARATION
           : LIST_NAMES.ACTUAL_DECLARATION;
 
-      const allDecls: IDeclarationItem[] = await getListItems(listName);
+      // Filter: Status='Approved'
+      // Incremental: IsExported ne 1
+      // Complete: IsExported eq 1
+      const isExportedFilter = activeTab === "Incremental" ? "ne 1" : "eq 1";
+      const filter = `Status eq 'Approved' and IsExported ${isExportedFilter}`;
+
+      const allDecls: IDeclarationItem[] = await getListItems(listName, filter);
 
       const filtered = allDecls.filter(
         (item) =>
-          item.Status === "Approved" &&
-          item.FinancialYear === selectedYear &&
-          item.TaxRegime === taxRegime && // Filter here too for cleaner raw state
-          item.ID > lastId,
+          item.FinancialYear === selectedYear && item.TaxRegime === taxRegime,
       );
       setRawDeclarations(filtered);
     } catch (err) {
@@ -114,7 +115,7 @@ const ExportDeclaration: React.FC = () => {
 
   React.useEffect(() => {
     void fetchData();
-  }, [selectedYear, declarationType, taxRegime]);
+  }, [selectedYear, declarationType, taxRegime, activeTab]);
 
   const handleDownload = async () => {
     if (!declarationType || !taxRegime) {
@@ -153,20 +154,22 @@ const ExportDeclaration: React.FC = () => {
         excelData,
         `Declarations_${declarationType}_${selectedYear}`,
       );
+      setShowDownloadPopup(true);
 
-      // 2. Log Export
-      const maxIdInBatch = Math.max(...exportData.map((d) => d.ID));
+      // 2. Batch Update IsExported Status
+      const listName =
+        declarationType === "Planned"
+          ? LIST_NAMES.PLANNED_DECLARATION
+          : LIST_NAMES.ACTUAL_DECLARATION;
 
-      await addListItem(LIST_NAMES.IT_EXPORT_LOG, {
-        Title: `Export_${declarationType}_${moment().format("YYYY-MM-DD HH:mm")}`,
-        ExportedById: userDetails?.Id || null,
-        ExportedOn: new Date().toISOString(),
-        RecordCount: exportData.length,
-        LastExportedId: maxIdInBatch,
-        DeclarationType: declarationType,
-      });
-
-      showToast(toast, "success", "Success", "Export completed and logged.");
+      const updates = exportData.map((d) => ({
+        id: d.ID,
+        data: { IsExported: true },
+      }));
+      await updateListItemsBatch(listName, updates);
+      setTimeout(() => {
+        setShowDownloadPopup(false);
+      }, 3000);
 
       // 3. Refresh
       await fetchData();
@@ -187,6 +190,11 @@ const ExportDeclaration: React.FC = () => {
 
   return (
     <div className={styles.screen}>
+      <StatusPopup
+        visible={showDownloadPopup}
+        onHide={() => setShowDownloadPopup(false)}
+        type="download"
+      />
       <AppToast toastRef={toast} />
       {isLoading && <Loader fullScreen label="Processing Export..." />}
 
@@ -204,8 +212,9 @@ const ExportDeclaration: React.FC = () => {
 
       <div className={styles.filtersBar}>
         <div className={styles.filterGroup}>
+          <label className={styles.groupLabel}>Financial Year</label>
           <AppDropdown
-            options={YEAR_OPTIONS}
+            options={yearOptions}
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.value as string)}
             className={styles.yearDropdown}
@@ -265,14 +274,25 @@ const ExportDeclaration: React.FC = () => {
         </div>
       </div>
 
+      <div className={styles.tabToggle}>
+        <button
+          className={`${styles.tabBtn} ${activeTab === "Incremental" ? styles.active : ""}`}
+          onClick={() => setActiveTab("Incremental")}
+        >
+          Incremental Export
+        </button>
+        <button
+          className={`${styles.tabBtn} ${activeTab === "Complete" ? styles.active : ""}`}
+          onClick={() => setActiveTab("Complete")}
+        >
+          Complete Export
+        </button>
+      </div>
+
       <div className={styles.tableCard}>
         <AppDataTable
           columns={columns}
-          data={declarations.filter(
-            (d) =>
-              (!declarationType || d.DeclarationType === declarationType) &&
-              (!taxRegime || d.TaxRegime === taxRegime),
-          )}
+          data={declarations}
           paginator
           rows={10}
         />

@@ -8,8 +8,8 @@ import {
   Popup,
   InputField,
   AppDropdown,
+  StatusPopup,
 } from "../../../../../CommonInputComponents";
-import { ActionPopup } from "../../../../../common/components";
 import { IColumnDef } from "../../../../../CommonInputComponents/DataTable/DataTable";
 import screenStyles from "../screens.module.scss";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
@@ -30,6 +30,7 @@ import AppToast, {
 import { Toast as PrimeToast } from "primereact/toast";
 import Loader from "../../../../../common/components/Loader/Loader";
 import { handleError } from "../../../../../common/utils/errorUtils";
+import { ActionPopup } from "../../../../../common/components";
 
 interface ILookupData {
   id: number;
@@ -56,6 +57,7 @@ const LookupConfig: React.FC = () => {
     type: "ADD" | "EDIT" | "DELETE" | null;
     id: number | null;
   }>({ type: null, id: null });
+  const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   // Consolidated Form State
   const [formData, setFormData] = React.useState({
@@ -138,6 +140,10 @@ const LookupConfig: React.FC = () => {
       })),
       "Lookup_Configuration",
     );
+    setShowDownloadPopup(true);
+    setTimeout(() => {
+      setShowDownloadPopup(false);
+    }, 3000);
   };
 
   // ─── Dialog Triggers ────────────────────────────────────────────────────────
@@ -284,6 +290,11 @@ const LookupConfig: React.FC = () => {
 
   return (
     <div className={screenStyles.screen}>
+      <StatusPopup
+        visible={showDownloadPopup}
+        onHide={() => setShowDownloadPopup(false)}
+        type="download"
+      />
       <AppToast toastRef={toast} />
       {uiState.isLoading && (
         <Loader fullScreen label="Loading Configuration..." />
@@ -302,10 +313,13 @@ const LookupConfig: React.FC = () => {
             variant="export"
             className="secondaryBtn"
             onClick={handleExport}
+            icon="pi pi-download"
           />
           <ActionButton
             variant="add"
             className="primaryBtn"
+            icon="pi pi-plus-circle"
+            label="Add New"
             onClick={openAddPopup}
           />
         </div>
@@ -342,6 +356,7 @@ const LookupConfig: React.FC = () => {
           <InputField
             id="subSection"
             label="Sub-Section"
+            required
             value={formData.subSection}
             onChange={(e) =>
               setFormData((p) => ({ ...p, subSection: e.target.value }))
@@ -351,6 +366,7 @@ const LookupConfig: React.FC = () => {
           <InputField
             id="types"
             label="Type"
+            required
             value={formData.types}
             onChange={(e) =>
               setFormData((p) => ({ ...p, types: e.target.value }))

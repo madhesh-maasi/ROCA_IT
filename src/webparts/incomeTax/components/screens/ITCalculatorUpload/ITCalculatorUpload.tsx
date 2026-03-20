@@ -8,8 +8,9 @@ import {
   ActionButton,
   AppDropdown,
   IconButton,
+  Popup,
+  StatusPopup,
 } from "../../../../../CommonInputComponents";
-import { ActionPopup } from "../../../../../common/components";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
@@ -22,6 +23,9 @@ import {
   updateListItem,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants";
+import { ActionPopup, Loader } from "../../../../../common/components";
+import RequiredSympol from "../../../../../common/components/RequiredSympol/RequiredSympol";
+import { getFYOptions } from "../../../../../common/utils/functions";
 
 interface ICalculatorFile {
   ID: number;
@@ -49,17 +53,16 @@ const ITCalculatorUpload: React.FC = () => {
   const [fileToDelete, setFileToDelete] = useState<ICalculatorFile | null>(
     null,
   );
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const dynamicYearOptions = useMemo(() => {
-    // Determine existing valid years
     const yearsSet = new Set(
       filesData.map((f) => f.FinanceYear).filter((y) => !!y),
     );
     const sortedYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
 
     let nextYear = "";
-    if (sortedYears.length === 0) {
-      // SP List is empty: Create "current year - next year"
+    if (sortedYears.length == 0) {
       const currYear = new Date().getFullYear();
       nextYear = `${currYear} - ${currYear + 1}`;
     } else {
@@ -102,7 +105,6 @@ const ITCalculatorUpload: React.FC = () => {
       }));
       setFilesData(mapped);
     } catch (err) {
-      console.error(err);
       showToast(toast, "error", "Error", "Failed to load calculator files.");
     } finally {
       setIsLoading(false);
@@ -142,9 +144,6 @@ const ITCalculatorUpload: React.FC = () => {
           IsDelete: true,
         });
       }
-
-      // Upload file directly using the PNP helper. Overwrite is explicitly set to true
-      // within the underlying helper to support iterative uploads for the same year/filename.
       await uploadFileWithMetadata(
         LIST_NAMES.IT_CALCULATOR,
         selectedFile.name,
@@ -152,13 +151,14 @@ const ITCalculatorUpload: React.FC = () => {
         { FinanceYear: selectedYear, IsDelete: false },
       );
 
+      setShowSuccessPopup(true);
+      setShowUploadPopup(false);
       showToast(
         toast,
         "success",
-        "Uploaded",
-        "Calculator uploaded successfully",
+        "Added",
+        "IT Computation file successfully added",
       );
-      setShowUploadPopup(false);
       void loadFiles();
     } catch (err) {
       console.error(err);
@@ -258,9 +258,20 @@ const ITCalculatorUpload: React.FC = () => {
   return (
     <div className={styles.screen}>
       <AppToast toastRef={toast} />
+      {isLoading && <Loader fullScreen label="Processing..." />}
+
+      {/* <StatusPopup
+        visible={showSuccessPopup}
+        onHide={() => {
+          setShowSuccessPopup(false);
+          void loadFiles();
+        }}
+        type="success"
+        description="Action completed successfully."
+      /> */}
 
       <div className={styles.header}>
-        <h2>IT Calculator</h2>
+        <h2>IT Computation</h2>
       </div>
 
       <div className={styles.headerToolbar}>
@@ -291,7 +302,7 @@ const ITCalculatorUpload: React.FC = () => {
             <ActionButton
               variant="add"
               label="Add New"
-              icon="pi pi-plus"
+              icon="pi pi-plus-circle"
               onClick={handleOpenUpload}
             />
           )}
@@ -304,7 +315,6 @@ const ITCalculatorUpload: React.FC = () => {
           data={filteredData}
           paginator
           rows={10}
-          loading={isLoading}
         />
       </div>
 
@@ -314,7 +324,7 @@ const ITCalculatorUpload: React.FC = () => {
         onHide={() => setShowUploadPopup(false)}
         onConfirm={handleConfirmUpload}
         actionType="Updated"
-        title="Upload IT Calculator"
+        title="Upload IT Computation"
         confirmLabel="Upload"
         cancelLabel="Cancel"
         hideIcon={true}
@@ -323,7 +333,7 @@ const ITCalculatorUpload: React.FC = () => {
           <div className={styles.formGroup}>
             <AppDropdown
               id="finYear"
-              label="Financial Year *"
+              label="Financial Year"
               required
               options={dynamicYearOptions}
               value={selectedYear}
@@ -332,7 +342,9 @@ const ITCalculatorUpload: React.FC = () => {
             />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.fileLabel}>Choose File *</label>
+            <label className={styles.fileLabel}>
+              Choose File {RequiredSympol()}
+            </label>
             <AppFilePicker
               buttonLabel={
                 selectedFile ? selectedFile.name : "Select Excel File"
@@ -352,7 +364,7 @@ const ITCalculatorUpload: React.FC = () => {
         onHide={() => setShowDeletePopup(false)}
         onConfirm={handleConfirmDelete}
         actionType="Delete"
-        title="Delete Calculator"
+        title="Delete Computation"
       />
     </div>
   );

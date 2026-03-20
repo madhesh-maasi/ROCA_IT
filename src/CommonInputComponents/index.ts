@@ -18,6 +18,9 @@ export type { IDataTableProps, IColumnDef } from "./DataTable";
 export { Popup } from "./Popup";
 export type { IPopupProps } from "./Popup";
 
+export { StatusPopup } from "./StatusPopup";
+export type { IStatusPopupProps, StatusPopupType } from "./StatusPopup";
+
 export * from "./RadioButton/RadioButton";
 
 // Action Buttons

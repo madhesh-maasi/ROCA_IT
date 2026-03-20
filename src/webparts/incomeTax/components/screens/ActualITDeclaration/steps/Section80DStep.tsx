@@ -9,6 +9,7 @@ interface I80DItem {
   investmentType: string;
   maxAmount: number;
   declaredAmount: string;
+  attachments?: any[];
 }
 
 interface ISection80DStepProps {
@@ -18,8 +19,8 @@ interface ISection80DStepProps {
   approverComments: string;
   onAmountChange: (id: number, val: string) => void;
   onCommentChange: (val: string) => void;
+  status?: string;
   readOnly?: boolean;
-  attachments?: Record<string, any[]>;
   onUpload?: (key: string, file: File) => Promise<void>;
   onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
@@ -31,13 +32,14 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
   approverComments,
   onAmountChange,
   onCommentChange,
+  status,
   readOnly,
-  attachments = {},
   onUpload,
   onDeleteAttachment,
 }) => {
   return (
-    <div className={styles.stepContent}>
+    <div>
+      <div className={styles.stepHeader}>Section 80D Deductions</div>
       <div className={styles.noteBox}>
         Note : Only{" "}
         <strong>Rs {sectionMaxAmount?.toLocaleString() || "50,000"}</strong> is
@@ -57,8 +59,9 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
           </thead>
           <tbody>
             {items.map((item) => {
-              const uploadKey = `80d-${item.id}`;
-              const rowAttachments = attachments[uploadKey] || [];
+              // const uploadKey = `80d-${item.id}`;
+              const uploadKey = `80d-${item.investmentType}`;
+              const rowAttachments = item.attachments || [];
               return (
                 <tr key={item.id}>
                   <td>
@@ -73,9 +76,7 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                     <div
                       className={styles.readonlyValue}
                       style={{
-                        background: "transparent",
                         border: "none",
-                        padding: 0,
                       }}
                     >
                       {item.investmentType}
@@ -183,11 +184,10 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
           </tbody>
         </table>
       </div>
-
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
+            <div className={styles.stepHeader}>Approver Comments</div>
             <textarea
               className={styles.commentArea || ""}
               style={{
@@ -195,15 +195,15 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
-                pointerEvents: "auto",
-                opacity: 1,
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
-              disabled={readOnly}
               placeholder="Enter here"
               value={approverComments}
+              disabled={status === "Approved"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

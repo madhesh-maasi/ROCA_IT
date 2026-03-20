@@ -17,6 +17,7 @@
 
   &:has(i) {
     gap: 8px;
+    font-size: 14px;
   }
 
   &:has(.rounded) {
@@ -39,7 +40,7 @@
 
   // ── Global Standardized Button Classes ────────────────────────────
   &.primaryBtn {
-    background-color: #4b55c9; // Indigo
+    background-color: #307a8a; // Indigo
     color: #fff;
     border: none;
 
@@ -49,7 +50,7 @@
     }
 
     &:hover:not(:disabled) {
-      background-color: #3f47a8;
+      background-color: #307a8a;
     }
   }
 
@@ -66,7 +67,7 @@
   &.secondaryBtn {
     background-color: #ffffff !important;
     color: #4b55c9 !important;
-    border: 1px solid #4b55c9 !important;
+    border: 1px solid #307a8a !important;
 
     i {
       font-size: 14px;
@@ -75,8 +76,8 @@
 
     &:hover:not(:disabled) {
       background-color: #f0fdf4 !important;
-      border-color: #3f47a8 !important;
-      color: #3f47a8 !important;
+      border-color: #307a8a !important;
+      color: #307a8a !important;
     }
   }
 
@@ -106,12 +107,12 @@
 
   // ── Cancel ───────────────────────────────────────────────────────
   &.cancel {
-    background: transparent !important;
+    background: #fff !important;
     border: 1px solid #d1d5db !important;
     color: #6b7280 !important;
 
     &:hover:not(:disabled) {
-      background: #f3f4f6 !important;
+      background: #fff !important;
       border-color: #9ca3af !important;
       color: #4b5563 !important;
     }
@@ -119,64 +120,67 @@
 
   // ── Save ─────────────────────────────────────────────────────────
   &.save {
-    background: #6b7280;
-    border-color: #6b7280;
+    background: #307a8a;
+    border-color: #307a8a;
     color: #ffffff;
 
     &:hover:not(:disabled) {
-      background: #4b5563;
-      border-color: #4b5563;
+      background: #307a8a;
+      border-color: #307a8a;
     }
   }
 
   // ── Continue ─────────────────────────────────────────────────────
   &.continue {
-    background: #4b55c9;
-    border-color: #4b55c9;
-    color: #ffffff;
-
-    &:hover:not(:disabled) {
-      background: #4f46e5;
-      border-color: #4f46e5;
-    }
+    border-color: #307a8a;
+    color: #307a8a;
+    background-color: transparent !important;
   }
 
   // ── Delete ───────────────────────────────────────────────────────
   &.delete {
-    background: #4f46e5 !important;
-    border-color: #4f46e5 !important;
+    background: #307a8a !important;
+    border-color: #307a8a !important;
     color: #ffffff !important;
     box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2) !important;
 
     &:hover:not(:disabled) {
-      background: #4338ca !important;
-      border-color: #4338ca !important;
+      background: #307a8a !important;
+      border-color: #307a8a !important;
       box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3) !important;
     }
   }
 
   // ── Upload ───────────────────────────────────────────────────────
   &.upload {
-    background: #4b55c9;
-    border-color: #4b55c9;
+    background: #307a8a;
+    border-color: #307a8a;
     color: #ffffff;
+    padding: 10px;
+    font-weight: 600;
 
     &:hover:not(:disabled) {
-      background: #4b55c9;
-      border-color: #4b55c9;
+      background: #307a8a;
+      border-color: #307a8a;
     }
   }
 
   // ── Download ─────────────────────────────────────────────────────
   &.download {
-    background: #4b55c9;
-    border-color: #4b55c9;
+    background: #307a8a;
+    border-color: #307a8a;
     color: #ffffff;
 
     &:hover:not(:disabled) {
-      background: #4b55c9;
-      border-color: #4b55c9;
+      background: #307a8a;
+      border-color: #307a8a;
     }
+  }
+
+  &.draft {
+    background: #c1f4ff;
+    border-color: #c1f4ff;
+    color: #398291;
   }
 
   // ── Export / Import ──────────────────────────────────────────────
@@ -184,24 +188,24 @@
   &.import {
     // background: #10b981;
     // border-color: #10b981;
-    background-color: #4b55c9;
-    border-color: #4b55c9;
+    background-color: #307a8a;
+    border-color: #307a8a;
     color: #ffffff;
     &:hover:not(:disabled) {
-      background: #4b55c9;
-      border-color: #4b55c9;
+      background: #307a8a;
+      border-color: #307a8a;
     }
   }
 
   // ── Add ──────────────────────────────────────────────────────────
   &.add {
-    background: #4b55c9;
-    border-color: #4b55c9;
+    background: #307a8a;
+    border-color: #307a8a;
     color: #ffffff;
 
     &:hover:not(:disabled) {
-      background: #4b55c9;
-      border-color: #4b55c9;
+      background: #307a8a;
+      border-color: #307a8a;
     }
   }
 

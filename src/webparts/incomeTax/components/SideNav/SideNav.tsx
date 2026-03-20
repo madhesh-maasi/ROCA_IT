@@ -20,21 +20,9 @@ import {
   ArrowDown01Icon,
 } from "@hugeicons/core-free-icons";
 import { AppRole, INavGroup } from "../../../../common/models";
-import { ActionButton } from "../../../../CommonInputComponents";
-import { useAppSelector, useAppDispatch } from "../../../../store/hooks";
-import { fetchIncomeTaxItems } from "../../../../store/slices/incomeTaxSlice";
+import { useAppSelector } from "../../../../store/hooks";
 import { selectUserDetails } from "../../../../store/slices/userSlice";
-import {
-  updateListItem,
-  getSP,
-  getListItems,
-} from "../../../../common/utils/pnpService";
-import {
-  LIST_NAMES,
-  NAV_CONFIG,
-} from "../../../../common/constants/appConstants";
-import { curFinanicalYear } from "../../../../common/utils/functions";
-import TaxRegimePopup from "../screens/SubmittedDeclarations/TaxRegimePopup";
+import { NAV_CONFIG } from "../../../../common/constants/appConstants";
 import styles from "./SideNav.module.scss";
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
@@ -112,7 +100,6 @@ export interface ISideNavProps {
 
 const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const user = useAppSelector(selectUserDetails);
 
   const [collapsed, setCollapsed] = React.useState(false);
@@ -121,103 +108,9 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
     administration: true,
   });
 
-  // ── New IT Declaration button state ──────────────────────────────────────
-  // Tracks whether to show the button and which declaration type drives it
-  const [releasedDeclarationType, setReleasedDeclarationType] = React.useState<
-    "Planned" | "Actual" | null
-  >(null);
-  const [releasedItemId, setReleasedItemId] = React.useState<number | null>(
-    null,
-  );
-
-  // TaxRegimePopup state (used only for Planned path)
-  const [showTaxRegimePopup, setShowTaxRegimePopup] = React.useState(false);
-  const [isSavingRegime, setIsSavingRegime] = React.useState(false);
-
-  // Fetch Released record from both Planned and Actual lists on mount / user change
   React.useEffect(() => {
     if (!user?.Email) return;
-
-    const check = async () => {
-      try {
-        const sp = getSP();
-        const email = user.Email.toLowerCase();
-        const fy = curFinanicalYear;
-        const baseFilter = `EmployeeEmail eq '${email}' and FinancialYear eq '${fy}' and Status eq 'Released' and IsDelete eq false`;
-
-        // Check Planned first
-        const plannedItems = await sp.web.lists
-          .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
-          .items.select("Id", "TaxRegime")
-          .filter(baseFilter)
-          .top(1)();
-
-        if (plannedItems.length > 0 && !plannedItems[0].TaxRegime) {
-          setReleasedDeclarationType("Planned");
-          setReleasedItemId(plannedItems[0].Id);
-          return;
-        }
-
-        // Check Actual
-        const actualItems = await sp.web.lists
-          .getByTitle(LIST_NAMES.ACTUAL_DECLARATION)
-          .items.select("Id")
-          .filter(baseFilter)
-          .top(1)();
-
-        if (actualItems.length > 0) {
-          setReleasedDeclarationType("Actual");
-          setReleasedItemId(actualItems[0].Id);
-          return;
-        }
-
-        // No released record found
-        setReleasedDeclarationType(null);
-        setReleasedItemId(null);
-      } catch (e) {
-        console.error("SideNav: failed to check released declarations", e);
-      }
-    };
-
-    void check();
   }, [user]);
-
-  const showNewDeclaration = releasedDeclarationType !== null;
-
-  // Handle Tax Regime submit (Planned path)
-  const handleTaxRegimeSubmit = async (regime: string) => {
-    if (!releasedItemId) return;
-    setIsSavingRegime(true);
-    try {
-      await updateListItem(LIST_NAMES.PLANNED_DECLARATION, releasedItemId, {
-        TaxRegime: regime,
-      });
-      setShowTaxRegimePopup(false);
-      // Refresh redux store
-      void dispatch(
-        fetchIncomeTaxItems({
-          getItems: () => {
-            const filterStr = `EmployeeEmail eq '${user!.Email}'`;
-            return getListItems(LIST_NAMES.PLANNED_DECLARATION, filterStr);
-          },
-        }),
-      );
-      navigate("/itDeclaration");
-    } catch (e) {
-      console.error("Failed to save TaxRegime", e);
-    } finally {
-      setIsSavingRegime(false);
-    }
-  };
-
-  // Handle button click based on declaration type
-  const handleNewDeclarationClick = () => {
-    if (releasedDeclarationType === "Planned") {
-      setShowTaxRegimePopup(true);
-    } else if (releasedDeclarationType === "Actual") {
-      navigate("/actualItDeclaration");
-    }
-  };
 
   const toggleGroup = (key: string): void => {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -281,24 +174,7 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
         <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2.5} />
       </button>
 
-      <div className={styles["buttonContainer" as keyof typeof styles]}>
-        {showNewDeclaration && (
-          <ActionButton
-            variant="newDeclaration"
-            onClick={handleNewDeclarationClick}
-          />
-        )}
-      </div>
-
-      {/* Tax Regime Popup — shown only for Planned declaration path */}
-      <TaxRegimePopup
-        visible={showTaxRegimePopup}
-        onHide={() => setShowTaxRegimePopup(false)}
-        onSubmit={(regime) => {
-          void handleTaxRegimeSubmit(regime);
-        }}
-        isLoading={isSavingRegime}
-      />
+      <div className={styles["buttonContainer" as keyof typeof styles]}></div>
 
       <ul className={styles.navList}>
         {visibleGroups.map((group) => {
@@ -308,12 +184,15 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
             canSee(role, item.allowedRoles),
           );
           const isOpen = openGroups[group.key];
+          const hasActiveChild = visibleItems.some(
+            (item) => activeKey === item.key,
+          );
 
           return (
             <li key={group.key}>
               {/* Group header — accordion trigger */}
               <div
-                className={styles.groupHeader}
+                className={`${styles.groupHeader} ${hasActiveChild ? styles.groupHeaderActive : ""}`}
                 onClick={() => toggleGroup(group.key)}
               >
                 <HugeiconsIcon
@@ -353,7 +232,9 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
                         strokeWidth={isActive ? 2 : 1.6}
                         className={styles.itemIcon}
                       />
-                      <span className={styles.navItemText}>{item.label}</span>
+                      <span className={styles.navItemText} title={item.label}>
+                        {item.label}
+                      </span>
                     </li>
                   );
                 })}
