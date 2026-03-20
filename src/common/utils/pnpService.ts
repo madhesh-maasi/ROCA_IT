@@ -1,5 +1,5 @@
 import { spfi, SPFI } from "@pnp/sp";
-import { SPFx, Web } from "@pnp/sp/presets/all";
+import { SPFx } from "@pnp/sp/presets/all";
 import "@pnp/sp/batching";
 import { deploymentConfig } from "../constants";
 import { LIST_NAMES } from "../constants/appConstants";
@@ -49,6 +49,20 @@ export const getSP = (): SPFI => {
 };
 
 /**
+ * Returns the stored WebPartContext.
+ * Used by services (e.g. emailService) that need direct access to the context
+ * for features like MSGraphClientFactory.
+ */
+export const getContext = (): WebPartContext => {
+  if (!_ctx) {
+    throw new Error(
+      "[pnpService] Context has not been initialised. Call initPnP(context) in onInit().",
+    );
+  }
+  return _ctx;
+};
+
+/**
  * Fetch all items from a SharePoint list.
  *
  * @param listName  - Internal name of the list.
@@ -62,20 +76,37 @@ export const getSP = (): SPFI => {
 export const getAllItems = async <T>(
   listName: string,
   select?: string[],
+  expand?: string,
   orderBy?: string,
   ascending = true,
+  filter?: string,
 ): Promise<T[]> => {
-  const sp = getSP();
-  let query = sp.web.lists.getByTitle(listName).items;
+  try {
+    const sp = getSP();
+    let query: any = sp.web.lists.getByTitle(listName).items;
 
-  if (select?.length) {
-    query = query.select(...select) as typeof query;
-  }
-  if (orderBy) {
-    query = query.orderBy(orderBy, ascending) as typeof query;
-  }
+    if (select && select.length > 0) {
+      // Concatenate "*" with any specific fields provided
+      query = query.select("*", ...select);
+    }
 
-  return query<T[]>();
+    if (expand) {
+      query = query.expand(expand);
+    }
+
+    if (filter) {
+      query = query.filter(filter);
+    }
+
+    if (orderBy) {
+      query = query.orderBy(orderBy, ascending);
+    }
+
+    return await query();
+  } catch (err) {
+    await handleError(err, `Fetching items from ${listName}`);
+    return [];
+  }
 };
 
 /**
@@ -231,6 +262,7 @@ export const getEmployeeMasterUsers = async (
       .getByTitle(LIST_NAMES.EMPLOYEE_MASTER)
       .items.select("*,Location/Title")
       .expand("Location")
+      .filter("IsActive eq 1")
       .top(5000)();
 
     return items;
@@ -254,14 +286,16 @@ export const getSiteAdminsGroupUsers = async (): Promise<any[]> => {
 };
 
 /**
- * Fetch all users in the site's Associated Members group.
+ * Fetch all users in the site.
  */
 export const getSiteMembersGroupUsers = async (): Promise<any[]> => {
   const sp = getSP();
   try {
-    return await sp.web.associatedMemberGroup.users();
+    return await sp.web.siteUsers.filter(
+      "PrincipalType eq 1 and Email ne null",
+    )();
   } catch (err) {
-    await handleError(err, "Fetching site members group users");
+    await handleError(err, "Fetching site users");
     return [];
   }
 };
@@ -435,11 +469,7 @@ export const uploadITDocument = async (
 
     // Ensure each folder level exists (addUsingPath is idempotent in PnP)
     for (const path of [fyPath, empPath, sectionPath]) {
-      try {
-        await sp.web.folders.addUsingPath(path, true);
-      } catch (_folderErr) {
-        // Folder may already exist — continue
-      }
+      await sp.web.folders.addUsingPath(path, true);
     }
 
     // Append a timestamp to guarantee uniqueness across uploads
@@ -454,15 +484,20 @@ export const uploadITDocument = async (
 
     // Get the uploaded file's list item via its server-relative URL
     const fileServerRelUrl = `${sectionPath}/${fileName}`;
-    const uploadedFile = sp.web.getFileByServerRelativePath(fileServerRelUrl);
-    const listItem = await uploadedFile.getItem();
-    await listItem.update({
+    const listItem = await sp.web
+      .getFileByServerRelativePath(fileServerRelUrl)
+      .getItem();
+
+    // Explicitly construct the update object to ensure property names are correct
+    const updateData: any = {
       IsDelete: false,
       ActualDeclarationId: meta.actualDeclarationId,
       LandLordId: meta.landLordId ?? null,
       Section80CId: meta.section80CId ?? null,
       Section80DId: meta.section80DId ?? null,
-    });
+    };
+
+    await listItem.update(updateData);
   } catch (err) {
     await handleError(err, `Uploading IT document for ${sectionType}`);
     throw err;
@@ -618,9 +653,9 @@ export const addListItem = async (
   try {
     const res = await sp.web.lists.getByTitle(listName).items.add({
       ...item,
-      IsDelete: false, // Explicitly set active
+      IsDelete: false,
     });
-    return res.data;
+    return res;
   } catch (err) {
     await handleError(err, `Adding item to ${listName}`);
     throw err;
@@ -805,6 +840,30 @@ export const getMyPlannedDeclaration = async (
     return items[0] || null;
   } catch (err) {
     await handleError(err, "Fetching my planned declaration");
+    return null;
+  }
+};
+
+/**
+ * Fetch the actual declaration for a user for a specific financial year.
+ */
+export const getMyActualDeclaration = async (
+  email: string,
+  financialYear: string,
+): Promise<any | null> => {
+  const sp = getSP();
+  try {
+    const items = await sp.web.lists
+      .getByTitle(LIST_NAMES.ACTUAL_DECLARATION)
+      .items.filter(
+        `EmployeeEmail eq '${email}' and FinancialYear eq '${financialYear}' and IsDelete ne 1`,
+      )
+      .select("*")
+      .orderBy("Id", false)();
+
+    return items[0] || null;
+  } catch (err) {
+    await handleError(err, "Fetching my actual declaration");
     return null;
   }
 };

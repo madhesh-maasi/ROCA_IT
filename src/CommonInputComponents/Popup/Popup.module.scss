@@ -98,12 +98,12 @@
 
     .p-button-primary,
     .p-button:not(.p-button-outlined):not(.p-button-secondary) {
-      background: #4f46e5;
+      background: #307a8a;
       color: #ffffff;
       box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 
       &:hover:not(:disabled) {
-        background: #4338ca;
+        background: #307a8a;
         box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
         transform: translateY(-1px);
       }

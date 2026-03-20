@@ -37,7 +37,7 @@ export const exportToExcel = (data: any[], fileName: string): void => {
     if (worksheet[cellAddress]) {
       worksheet[cellAddress].s = {
         fill: {
-          fgColor: { rgb: "4F46E5" }, // Indigo background
+          fgColor: { rgb: "307a8a" }, // Indigo background
         },
         font: {
           color: { rgb: "FFFFFF" }, // White text

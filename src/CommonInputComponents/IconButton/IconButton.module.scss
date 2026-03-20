@@ -30,7 +30,7 @@
 
   // ── Edit Variant (Indigo) ──────────────────────────────────────────
   &.edit {
-    color: #4b55c9; // Indigo
+    color: #307a8a; // Indigo
     &:hover:not(:disabled) {
       background-color: rgba(75, 85, 201, 0.1);
     }
@@ -46,7 +46,7 @@
 
   // ── Download Variant (Green) ───────────────────────────────────────────
   &.download {
-    color: #4b55c9;
+    color: #307a8a;
     &:hover:not(:disabled) {
       background-color: rgba(75, 85, 201, 0.1);
     }

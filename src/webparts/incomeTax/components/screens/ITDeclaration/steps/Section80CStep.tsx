@@ -16,6 +16,7 @@ interface ISection80CStepProps {
   showApproverComments?: boolean;
   approverComments?: string;
   onCommentChange?: (val: string) => void;
+  status?: string;
   readOnly?: boolean;
 }
 
@@ -26,10 +27,12 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
   showApproverComments,
   approverComments,
   onCommentChange,
+  status,
   readOnly,
 }) => {
   return (
-    <div className={styles.stepContent}>
+    <div>
+      <div className={styles.stepHeader}>Section 80C Deductions</div>
       <div className={styles.noteBox}>
         Note : Only{" "}
         <strong>Rs {sectionMaxAmount?.toLocaleString() || "1,50,000"}</strong>{" "}
@@ -52,9 +55,7 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
                   <div
                     className={styles.readonlyValue}
                     style={{
-                      background: "transparent",
                       border: "none",
-                      padding: 0,
                     }}
                   >
                     {item.investmentType}
@@ -84,11 +85,10 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
           </tbody>
         </table>
       </div>
-
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
+            <div className={styles.stepHeader}>Approver Comments</div>
             <textarea
               className={styles.commentArea || ""}
               style={{
@@ -96,15 +96,15 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
-                pointerEvents: "auto",
-                opacity: 1,
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
-              disabled={readOnly}
               placeholder="Enter here"
               value={approverComments}
+              disabled={status === "Approved"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

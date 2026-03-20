@@ -17,3 +17,18 @@ body {
   padding: 0 !important;
   max-width: 100% !important;
 }
+
+#spCommandBar,
+#CommentsWrapper,
+[data-automationid="SiteHeader"],
+#sp-appBar,
+[data-automationid="SimpleFooter"] {
+  display: none !important;
+}
+
+.sp-pageLayout-horizontalNav {
+  margin: 0 !important;
+}
+[data-automation-id="contentScrollRegion"] {
+  overflow-y: hidden !important;
+}

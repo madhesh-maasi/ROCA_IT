@@ -199,7 +199,7 @@ const ActionPopup: React.FC<IActionPopupProps> = ({
           )}
 
           <ActionButton
-            variant={config.actionVariant}
+            variant={"save"}
             label={confirmLabel || config.confirmLabel}
             onClick={onConfirm as any}
             className={styles.confirmBtn}

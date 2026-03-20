@@ -20,3 +20,12 @@
   margin-top: 6px;
   font-family: "Poppins", sans-serif;
 }
+
+.peoplePickerWrapper {
+  :global(.is-disabled) {
+    :global(.ms-BasePicker-text) {
+      background-color: #f6f6f6 !important;
+      border-color: #ced4da !important;
+    }
+  }
+}

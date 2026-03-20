@@ -14,6 +14,7 @@ export interface ICalendarProps extends CalendarProps {
   /** Additional class for the outer wrapper div. */
   className?: string;
   onChange?: (e: any) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ const AppCalendar: React.FC<ICalendarProps> = ({
   errorMessage,
   className,
   onChange,
+  disabled,
   ...rest
 }) => {
   const hasError = Boolean(errorMessage);
@@ -34,7 +36,7 @@ const AppCalendar: React.FC<ICalendarProps> = ({
 
   const handleWrapperClick = (): void => {
     // Force open the calendar when the wrapper (input area) is clicked
-    if (calendarRef.current) {
+    if (calendarRef.current && !disabled) {
       calendarRef.current.show();
     }
   };
@@ -62,9 +64,10 @@ const AppCalendar: React.FC<ICalendarProps> = ({
           autoZIndex
           onFocus={(e) => {
             rest.onFocus?.(e);
-            handleWrapperClick();
+            if (!disabled) handleWrapperClick();
           }}
           onChange={(e: any) => onChange?.(e)}
+          disabled={disabled}
         />
       </div>
       {hasError && (

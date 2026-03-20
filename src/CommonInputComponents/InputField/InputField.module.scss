@@ -1,7 +1,7 @@
 .inputFieldContainer {
   display: flex;
   flex-direction: column;
-  margin-bottom: 16px;
+  // margin-bottom: 16px;
   width: 100%;
 
   .label {
@@ -40,6 +40,13 @@
       outline-offset: 0;
       box-shadow: 0 0 0 0.1rem rgba(0, 0, 0, 0.4);
       border-color: #000000;
+    }
+
+    &:global(.p-disabled) {
+      background-color: #f6f6f6 !important;
+      opacity: 1 !important;
+      cursor: not-allowed !important;
+      border-color: #ced4da !important;
     }
   }
 

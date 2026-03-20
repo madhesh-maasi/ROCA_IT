@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ActionButton } from "../ActionButton";
-import { Popup } from "../Popup";
+import { Popup } from "../Popup/Popup";
 import styles from "./FilePicker.module.scss";
 
 export interface IFilePickerProps {

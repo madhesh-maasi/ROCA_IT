@@ -87,10 +87,10 @@ const ITCalculator: React.FC = () => {
         toast,
         "success",
         "Downloaded",
-        "The latest IT Calculator file has been downloaded successfully.",
+        "The latest IT Computation file has been downloaded successfully.",
       );
     } catch (err) {
-      await handleError(err, "Downloading IT Calculator", toast);
+      await handleError(err, "Downloading IT Computation", toast);
     } finally {
       setIsDownloading(false);
     }
@@ -100,10 +100,10 @@ const ITCalculator: React.FC = () => {
     <>
       <div className={screenStyles.screen}>
         <AppToast toastRef={toast} />
-        <h2 className={screenStyles.pageTitle}>IT Calculator</h2>
+        <h2 className={screenStyles.pageTitle}>IT Computation</h2>
 
         <div className={styles.calculatorCard}>
-          <h3 className={styles.reportTitle}>Income Tax Calculator Report</h3>
+          <h3 className={styles.reportTitle}>Income Tax Computation Report</h3>
           <div style={{ display: "flex", gap: "8px" }}>
             {/* {canUpload && (
               <AppFilePicker

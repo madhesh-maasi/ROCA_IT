@@ -25,6 +25,7 @@ interface IPreviousEmployerStepProps {
   showApproverComments?: boolean;
   approverComments?: string;
   onCommentChange?: (val: string) => void;
+  status?: string;
   readOnly?: boolean;
 }
 
@@ -34,10 +35,12 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
   showApproverComments,
   approverComments,
   onCommentChange,
+  status,
   readOnly,
 }) => {
   return (
-    <div className={styles.stepContent}>
+    <div>
+      <div className={styles.stepHeader}>Previous Employer Details</div>
       <div className={styles.stepGrid}>
         <div className={styles.formGroup}>
           <label>Name of Employer</label>
@@ -168,9 +171,9 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
       </div>
 
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
+            <div className={styles.stepHeader}>Approver Comments</div>
             <textarea
               className={styles.commentArea || ""}
               style={{
@@ -178,13 +181,15 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
               placeholder="Enter here"
-              disabled={readOnly}
               value={approverComments}
+              disabled={status === "Approved"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

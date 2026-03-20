@@ -17,7 +17,8 @@ export type ActionVariant =
   | "tab"
   | "expand"
   | "collapse"
-  | "newDeclaration";
+  | "newDeclaration"
+  | "draft";
 
 const VARIANT_CONFIG: Record<
   ActionVariant,
@@ -36,10 +37,10 @@ const VARIANT_CONFIG: Record<
     severity: "danger",
     outlined: true,
   },
-  save: { label: "Save", icon: "pi pi-save", severity: "secondary" },
+  save: { label: "Save", icon: "", severity: "secondary" },
   continue: {
     label: "Continue",
-    icon: "pi pi-arrow-right",
+    icon: "",
     severity: undefined,
   },
   delete: { label: "Delete", icon: "pi pi-trash", severity: "danger" },
@@ -68,6 +69,11 @@ const VARIANT_CONFIG: Record<
   newDeclaration: {
     label: "New IT Declaration",
     icon: "pi pi-plus",
+    severity: undefined,
+  },
+  draft: {
+    label: "Draft",
+    icon: "",
     severity: undefined,
   },
 };

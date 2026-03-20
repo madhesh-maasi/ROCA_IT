@@ -4,7 +4,10 @@ import {
   getCurrentUser,
   getCurrentUserGroups,
   getSiteOwnersGroup,
+  getSP,
+  getAllItems,
 } from "../../common/utils/pnpService";
+import { LIST_NAMES } from "../../common/constants/appConstants";
 import { AppRole } from "../../common/models";
 import { handleError } from "../../common/utils/errorUtils";
 
@@ -43,9 +46,13 @@ export const fetchUserContext = createAsyncThunk<
     if (isSiteOwner) {
       role = "Admin";
     } else {
-      const isFinanceApprover = userGroups.some(
-        (g: any) => g.Title === "Admins",
+      // 5. Check Finance Approver list
+      const financeApprovers = await getAllItems(LIST_NAMES.FINANCE_APPROVER);
+
+      const isFinanceApprover = financeApprovers.some(
+        (item: any) => item.UserId === details.Id && !item.IsDelete,
       );
+
       if (isFinanceApprover) {
         role = "FinanceApprover";
       }

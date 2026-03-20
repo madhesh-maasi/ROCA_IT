@@ -18,6 +18,7 @@ interface IHousingLoanData {
   lenderPan: string;
   lenderType: string;
   isJointlyAvailed: boolean;
+  attachments?: any[];
 }
 
 interface IHousingLoanStepProps {
@@ -26,9 +27,8 @@ interface IHousingLoanStepProps {
   showApproverComments?: boolean;
   approverComments?: string;
   onCommentChange?: (val: string) => void;
+  status?: string;
   readOnly?: boolean;
-  // ── Document upload ──────────────────────────────────────────────
-  attachments?: Record<string, any[]>;
   onUpload?: (key: string, file: File) => Promise<void>;
   onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
@@ -42,8 +42,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   showApproverComments,
   approverComments,
   onCommentChange,
+  status,
   readOnly,
-  attachments = {},
   onUpload,
   onDeleteAttachment,
 }) => {
@@ -56,7 +56,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
 
   /** Single inline row: [AppFilePicker] [📄 filename.pdf 🗑] ... */
   const renderUploadRow = (key: string) => {
-    const files = attachments[key] || [];
+    const files = data.attachments || [];
     return (
       <div
         style={{
@@ -133,9 +133,9 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   };
 
   return (
-    <div className={styles.stepContent}>
+    <div>
+      <div className={styles.stepHeader}>Type of Property</div>
       <div className={styles.formGroup}>
-        <label>Type of Property</label>
         <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
           <AppRadioButton
             label="None"
@@ -163,10 +163,11 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
           />
         </div>
       </div>
-
       {data.propertyType === "Self Occupied" && (
-        <div style={{ marginTop: "30px" }}>
-          <h3>Incase of Self Occupied property</h3>
+        <div style={{ marginTop: 10 }}>
+          <div className={styles.stepHeader}>
+            Incase of Self Occupied property
+          </div>
           <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
             <div className={styles.formGroup}>
               <label>Interest of Housing Loan</label>
@@ -192,8 +193,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
       )}
 
       {data.propertyType === "Let Out Property" && (
-        <div style={{ marginTop: "30px" }}>
-          <h3>Incase of Let Out property</h3>
+        <div style={{ marginTop: 10 }}>
+          <div className={styles.stepHeader}>Incase of Let Out property</div>
           <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
             <div className={styles.formGroup}>
               <label>Final Lettable Value</label>
@@ -236,10 +237,9 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
           {renderUploadRow(UPLOAD_KEY_LETOUT)}
         </div>
       )}
-
       {data.propertyType !== "None" && (
-        <div style={{ marginTop: "40px" }}>
-          <h3>Financial Institution</h3>
+        <div style={{ marginTop: 10 }}>
+          <div className={styles.stepHeader}>Financial Institution</div>
           <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
             <div className={styles.formGroup}>
               <label>Lender's name</label>
@@ -292,8 +292,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
         </div>
       )}
 
-      <div style={{ marginTop: "40px" }}>
-        <h3>Others</h3>
+      <div style={{ marginTop: 10 }}>
+        <div className={styles.stepHeader}>Others</div>
         <div className={styles.formGroup} style={{ marginTop: "16px" }}>
           <label>Jointly availed Property Loan</label>
           <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
@@ -316,26 +316,25 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
           </div>
         </div>
       </div>
-
       {showApproverComments && onCommentChange && (
-        <div style={{ marginTop: "40px" }}>
+        <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
+            <div className={styles.stepHeader}>Approver Comments</div>
             <textarea
               style={{
                 width: "100%",
                 height: "100px",
                 padding: "16px",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
                 resize: "none",
                 fontSize: "14px",
-                pointerEvents: "auto",
-                opacity: 1,
+                pointerEvents: status === "Approved" ? "none" : "auto",
+                opacity: status === "Approved" ? 0.8 : 1,
+                backgroundColor: "#fff",
               }}
-              disabled={readOnly}
               placeholder="Enter here"
               value={approverComments}
+              disabled={status === "Approved"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

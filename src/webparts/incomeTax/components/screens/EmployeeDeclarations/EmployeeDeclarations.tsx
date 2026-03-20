@@ -10,6 +10,7 @@ import {
   ActionButton,
   AppDropdown,
   IDropdownOption,
+  StatusPopup,
 } from "../../../../../CommonInputComponents";
 import { SearchInput } from "../../../../../CommonInputComponents/SearchInput";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
@@ -23,12 +24,15 @@ import {
 import { useEffect } from "react";
 import { getListItems } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
-import { curFinanicalYear } from "../../../../../common/utils/functions";
-import { useNavigate } from "react-router-dom";
+import {
+  curFinanicalYear,
+  getFYOptions,
+} from "../../../../../common/utils/functions";
+import { useNavigate, useLocation } from "react-router-dom";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import styles from "../screens.module.scss";
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
+import { AppToast, showToast } from "../../../../../common/components";
+import { Toast as PrimeToast } from "primereact/toast";
 
 interface IEmployeeRow {
   requestId: string;
@@ -41,18 +45,18 @@ interface IEmployeeRow {
   status: StatusVariant;
 }
 
-const FY_OPTIONS: IDropdownOption[] = [
-  curFinanicalYear,
-  ...(() => {
-    const start = parseInt(curFinanicalYear.split("-")[0]);
-    return [`${start - 1}-${start}`, `${start - 2}-${start - 1}`];
-  })(),
-].map((yr) => ({ label: yr, value: yr }));
+// Remove static FY_OPTIONS
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const COLUMNS: IColumnDef[] = [
-  { field: "requestId", header: "Request ID" },
+  {
+    field: "requestId",
+    header: "Request ID",
+    body: (row: IEmployeeRow) => (
+      <span className={styles.reqID}>{row.requestId}</span>
+    ),
+  },
   { field: "taxRegimeType", header: "Tax Regime Type" },
   { field: "investmentType", header: "Investment Type" },
   { field: "employeeId", header: "Employee ID" },
@@ -70,14 +74,24 @@ const COLUMNS: IColumnDef[] = [
 const EmployeeDeclarations: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = React.useRef<PrimeToast>(null);
   const items = useAppSelector(selectIncomeTaxItems);
   const actualItems = useAppSelector(selectActualIncomeTaxItems);
 
   const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(
-    "Planned",
+    location.state?.tab || "Planned",
   );
   const [search, setSearch] = React.useState("");
   const [fy, setFy] = React.useState(curFinanicalYear);
+  const [selectedRegime, setSelectedRegime] = React.useState("All");
+  const [selectedStatus, setSelectedStatus] = React.useState("All");
+  const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
+
+  const fyOptions = React.useMemo(() => {
+    const allItems = [...items, ...actualItems];
+    return getFYOptions(allItems);
+  }, [items, actualItems]);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -124,6 +138,9 @@ const EmployeeDeclarations: React.FC = () => {
   const refined = tableData.filter(
     (row) =>
       row.financialYear === fy &&
+      (selectedRegime === "All" || row.taxRegimeType === selectedRegime) &&
+      (selectedStatus === "All" ||
+        row.status.toLowerCase() === selectedStatus.toLowerCase()) &&
       (search === "" ||
         row.requestId.toLowerCase().includes(search.toLowerCase()) ||
         row.employeeName.toLowerCase().includes(search.toLowerCase()) ||
@@ -143,32 +160,66 @@ const EmployeeDeclarations: React.FC = () => {
     }));
 
     const fileName = `${activeTab}_Declarations_${fy}`;
-    exportToExcel(dataToExport, fileName);
+    if (dataToExport.length) {
+      exportToExcel(dataToExport, fileName);
+      setShowDownloadPopup(true);
+      setTimeout(() => {
+        setShowDownloadPopup(false);
+      }, 3000);
+    } else {
+      showToast(toast, "warn", "No Data", "No records found for export.");
+    }
   };
 
   return (
     <div className={styles.screen}>
+      <AppToast toastRef={toast} />
+      <StatusPopup
+        visible={showDownloadPopup}
+        onHide={() => setShowDownloadPopup(false)}
+        type="download"
+      />
       <h2 className={styles.pageTitle}>Submitted Declarations</h2>
 
       {/* Toolbar */}
       <div className={styles.toolbar}>
-        <div className={styles.tabGroup}>
+        <div className={styles.tabToggle}>
           {(["Planned", "Actual"] as const).map((tab) => (
-            <ActionButton
-              variant="tab"
+            <button
               key={tab}
-              className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ""}`}
+              className={`${styles.tabBtn} ${activeTab === tab ? styles.active : ""}`}
               onClick={() => setActiveTab(tab)}
-              label={tab}
-            />
+            >
+              {tab}
+            </button>
           ))}
         </div>
         <div className={styles.rightSide}>
           <SearchInput value={search} onChange={(val) => setSearch(val)} />
           <AppDropdown
+            value={selectedRegime}
+            onChange={(e) => setSelectedRegime(e.value)}
+            options={[
+              { label: "All Regimes", value: "All" },
+              { label: "Old Regime", value: "Old Regime" },
+              { label: "New Regime", value: "New Regime" },
+            ]}
+            placeholder="Tax Regime"
+          />
+          <AppDropdown
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.value)}
+            options={[
+              { label: "All Status", value: "All" },
+              { label: "Submitted", value: "Submitted" },
+              { label: "Approved", value: "Approved" },
+            ]}
+            placeholder="Status"
+          />
+          <AppDropdown
             value={fy}
-            onChange={(e) => setFy(e.target.value)}
-            options={FY_OPTIONS}
+            onChange={(e) => setFy(e.value)}
+            options={fyOptions}
           />
           <ActionButton
             variant="export"
@@ -196,10 +247,14 @@ const EmployeeDeclarations: React.FC = () => {
           if (originalItem) {
             if (activeTab == "Planned") {
               dispatch(setSelectedItem(originalItem));
-              navigate("/itDeclaration");
+              navigate("/itDeclaration", {
+                state: { from: "employeeDeclaration", tab: activeTab },
+              });
             } else {
               dispatch(setSelectedItem(originalItem));
-              navigate("/actualItDeclaration");
+              navigate("/actualItDeclaration", {
+                state: { from: "employeeDeclaration", tab: activeTab },
+              });
             }
           }
         }}

@@ -14,6 +14,8 @@ interface IBasicInfoStepProps {
   pan: string;
   onPanChange: (val: string) => void;
   readOnly?: boolean;
+  mobile: string;
+  onMobileChange: (val: string) => void;
 }
 
 const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
@@ -21,10 +23,13 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
   pan,
   onPanChange,
   readOnly,
+  mobile,
+  onMobileChange,
 }) => {
   return (
-    <div className={styles.stepContent}>
-      <div className={styles.stepGrid}>
+    <div>
+      <div className={styles.stepHeader}>Basic Information</div>
+      <div className={styles.basicInfoGrid}>
         <div className={styles.formGroup}>
           <label>Employee Code</label>
           <div className={styles.readonlyValue}>{employeeData.code}</div>
@@ -45,9 +50,23 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
           <label>Email ID</label>
           <div className={styles.readonlyValue}>{employeeData.email}</div>
         </div>
-        <div className={styles.formGroup}>
+        {/* <div className={styles.formGroup}>
           <label>Mobile Number</label>
           <div className={styles.readonlyValue}>{employeeData.mobile}</div>
+        </div> */}
+        <div className={styles.formGroup}>
+          <label>
+            Mobile Number <span>*</span>
+          </label>
+          <InputField
+            id="basic-info-mobile"
+            value={mobile}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onMobileChange(e.target.value)
+            }
+            placeholder="Enter Mobile Number"
+            disabled={readOnly}
+          />
         </div>
         <div className={styles.formGroup}>
           <label>

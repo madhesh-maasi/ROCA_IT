@@ -16,7 +16,7 @@
 
 .title {
   margin-top: 0;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
   font-size: 20px;
   font-weight: 600;
   color: #111827;
@@ -28,7 +28,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 
   .iconWrapper {
     display: flex;
@@ -36,7 +36,8 @@
     align-items: center;
 
     i {
-      font-size: 64px;
+      height: 30px;
+      width: 30px;
     }
 
     &.approve i {
@@ -64,7 +65,7 @@
 }
 
 .message {
-  margin-bottom: 32px;
+  margin-bottom: 10px;
   font-size: 15px;
   color: #4b5563;
   line-height: 1.6;
@@ -74,7 +75,7 @@
 }
 
 .customContent {
-  margin-bottom: 32px;
+  margin-bottom: 10px;
   text-align: left;
   width: 100%;
 }
@@ -90,6 +91,7 @@
   height: 44px !important;
   border-radius: 10px !important;
   font-family: "Poppins", sans-serif !important;
+  font-size: 16px;
 }
 
 .confirmBtn {
@@ -97,4 +99,5 @@
   height: 44px !important;
   border-radius: 10px !important;
   font-family: "Poppins", sans-serif !important;
+  font-size: 16px;
 }

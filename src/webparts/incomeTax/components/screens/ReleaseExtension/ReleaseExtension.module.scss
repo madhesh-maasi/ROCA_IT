@@ -1,28 +1,73 @@
 .screen {
   padding: 12px 16px;
-  background-color: #f8f9fa;
   min-height: calc(100vh - 120px); // Approximate header/footer height
   display: flex;
   flex-direction: column;
+}
+.titleBlock {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 10px;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #307a8a;
+  }
 }
 
 .headerToolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 
-  h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 500;
-    color: #333333;
+  .tabToggle {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+
+    .tabBtn {
+      border: none;
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #495057;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.active {
+        background-color: #307a8a; // Blue brand background
+        color: white;
+      }
+
+      &:hover:not(.active) {
+        background-color: #f1f3f5;
+      }
+    }
   }
 
   .actions {
     display: flex;
     align-items: center;
     gap: 16px;
+
+    .searchBlock {
+      width: 250px;
+    }
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 
     .calendarBlock {
       width: 200px;
@@ -72,26 +117,26 @@
   overflow: hidden;
 
   // DataTable overrides for the redesigned look
-  :global(.p-datatable) {
-    :global(.p-datatable-thead > tr > th) {
-      background-color: #eef2ff; // Pale blue background
-      color: #3b82f6; // Darker blue text
-      font-weight: 600;
-      border-bottom: 2px solid #dee2e6;
-      padding: 12px 16px;
+  // :global(.p-datatable) {
+  //   :global(.p-datatable-thead > tr > th) {
+  //     background-color: #eef2ff; // Pale blue background
+  //     color: #307a8a; // Darker blue text
+  //     font-weight: 600;
+  //     border-bottom: 2px solid #dee2e6;
+  //     padding: 12px 16px;
 
-      :global(.p-sortable-column-icon) {
-        color: #3b82f6;
-        width: 0.8rem;
-        height: 0.8rem;
-        margin-left: 0.5rem;
-      }
-    }
+  //     :global(.p-sortable-column-icon) {
+  //       color: #307a8a;
+  //       width: 0.8rem;
+  //       height: 0.8rem;
+  //       margin-left: 0.5rem;
+  //     }
+  //   }
 
-    :global(.p-datatable-tbody > tr > td) {
-      padding: 12px 16px;
-      color: #495057;
-      border-bottom: 1px solid #f1f3f5;
-    }
-  }
+  //   :global(.p-datatable-tbody > tr > td) {
+  //     padding: 12px 16px;
+  //     color: #495057;
+  //     border-bottom: 1px solid #f1f3f5;
+  //   }
+  // }
 }

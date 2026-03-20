@@ -24,20 +24,6 @@ import { getListItems } from "../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../common/constants/appConstants";
 import styles from "./Dashboard.module.scss";
 
-// ─── Screen → Component map ───────────────────────────────────────────────────
-
-const PLACEHOLDER_SCREENS: Record<string, string> = {
-  itCalculator: "IT Calculator",
-  sectionConfig: "Section Config",
-  lookupConfig: "Lookup Config",
-  releaseDeclaration: "Release Declaration",
-  extendSubmission: "Extend Submission",
-  exportDeclaration: "Export Declaration",
-  taxRegimeUpdate: "Tax Regime Update",
-  itCalculatorUpload: "IT Calculator Upload",
-  financeApprover: "Finance Approver",
-};
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface IDashboardProps {
@@ -53,6 +39,9 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
 
   const activeScreen = React.useMemo(() => {
     const path = location.pathname.replace(/^\//, "");
+    if (path === "itDeclaration" || path === "actualItDeclaration") {
+      return location.state?.from || "submittedDeclarations";
+    }
     return path || "submittedDeclarations";
   }, [location]);
 
@@ -99,13 +88,6 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
         <Route path="/itCalculatorUpload" element={<ITCalculatorUpload />} />
         <Route path="/itDeclaration" element={<ITDeclaration />} />
         <Route path="/actualItDeclaration" element={<ActualITDeclaration />} />
-        {Object.keys(PLACEHOLDER_SCREENS).map((key) => (
-          <Route
-            key={key}
-            path={`/${key}`}
-            element={<PlaceholderScreen title={PLACEHOLDER_SCREENS[key]} />}
-          />
-        ))}
         <Route
           path="*"
           element={<Navigate to="/submittedDeclarations" replace />}

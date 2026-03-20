@@ -37,5 +37,11 @@
       border-color: #d1d5db !important;
       box-shadow: 0 0 0 3px rgba(229, 231, 235, 0.3) !important;
     }
+
+    &:disabled {
+      background: #f6f6f6 !important;
+      cursor: not-allowed !important;
+      border-color: #ced4da !important;
+    }
   }
 }
