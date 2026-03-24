@@ -20,6 +20,10 @@ import {
   updateListItemsBatch,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
+import {
+  getFYOptions,
+  globalSearchFilter,
+} from "../../../../../common/utils/functions";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import { ActionPopup, Loader } from "../../../../../common/components";
 
@@ -43,7 +47,8 @@ const TaxRegimeUpdate: React.FC = () => {
     null,
   );
   const [selectedRegime, setSelectedRegime] = React.useState<string>("");
-  const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+  // const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+
   const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const fetchData = async () => {
@@ -114,6 +119,7 @@ const TaxRegimeUpdate: React.FC = () => {
           SubmittedDate: null,
           ApproverCommentsJson: "",
           Status: "Released",
+          RentDetailsJSON: "",
         });
 
         // 2. If changing from Old to New, soft-delete child lists
@@ -155,8 +161,13 @@ const TaxRegimeUpdate: React.FC = () => {
           }
         }
 
-        setShowSuccessPopup(true);
-
+        // setShowSuccessPopup(true);
+        showToast(
+          toast,
+          "success",
+          "Success",
+          "Tax Regime Updated Successfully.",
+        );
         await fetchData();
         handleClosePopup();
       } catch (err) {
@@ -188,12 +199,7 @@ const TaxRegimeUpdate: React.FC = () => {
   ];
 
   const filteredData = React.useMemo(() => {
-    const lowerSearch = searchTerm.toLowerCase();
-    return data.filter(
-      (emp) =>
-        (emp.EmployeeCode || "").toLowerCase().includes(lowerSearch) ||
-        (emp.EmployeeName || "").toLowerCase().includes(lowerSearch),
-    );
+    return globalSearchFilter(data, searchTerm);
   }, [searchTerm, data]);
 
   const handleExport = () => {
@@ -270,6 +276,7 @@ const TaxRegimeUpdate: React.FC = () => {
         <AppDataTable
           columns={columns}
           data={filteredData}
+          globalFilter={searchTerm}
           paginator
           rows={10}
         />
@@ -288,15 +295,17 @@ const TaxRegimeUpdate: React.FC = () => {
         <div className={styles.popupInner}>
           {selectedEmployee && (
             <>
-              <div className={styles.employeeDetails}>
+              <div
+                className={styles.employeeDetails}
+                style={{ marginBottom: 10 }}
+              >
                 <span className={styles.detailLabel}>Employee Details</span> -{" "}
                 <span className={styles.detailText}>
                   {selectedEmployee.EmployeeName} (
                   {selectedEmployee.EmployeeCode})
                 </span>
               </div>
-
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} style={{ marginBottom: 18 }}>
                 <AppDropdown
                   id="taxRegimeType"
                   label="Tax Regime Type"

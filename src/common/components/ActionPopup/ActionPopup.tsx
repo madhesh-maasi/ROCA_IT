@@ -37,6 +37,8 @@ export interface IActionPopupProps {
   children?: React.ReactNode;
   /** Optionally hide the large centered icon */
   hideIcon?: boolean;
+  /** Icon flag for the button element. */
+  iconFlag?: boolean;
 }
 
 const ACTION_CONFIG: Record<
@@ -87,7 +89,7 @@ const ACTION_CONFIG: Record<
     iconClass: styles.submitted,
     title: "Submitted",
     message: "IT Declaration has been\nsubmitted successfully.",
-    confirmLabel: "OK",
+    confirmLabel: "",
     cancelLabel: undefined,
     actionVariant: "continue",
   },
@@ -106,7 +108,7 @@ const ACTION_CONFIG: Record<
     iconClass: styles.updated,
     title: "Updated",
     message: "The Item has been\nupdated successfully.",
-    confirmLabel: "OK",
+    confirmLabel: "",
     cancelLabel: undefined,
     actionVariant: "continue",
   },
@@ -115,7 +117,7 @@ const ACTION_CONFIG: Record<
     iconClass: styles.added,
     title: "Added",
     message: "The Item has been\nadded successfully.",
-    confirmLabel: "OK",
+    confirmLabel: "",
     cancelLabel: undefined,
     actionVariant: "continue",
   },
@@ -132,6 +134,7 @@ const ActionPopup: React.FC<IActionPopupProps> = ({
   cancelLabel,
   children,
   hideIcon = false,
+  iconFlag = true,
 }) => {
   const config = ACTION_CONFIG[actionType] || ACTION_CONFIG["Approve"];
 
@@ -188,24 +191,37 @@ const ActionPopup: React.FC<IActionPopupProps> = ({
 
         {children && <div className={styles.customContent}>{children}</div>}
 
-        <div className={styles.buttonGroup}>
-          {(cancelLabel !== undefined ? cancelLabel : config.cancelLabel) && (
-            <ActionButton
-              variant={config.cancelVariant || "cancel"}
-              label={cancelLabel || config.cancelLabel || "Cancel"}
-              onClick={onHide as any}
-              className={styles.cancelBtn}
-            />
-          )}
+        {(cancelLabel !== undefined ||
+          config.cancelLabel !== undefined ||
+          confirmLabel ||
+          config.confirmLabel) && (
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <div className={styles.buttonGroup}>
+              {(cancelLabel !== undefined
+                ? cancelLabel
+                : config.cancelLabel) && (
+                <ActionButton
+                  variant={config.cancelVariant || "cancel"}
+                  label={cancelLabel || config.cancelLabel || "Cancel"}
+                  onClick={onHide as any}
+                  className={styles.cancelBtn}
+                  iconFlag={false}
+                />
+              )}
 
-          <ActionButton
-            variant={"save"}
-            label={confirmLabel || config.confirmLabel}
-            onClick={onConfirm as any}
-            className={styles.confirmBtn}
-            autoFocus
-          />
-        </div>
+              {(confirmLabel || config.confirmLabel) && (
+                <ActionButton
+                  variant={"save"}
+                  label={confirmLabel || config.confirmLabel}
+                  onClick={onConfirm as any}
+                  className={styles.confirmBtn}
+                  autoFocus
+                  iconFlag={false}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Dialog>
   );

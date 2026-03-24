@@ -4,6 +4,7 @@ import {
   InputField,
 } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
+import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
 
 interface ISummaryStepProps {
   employeeInfo: {
@@ -93,10 +94,10 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             <label
               style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
             >
-              LTA
+              House Rental
             </label>
             <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.lta || "-"}
+              {totals.houseRental || "-"}
             </div>
           </div>
           <div
@@ -111,12 +112,13 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             <label
               style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
             >
-              House Rental
+              LTA
             </label>
             <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.houseRental || "-"}
+              {totals.lta || "-"}
             </div>
           </div>
+
           <div
             style={{
               display: "flex",
@@ -215,7 +217,7 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
 
         <div className={styles.stepGrid}>
           <div className={styles.formGroup}>
-            <label>Place</label>
+            <label>Place {RequiredSympol()}</label>
             <InputField
               id="decl-place"
               value={declaration.place}
@@ -285,7 +287,7 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
               className={styles.commentArea || ""}
               style={{
                 width: "100%",
-                height: "100px",
+                height: 80,
                 padding: "16px",
                 borderRadius: "12px",
                 border: "1px solid #e2e8f0",

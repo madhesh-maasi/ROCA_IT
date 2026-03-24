@@ -10,6 +10,7 @@ export type StatusVariant =
   | "pending"
   | "draft"
   | "completed"
+  | "not_submitted"
   | "released";
 
 const STATUS_CONFIG: Record<
@@ -18,18 +19,18 @@ const STATUS_CONFIG: Record<
 > = {
   submitted: {
     label: "Submitted",
-    icon: "pi pi-circle-fill",
+    icon: "pi pi-book",
     colorClass: styles.submitted,
   },
   approved: {
     label: "Approved",
-    icon: "pi pi-circle-fill",
+    icon: "pi pi-check-circle",
     colorClass: styles.approved,
   },
-  rework: { label: "Rework", icon: "pi pi-refresh", colorClass: styles.rework },
+  rework: { label: "Rework", icon: "pi pi-undo", colorClass: styles.rework },
   cancelled: {
     label: "Cancelled",
-    icon: "pi pi-times-circle",
+    icon: "pi pi-times",
     colorClass: styles.cancelled,
   },
   pending: {
@@ -37,7 +38,7 @@ const STATUS_CONFIG: Record<
     icon: "pi pi-clock",
     colorClass: styles.pending,
   },
-  draft: { label: "Draft", icon: "pi pi-file-edit", colorClass: styles.draft },
+  draft: { label: "Draft", icon: "pi pi-file", colorClass: styles.draft },
   completed: {
     label: "Completed",
     icon: "pi pi-verified",
@@ -47,6 +48,11 @@ const STATUS_CONFIG: Record<
     label: "Released",
     icon: "pi pi-check-circle",
     colorClass: styles.released,
+  },
+  not_submitted: {
+    label: "Not Submitted",
+    icon: "pi pi-times-circle",
+    colorClass: styles.notSubmitted,
   },
 };
 
@@ -71,7 +77,9 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
   label,
   className,
 }) => {
-  const config = STATUS_CONFIG[status];
+  const config =
+    STATUS_CONFIG[status.toLowerCase() as StatusVariant] ||
+    STATUS_CONFIG["draft"];
   const displayLabel = label ?? config.label;
 
   return (

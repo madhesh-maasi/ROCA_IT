@@ -93,7 +93,7 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
               className={styles.commentArea || ""}
               style={{
                 width: "100%",
-                height: "100px",
+                height: 80,
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",

@@ -7,6 +7,7 @@ import {
   AppRadioButton,
   ActionButton,
   StatusPopup,
+  SearchInput,
 } from "../../../../../CommonInputComponents";
 import AppToast, {
   showToast,
@@ -17,10 +18,19 @@ import {
   getSP,
   getListItems,
   updateListItemsBatch,
+  getAllItems,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
-import { exportToExcel } from "../../../../../common/utils/exportUtils";
-import { curFinanicalYear, getFYOptions } from "../../../../../common/utils/functions";
+import {
+  exportToExcel,
+  generateExcelBase64,
+} from "../../../../../common/utils/exportUtils";
+import { sendExportEmail } from "../../../../../common/utils/emailService";
+import {
+  curFinanicalYear,
+  getFYOptions,
+  globalSearchFilter,
+} from "../../../../../common/utils/functions";
 import { useAppSelector } from "../../../../../store/hooks";
 import { selectUserDetails } from "../../../../../store/slices/userSlice";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
@@ -57,6 +67,7 @@ const ExportDeclaration: React.FC = () => {
   const [rawDeclarations, setRawDeclarations] = React.useState<
     IDeclarationItem[]
   >([]);
+  const [searchTerm, setSearchTerm] = React.useState("");
   const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const yearOptions = React.useMemo(() => {
@@ -75,6 +86,10 @@ const ExportDeclaration: React.FC = () => {
       };
     });
   }, [rawDeclarations, employeeMaster]);
+
+  const filteredDeclarations = React.useMemo(() => {
+    return globalSearchFilter(declarations, searchTerm);
+  }, [declarations, searchTerm]);
 
   const fetchData = async () => {
     // Initially page show 0 records. once i select the choice then the respective data show in the table.
@@ -150,11 +165,35 @@ const ExportDeclaration: React.FC = () => {
         "Tax Regime": d.TaxRegime,
       }));
 
-      exportToExcel(
-        excelData,
-        `Declarations_${declarationType}_${selectedYear}`,
-      );
-      setShowDownloadPopup(true);
+      const fileName = `Declarations_${declarationType}_${selectedYear}`;
+      exportToExcel(excelData, fileName);
+
+      if (activeTab == "Incremental") {
+        // Send email with attachment to the current user
+        let _FinanceApporvers: any[] = await getAllItems(
+          LIST_NAMES.FINANCE_APPROVER,
+          ["User/EMail"],
+          "User",
+          "Id",
+          false,
+          "IsDelete ne 1",
+        );
+        _FinanceApporvers = _FinanceApporvers
+          .map((item) => item?.User?.EMail)
+          .filter((email) => !!email);
+        const base64Data = generateExcelBase64(excelData, fileName);
+        if (base64Data && _FinanceApporvers?.length > 0) {
+          await sendExportEmail(
+            _FinanceApporvers,
+            // "Finance Team",
+            userDetails?.Title!,
+            `${fileName}.xlsx`,
+            base64Data,
+            selectedYear,
+          );
+        }
+        setShowDownloadPopup(true);
+      }
 
       // 2. Batch Update IsExported Status
       const listName =
@@ -182,10 +221,22 @@ const ExportDeclaration: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "EmployeeCode", header: "Employee ID", sortable: true },
-    { field: "EmployeeName", header: "Employee Name", sortable: true },
+    {
+      field: "EmployeeCode",
+      header: "Employee ID",
+      sortable: true,
+    },
+    {
+      field: "EmployeeName",
+      header: "Employee Name",
+      sortable: true,
+    },
     { field: "Email", header: "Email Address", sortable: true },
-    { field: "TaxRegime", header: "Tax Regime Type", sortable: true },
+    {
+      field: "TaxRegime",
+      header: "Tax Regime Type",
+      sortable: true,
+    },
   ];
 
   return (
@@ -292,7 +343,8 @@ const ExportDeclaration: React.FC = () => {
       <div className={styles.tableCard}>
         <AppDataTable
           columns={columns}
-          data={declarations}
+          data={filteredDeclarations}
+          globalFilter={searchTerm}
           paginator
           rows={10}
         />

@@ -87,6 +87,8 @@ export interface IActionButtonProps extends Omit<ButtonProps, "severity"> {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   /** Additional class for the button element. */
   className?: string;
+  /** Icon flag for the button element. */
+  iconFlag?: boolean;
 }
 
 /**
@@ -107,16 +109,18 @@ const ActionButton: React.FC<IActionButtonProps> = ({
   onClick,
   className,
   disabled,
+  iconFlag = true,
   ...rest
 }) => {
   const config = VARIANT_CONFIG[variant];
   const resolvedIcon = icon ?? config.icon;
-  const iconNode =
+  const iconNode = iconFlag ? (
     typeof resolvedIcon === "string" && resolvedIcon ? (
       <i className={resolvedIcon} />
     ) : (
       resolvedIcon
-    );
+    )
+  ) : null;
 
   const defaultLabel = label ?? config.label;
 

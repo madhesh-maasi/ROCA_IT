@@ -25,7 +25,11 @@ import {
 import { LIST_NAMES } from "../../../../../common/constants";
 import { ActionPopup, Loader } from "../../../../../common/components";
 import RequiredSympol from "../../../../../common/components/RequiredSympol/RequiredSympol";
-import { getFYOptions } from "../../../../../common/utils/functions";
+import {
+  curFinanicalYear,
+  getFYOptions,
+  globalSearchFilter,
+} from "../../../../../common/utils/functions";
 
 interface ICalculatorFile {
   ID: number;
@@ -45,7 +49,7 @@ const ITCalculatorUpload: React.FC = () => {
 
   // Upload Popup states
   const [showUploadPopup, setShowUploadPopup] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>(curFinanicalYear);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Delete Popup states
@@ -54,40 +58,8 @@ const ITCalculatorUpload: React.FC = () => {
     null,
   );
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-
-  const dynamicYearOptions = useMemo(() => {
-    const yearsSet = new Set(
-      filesData.map((f) => f.FinanceYear).filter((y) => !!y),
-    );
-    const sortedYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
-
-    let nextYear = "";
-    if (sortedYears.length == 0) {
-      const currYear = new Date().getFullYear();
-      nextYear = `${currYear} - ${currYear + 1}`;
-    } else {
-      // Find latest year string logic
-      const latestYear = sortedYears[0];
-      const match = latestYear.match(/^(\d{4})\s*-\s*(\d{4})$/);
-      if (match) {
-        nextYear = `${parseInt(match[1], 10) + 1} - ${parseInt(match[2], 10) + 1}`;
-      }
-    }
-
-    const options: { label: string; value: string }[] = [];
-    if (nextYear) {
-      options.push({ label: nextYear, value: nextYear });
-    }
-
-    sortedYears.forEach((y) => {
-      // Avoid duplication
-      if (y !== nextYear) {
-        options.push({ label: y, value: y });
-      }
-    });
-
-    return options;
-  }, [filesData]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = async () => {
     setIsLoading(true);
@@ -117,7 +89,7 @@ const ITCalculatorUpload: React.FC = () => {
   }, []);
 
   const handleOpenUpload = () => {
-    setSelectedYear("");
+    setSelectedYear(curFinanicalYear);
     setSelectedFile(null);
     setShowUploadPopup(true);
   };
@@ -168,6 +140,45 @@ const ITCalculatorUpload: React.FC = () => {
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (
+        file.name.endsWith(".xls") ||
+        file.name.endsWith(".xlsx") ||
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ) {
+        setSelectedFile(file);
+      } else {
+        showToast(
+          toast,
+          "warn",
+          "Invalid File",
+          "Please upload an Excel file.",
+        );
+      }
+    }
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
   const handleDeletePrompt = (file: ICalculatorFile) => {
     setFileToDelete(file);
     setShowDeletePopup(true);
@@ -214,16 +225,7 @@ const ITCalculatorUpload: React.FC = () => {
       }
     }
 
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (f) =>
-          (f.FileLeafRef && f.FileLeafRef.toLowerCase().includes(lower)) ||
-          (f.FinanceYear && f.FinanceYear.toLowerCase().includes(lower)),
-      );
-    }
-
-    return filtered;
+    return globalSearchFilter(filtered, searchTerm);
   }, [filesData, searchTerm, activeTab]);
 
   const columns: IColumnDef[] = [
@@ -313,6 +315,7 @@ const ITCalculatorUpload: React.FC = () => {
         <AppDataTable
           columns={columns}
           data={filteredData}
+          globalFilter={searchTerm}
           paginator
           rows={10}
         />
@@ -324,36 +327,71 @@ const ITCalculatorUpload: React.FC = () => {
         onHide={() => setShowUploadPopup(false)}
         onConfirm={handleConfirmUpload}
         actionType="Updated"
-        title="Upload IT Computation"
-        confirmLabel="Upload"
-        cancelLabel="Cancel"
+        title="Upload IT Calculator"
+        confirmLabel={null as any} // Hide default buttons to use custom ones
+        cancelLabel={null as any}
         hideIcon={true}
       >
         <div className={styles.uploadForm}>
-          <div className={styles.formGroup}>
-            <AppDropdown
-              id="finYear"
-              label="Financial Year"
-              required
-              options={dynamicYearOptions}
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.value as string)}
-              placeholder="Select Year"
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.fileLabel}>
-              Choose File {RequiredSympol()}
-            </label>
-            <AppFilePicker
-              buttonLabel={
-                selectedFile ? selectedFile.name : "Select Excel File"
-              }
+          <div
+            className={`${styles.dropZone} ${isDragging ? styles.dragActive : ""}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: "none" }}
               accept=".xls,.xlsx"
-              onChange={(files: File[]) =>
-                setSelectedFile(files.length > 0 ? files[0] : null)
-              }
+              onChange={onFileChange}
             />
+
+            {!selectedFile ? (
+              <>
+                <i className={`pi pi-cloud-upload ${styles.uploadIcon}`} />
+                <div className={styles.dropText}>
+                  Click or drag file to this area to upload
+                  <span>(*File size must be 5MB or smaller)</span>
+                </div>
+                <button type="button" className={styles.browseBtn}>
+                  Browse
+                </button>
+              </>
+            ) : (
+              <div className={styles.selectedFile}>
+                <i className="pi pi-file-excel" />
+                <span>{selectedFile.name}</span>
+                <button
+                  type="button"
+                  className={styles.removeBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                >
+                  <i className="pi pi-times" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.modalFooter}>
+            <button
+              className={styles.cancelBtn}
+              onClick={() => setShowUploadPopup(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className={styles.confirmBtn}
+              onClick={handleConfirmUpload}
+              disabled={!selectedFile || !selectedYear}
+            >
+              Upload
+            </button>
           </div>
         </div>
       </ActionPopup>

@@ -28,6 +28,7 @@ import {
   getSP,
   getListItems,
   addListItemsBatch,
+  getAllItems,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import Loader from "../../../../../common/components/Loader/Loader";
@@ -35,9 +36,11 @@ import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import {
   curFinanicalYear,
   getFYOptions,
+  globalSearchFilter,
 } from "../../../../../common/utils/functions";
 import RequiredSympol from "../../../../../common/components/RequiredSympol/RequiredSympol";
 import { sendReleaseEmails } from "../../../../../common/utils/emailService";
+import { selectUserDetails } from "../../../../../store/slices";
 
 interface IReleaseData {
   DeclarationType: string;
@@ -60,6 +63,7 @@ const ReleaseDeclaration: React.FC = () => {
   const _financialYear = curFinanicalYear;
   const toast = React.useRef<PrimeToast>(null);
   const employeeMaster: IEmployee[] = useAppSelector(selectEmployees) || [];
+  const user = useAppSelector(selectUserDetails);
 
   const [formData, setFormData] = React.useState<IReleaseData>({
     DeclarationType: "",
@@ -78,15 +82,14 @@ const ReleaseDeclaration: React.FC = () => {
     null,
   );
 
-  const [selectedFY, setSelectedFY] = React.useState("All");
+  const [selectedFY, setSelectedFY] = React.useState(_financialYear);
   const [selectedLocation, setSelectedLocation] = React.useState("All");
   const [selectedType, setSelectedType] = React.useState("All");
   const [selectedStatus, setSelectedStatus] = React.useState("All");
   const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const excelColumns: IExcelColumn[] = [
-    { key: "EmployeeID", label: "Employee ID", required: true },
-    { key: "Title", label: "Employee Name", required: true },
+    { key: "EmployeeID", label: "Employee ID" },
   ];
 
   const fetchReleasedData = async () => {
@@ -119,6 +122,16 @@ const ReleaseDeclaration: React.FC = () => {
         ...processRecords(planned, "Planned"),
         ...processRecords(actual, "Actual"),
       ]);
+
+      // Conditional Default: If current year's actual declaration data > 0, show Actual. Otherwise Planned.
+      const currentYearActuals = actual.filter(
+        (r) => r.FinancialYear === _financialYear,
+      );
+      if (currentYearActuals.length > 0) {
+        setSelectedType("Actual");
+      } else {
+        setSelectedType("Planned");
+      }
     } catch (error) {
       console.error("Error fetching released declarations", error);
     } finally {
@@ -132,22 +145,33 @@ const ReleaseDeclaration: React.FC = () => {
     }
   }, [employeeMaster]);
 
+  // Force Actual type when previous year is selected
+  React.useEffect(() => {
+    if (selectedFY !== "All" && selectedFY !== _financialYear) {
+      setSelectedType("Actual");
+    }
+  }, [selectedFY, _financialYear]);
+
   // ─── Event Handlers ──────────────────────────────────────────────────────────────
 
   const handlePeoplePickerChange = (users: any[]) => {
-    // AppPeoplePicker returns IEmployee objects
     const logins = users
       .map((u: IEmployee) => u.Email)
       .filter((email): email is string => Boolean(email));
     setFormData((p) => ({ ...p, SelectedUsers: logins }));
+
+    if (logins.length > 0) {
+      setExcelEmployees([]);
+      setImportResult(null);
+    }
   };
 
   const handleExcelImport = (result: IImportResult) => {
     setImportResult(result);
     if (result.validData.length > 0) {
+      // Clear people picker when excel is uploaded
+      setFormData((p) => ({ ...p, SelectedUsers: [] }));
       setExcelEmployees(result.validData);
-    } else {
-      setExcelEmployees([]);
     }
 
     if (result.errors.length > 0) {
@@ -159,9 +183,71 @@ const ReleaseDeclaration: React.FC = () => {
       );
     }
   };
+  const templateDownload = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const items: any = await getAllItems(
+        LIST_NAMES.IT_Templates,
+        ["FileRef", "FileLeafRef", "Template"],
+        undefined, // expand
+        "Id", // orderBy
+        false, // ascending
+        "Template eq 'ReleaseDeclaration'", // filter
+      );
 
-  const removeExcelEmployee = (empId: string) => {
-    setExcelEmployees((prev) => prev.filter((p) => p.EmployeeID !== empId));
+      if (items.length > 0) {
+        const fileUrl = items[0].FileRef;
+        const sp = getSP();
+        const file = await sp.web
+          .getFileByServerRelativePath(fileUrl)
+          .getBlob();
+
+        const url = window.URL.createObjectURL(file);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = items[0].FileLeafRef;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        showToast(
+          toast,
+          "success",
+          "Success",
+          "Template downloaded successfully.",
+        );
+      } else {
+        showToast(
+          toast,
+          "warn",
+          "Not Found",
+          "No template found for Release Declaration.",
+        );
+      }
+    } catch (error) {
+      console.error("Error downloading template", error);
+      showToast(toast, "error", "Error", "Failed to download template.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeEmployee = (empId: string, isExcel: boolean) => {
+    if (isExcel) {
+      setExcelEmployees((prev) => prev.filter((p) => p.EmployeeID !== empId));
+    } else {
+      // For people picker, we need to update SelectedUsers in formData
+      setFormData((prev) => {
+        const matchedEmp = employeeMaster.find((e) => e.EmployeeId === empId);
+        if (!matchedEmp || !matchedEmp.Email) return prev;
+        return {
+          ...prev,
+          SelectedUsers: prev.SelectedUsers.filter(
+            (email) => email !== matchedEmp.Email,
+          ),
+        };
+      });
+    }
   };
 
   const handleRelease = async () => {
@@ -181,25 +267,14 @@ const ReleaseDeclaration: React.FC = () => {
     }
     if (
       formData.ReleaseType === "Release Selected" &&
-      formData.SelectedUsers.length === 0
-    ) {
-      showToast(
-        toast,
-        "warn",
-        "Validation",
-        "Please select employees to release.",
-      );
-      return;
-    }
-    if (
-      formData.ReleaseType === "Upload Excel" &&
+      formData.SelectedUsers.length === 0 &&
       excelEmployees.length === 0
     ) {
       showToast(
         toast,
         "warn",
         "Validation",
-        "Please upload valid excel data to release.",
+        "Please select employees or upload an excel file to release.",
       );
       return;
     }
@@ -249,12 +324,12 @@ const ReleaseDeclaration: React.FC = () => {
             IsDelete: false,
           });
         });
-      } else if (formData.ReleaseType === "Upload Excel") {
+
         excelEmployees.forEach((row) => {
           itemsToRelease.push({
-            Title: `REQ-${_financialYear}-${row.EmployeeID.toString()}`,
+            Title: `REQ-${_financialYear}-${row.EmployeeID}`,
             EmployeeName: row.Title,
-            EmployeeCode: row.EmployeeID.toString(),
+            EmployeeCode: row.EmployeeID,
             EmployeeEmail: row.Email,
             Status: "Released",
             FinancialYear: _financialYear,
@@ -263,6 +338,15 @@ const ReleaseDeclaration: React.FC = () => {
             IsDelete: false,
           });
         });
+
+        // Deduplicate itemsToRelease by EmployeeCode (in case of double selection from PP and Excel)
+        const uniqueItems = new Map();
+        itemsToRelease.forEach((item) => {
+          if (item.EmployeeCode && !uniqueItems.has(item.EmployeeCode)) {
+            uniqueItems.set(item.EmployeeCode, item);
+          }
+        });
+        itemsToRelease = Array.from(uniqueItems.values());
       }
 
       // ─── Actual Declaration: validate approved planned declarations ────────────
@@ -283,27 +367,7 @@ const ReleaseDeclaration: React.FC = () => {
           }
         });
 
-        // Identify employees without an Approved planned declaration
-        // const notApproved = itemsToRelease.filter((item) => {
-        //   const record = plannedMap.get(item.EmployeeCode);
-        //   return !record || record.Status !== "Approved";
-        // });
-
-        // if (notApproved.length > 0) {
-        //   const names = notApproved
-        //     .map((item) => `${item.EmployeeName} (${item.EmployeeCode})`)
-        //     .join(", ");
-        //   showToast(
-        //     toast,
-        //     "error",
-        //     "Validation Failed",
-        //     `The following employees do not have an Approved Planned Declaration for FY ${_financialYear}: ${names}`,
-        //   );
-        //   setIsLoading(false);
-        //   return;
-        // }
-
-        // ─── Duplicate Check for Actual Declarations ──────────────────────────
+        // Duplicate Check for Actual Declarations
         const actualCodes = new Set(
           releasedList
             .filter(
@@ -364,6 +428,7 @@ const ReleaseDeclaration: React.FC = () => {
             emailTargets,
             "Actual",
             _financialYear,
+            user!,
             deadlineStr,
           );
         }
@@ -438,6 +503,7 @@ const ReleaseDeclaration: React.FC = () => {
           emailTargets,
           "Planned",
           _financialYear,
+          user!,
           deadlineStr,
         );
       }
@@ -468,27 +534,16 @@ const ReleaseDeclaration: React.FC = () => {
 
   // Format the redux state for the DataTable
   const employeeTableData = React.useMemo(() => {
-    return employeeMaster
-      .map((emp: IEmployee) => ({
-        employeeId: emp.EmployeeId || "-",
-        employeeName: emp.Name || emp.Title || "-",
-        location: emp.Location || "-",
-      }))
-      .filter(
-        (e) =>
-          e.employeeId.toLowerCase().includes(empFilter) ||
-          e.employeeName.toLowerCase().includes(empFilter) ||
-          e.location.toLowerCase().includes(empFilter),
-      );
-  }, [employeeMaster, empFilter]);
+    const data = employeeMaster.map((emp: IEmployee) => ({
+      employeeId: emp.EmployeeId || "-",
+      employeeName: emp.Name || emp.Title || "-",
+      location: emp.Location || "-",
+    }));
+    return globalSearchFilter(data, searchTerm);
+  }, [employeeMaster, searchTerm]);
 
   const releasedTableData = React.useMemo(() => {
-    return releasedList.filter((r) => {
-      const matchesSearch =
-        r.employeeId.toLowerCase().includes(empFilter) ||
-        r.employeeName.toLowerCase().includes(empFilter) ||
-        r.status.toLowerCase().includes(empFilter);
-
+    const filtered = releasedList.filter((r) => {
       const matchesFY = selectedFY === "All" || r.financialYear === selectedFY;
       const matchesLocation =
         selectedLocation === "All" || r.location === selectedLocation;
@@ -498,17 +553,13 @@ const ReleaseDeclaration: React.FC = () => {
         selectedStatus === "All" ||
         r.status.toLowerCase() === selectedStatus.toLowerCase();
 
-      return (
-        matchesSearch &&
-        matchesFY &&
-        matchesLocation &&
-        matchesType &&
-        matchesStatus
-      );
+      return matchesFY && matchesLocation && matchesType && matchesStatus;
     });
+
+    return globalSearchFilter(filtered, searchTerm);
   }, [
     releasedList,
-    empFilter,
+    searchTerm,
     selectedFY,
     selectedLocation,
     selectedType,
@@ -531,6 +582,55 @@ const ReleaseDeclaration: React.FC = () => {
       ...locations.sort().map((l) => ({ label: l, value: l })),
     ];
   }, [releasedList]);
+
+  const typeOptions = React.useMemo(() => {
+    // Determine available types for the selected year
+    const filteredByYear = releasedList.filter((r) => {
+      return selectedFY === "All" || r.financialYear === selectedFY;
+    });
+
+    const uniqueTypes = Array.from(
+      new Set(filteredByYear.map((r) => r.declarationType)),
+    ).filter(Boolean);
+
+    // If only one type exists for a specific year (not "All"), we won't show the dropdown
+    if (
+      selectedFY !== "All" &&
+      selectedFY !== _financialYear &&
+      uniqueTypes.length <= 1
+    ) {
+      return [];
+    }
+
+    if (uniqueTypes.length === 0) return [];
+
+    return [
+      { label: "All Types", value: "All" },
+      ...uniqueTypes.sort().map((t) => ({ label: t, value: t })),
+    ];
+  }, [releasedList, selectedFY, _financialYear]);
+
+  const statusOptions = React.useMemo(() => {
+    // Filter the list by other active filters to show only relevant statuses
+    const filteredByOthers = releasedList.filter((r) => {
+      const matchesFY = selectedFY === "All" || r.financialYear === selectedFY;
+      const matchesType =
+        selectedType === "All" || r.declarationType === selectedType;
+      // const matchesLocation = selectedLocation === "All" || r.location === selectedLocation;
+      return matchesFY && matchesType;
+    });
+
+    const statuses = Array.from(new Set(filteredByOthers.map((r) => r.status)))
+      .filter(Boolean)
+      .sort();
+    return [
+      { label: "All Status", value: "All" },
+      ...statuses.map((s) => ({
+        label: s.charAt(0).toUpperCase() + s.slice(1),
+        value: s,
+      })),
+    ];
+  }, [releasedList, selectedFY, selectedType]);
 
   const empColumns: IColumnDef[] = [
     { field: "employeeId", header: "Employee ID", sortable: true },
@@ -584,47 +684,45 @@ const ReleaseDeclaration: React.FC = () => {
       </div>
 
       <div className={styles.formCard}>
-        <div className={styles.formContent}>
-          <div className={styles.row}>
-            <div className={styles.col}>
-              <label>
-                Declaration Type <RequiredSympol />
-              </label>
-              <div className={styles.radioGroup}>
-                <AppRadioButton
-                  name="declarationType"
-                  value="Planned"
-                  label="Planned"
-                  selectedValue={formData.DeclarationType}
-                  onChange={(val) =>
-                    setFormData((p) => ({ ...p, DeclarationType: val }))
-                  }
-                />
-                <AppRadioButton
-                  name="declarationType"
-                  value="Actual"
-                  label="Actual"
-                  selectedValue={formData.DeclarationType}
-                  onChange={(val) =>
-                    setFormData((p) => ({ ...p, DeclarationType: val }))
-                  }
-                />
-              </div>
+        <div className={styles.formRow}>
+          <div className={styles.col}>
+            <label>
+              Declaration Type <RequiredSympol />
+            </label>
+            <div className={styles.radioGroup}>
+              <AppRadioButton
+                name="declarationType"
+                value="Planned"
+                label="Planned"
+                selectedValue={formData.DeclarationType}
+                onChange={(val) =>
+                  setFormData((p) => ({ ...p, DeclarationType: val }))
+                }
+              />
+              <AppRadioButton
+                name="declarationType"
+                value="Actual"
+                label="Actual"
+                selectedValue={formData.DeclarationType}
+                onChange={(val) =>
+                  setFormData((p) => ({ ...p, DeclarationType: val }))
+                }
+              />
             </div>
           </div>
 
-          <div className={styles.row}>
-            <div className={styles.col}>
-              <label>
-                Release Type <RequiredSympol />
-              </label>
-              <div className={styles.radioGroup}>
-                <AppRadioButton
-                  name="releaseType"
-                  value="Release All"
-                  label="Release All"
-                  selectedValue={formData.ReleaseType}
-                  onChange={(val) => {
+          <div className={styles.col}>
+            <label>
+              Release Type <RequiredSympol />
+            </label>
+            <div className={styles.radioGroup}>
+              <AppRadioButton
+                name="releaseType"
+                value="Release All"
+                label="Release All"
+                selectedValue={formData.ReleaseType}
+                onChange={(val) => {
+                  if (val && val !== formData.ReleaseType) {
                     setImportResult(null);
                     setFormData((p) => ({
                       ...p,
@@ -632,14 +730,16 @@ const ReleaseDeclaration: React.FC = () => {
                       SelectedUsers: [],
                     }));
                     setExcelEmployees([]);
-                  }}
-                />
-                <AppRadioButton
-                  name="releaseType"
-                  value="Release Selected"
-                  label="Release Selected"
-                  selectedValue={formData.ReleaseType}
-                  onChange={(val) => {
+                  }
+                }}
+              />
+              <AppRadioButton
+                name="releaseType"
+                value="Release Selected"
+                label="Release Selected"
+                selectedValue={formData.ReleaseType}
+                onChange={(val) => {
+                  if (val && val !== formData.ReleaseType) {
                     setImportResult(null);
                     setFormData((p) => ({
                       ...p,
@@ -647,70 +747,82 @@ const ReleaseDeclaration: React.FC = () => {
                       SelectedUsers: [],
                     }));
                     setExcelEmployees([]);
-                  }}
-                />
-                <AppRadioButton
-                  name="releaseType"
-                  value="Upload Excel"
-                  label="Upload Excel"
-                  selectedValue={formData.ReleaseType}
-                  onChange={(val) => {
-                    setFormData((p) => ({
-                      ...p,
-                      ReleaseType: val,
-                      SelectedUsers: [],
-                    }));
-                    setExcelEmployees([]);
-                    setImportResult(null);
-                  }}
-                />
-              </div>
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
 
-        {formData.ReleaseType && (
-          <div className={styles.rowWrapper}>
-            {formData.ReleaseType === "Release Selected" && (
-              <div className={styles.peoplePickerWrapper}>
-                <AppPeoplePicker
-                  titleText="Choose Employees"
-                  selectedUsers={employeeMaster.filter(
-                    (emp) =>
-                      emp.Email && formData.SelectedUsers.includes(emp.Email),
-                  )}
-                  onChange={handlePeoplePickerChange}
-                  personSelectionLimit={100}
-                  source="EmployeeMaster"
-                />
+        {formData.ReleaseType === "Release Selected" && (
+          <div className={styles.selectionRow}>
+            <div className={styles.col}>
+              <label>Choose Employees</label>
+              <div className={styles.selectionControls}>
+                <div className={styles.peoplePickerWrapper}>
+                  <AppPeoplePicker
+                    titleText=""
+                    selectedUsers={employeeMaster.filter(
+                      (emp) =>
+                        emp.Email && formData.SelectedUsers.includes(emp.Email),
+                    )}
+                    onChange={handlePeoplePickerChange}
+                    personSelectionLimit={100}
+                    source="EmployeeMaster"
+                  />
+                </div>
+                <div className={styles.uploadWrapper}>
+                  <ExcelImport
+                    columns={excelColumns}
+                    onImport={handleExcelImport}
+                    buttonLabel="Upload"
+                    icon="pi pi-upload"
+                    iconFlag={false}
+                  />
+                </div>
+                <div
+                  className={styles.downloadTemplate}
+                  onClick={templateDownload}
+                >
+                  Download template
+                </div>
               </div>
-            )}
-            {formData.ReleaseType === "Upload Excel" && (
-              <div className={styles.filePickerWrapper}>
-                <ExcelImport
-                  columns={excelColumns}
-                  onImport={handleExcelImport}
-                  buttonLabel="Upload Excel File"
-                />
-                {excelEmployees.length > 0 && (
-                  <div className={styles.chipArea}>
-                    {excelEmployees.map((emp, idx) => (
-                      <div key={idx} className={styles.chip}>
-                        <span className={styles.chipLabel}>
-                          {emp.Title} ({emp.EmployeeID})
-                        </span>
-                        <span
-                          className={styles.chipRemove}
-                          onClick={() => removeExcelEmployee(emp.EmployeeID)}
-                        >
-                          ×
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            </div>
+          </div>
+        )}
+
+        {formData.ReleaseType === "Release Selected" && (
+          <div className={styles.chipArea}>
+            {formData.SelectedUsers.map((email, idx) => {
+              const emp = employeeMaster.find((e) => e.Email === email);
+              if (!emp) return null;
+              return (
+                <div key={`pp-${idx}`} className={styles.chip}>
+                  <span className={styles.chipLabel}>
+                    {emp.Title || emp.Name} ({emp.EmployeeId})
+                  </span>
+                  <span
+                    className={styles.chipRemove}
+                    onClick={() => removeEmployee(emp.EmployeeId || "", false)}
+                  >
+                    ×
+                  </span>
+                </div>
+              );
+            })}
+            {excelEmployees.map((emp, idx) => (
+              <div key={`excel-${idx}`} className={styles.chip}>
+                <span className={styles.chipLabel}>
+                  {emp.Title} ({emp.EmployeeID})
+                </span>
+                <span
+                  className={styles.chipRemove}
+                  onClick={() => removeEmployee(emp.EmployeeID, true)}
+                >
+                  ×
+                </span>
               </div>
-            )}
+            ))}
           </div>
         )}
 
@@ -734,7 +846,7 @@ const ReleaseDeclaration: React.FC = () => {
           </div>
         )}
 
-        <div className={styles.row}>
+        <div>
           <div className={`${styles.col} ${styles.calendarCol}`}>
             <AppCalendar
               label="On or Before"
@@ -756,12 +868,11 @@ const ReleaseDeclaration: React.FC = () => {
           <ActionButton
             variant="add"
             label="Release"
-            icon="pi pi-check-square"
+            icon="pi pi-file-edit"
             disabled={
-              (formData.ReleaseType === "Upload Excel" &&
-                excelEmployees.length === 0) ||
-              (formData.ReleaseType === "Release Selected" &&
-                formData.SelectedUsers.length === 0)
+              formData.ReleaseType === "Release Selected" &&
+              formData.SelectedUsers.length === 0 &&
+              excelEmployees.length === 0
             }
             onClick={() => {
               void handleRelease();
@@ -772,7 +883,7 @@ const ReleaseDeclaration: React.FC = () => {
 
       {/* Tabs */}
       <div className={styles.tabsCard}>
-        <div style={{ margin: "20px 0px 10px 0px" }}>
+        <div style={{ margin: "10px 0px" }}>
           <div className={styles.searchToolbar}>
             <div className={styles.tabToggle}>
               <button
@@ -798,8 +909,8 @@ const ReleaseDeclaration: React.FC = () => {
                 />
               </div>
               {activeIndex === 1 && (
-                <>
-                  <div style={{ width: "130px" }}>
+                <div className={styles.filters}>
+                  <div style={{ width: "136px" }}>
                     <AppDropdown
                       value={selectedFY}
                       options={fyOptions}
@@ -815,33 +926,25 @@ const ReleaseDeclaration: React.FC = () => {
                       placeholder="Location"
                     />
                   </div> */}
-                  <div style={{ width: "130px" }}>
-                    <AppDropdown
-                      value={selectedType}
-                      options={[
-                        { label: "All Types", value: "All" },
-                        { label: "Planned", value: "Planned" },
-                        { label: "Actual", value: "Actual" },
-                      ]}
-                      onChange={(e) => setSelectedType(e.value)}
-                      placeholder="Type"
-                    />
-                  </div>
+                  {/* {typeOptions.length > 0 && (
+                    <div style={{ width: "130px" }}>
+                      <AppDropdown
+                        value={selectedType}
+                        options={typeOptions}
+                        onChange={(e) => setSelectedType(e.value)}
+                        placeholder="Type"
+                      />
+                    </div>
+                  )} */}
                   <div style={{ width: "130px" }}>
                     <AppDropdown
                       value={selectedStatus}
-                      options={[
-                        { label: "All Status", value: "All" },
-                        { label: "Draft", value: "Draft" },
-                        { label: "Submitted", value: "Submitted" },
-                        { label: "Approved", value: "Approved" },
-                        { label: "Rework", value: "Rework" },
-                      ]}
+                      options={statusOptions}
                       onChange={(e) => setSelectedStatus(e.value)}
-                      placeholder="Status"
+                      // placeholder="Status"
                     />
                   </div>
-                </>
+                </div>
               )}
               <div className={styles.actions}>
                 <ActionButton
@@ -860,6 +963,7 @@ const ReleaseDeclaration: React.FC = () => {
             <AppDataTable
               columns={empColumns}
               data={employeeTableData}
+              globalFilter={searchTerm}
               paginator
               rows={10}
             />
@@ -868,6 +972,7 @@ const ReleaseDeclaration: React.FC = () => {
             <AppDataTable
               columns={releasedColumns}
               data={releasedTableData}
+              globalFilter={searchTerm}
               paginator
               rows={10}
             />

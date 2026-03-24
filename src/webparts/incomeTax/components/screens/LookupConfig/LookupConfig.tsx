@@ -24,6 +24,7 @@ import {
   validateField,
   required,
 } from "../../../../../common/utils/validationUtils";
+import { globalSearchFilter } from "../../../../../common/utils/functions";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
@@ -121,14 +122,9 @@ const LookupConfig: React.FC = () => {
     void init();
   }, []);
 
-  const filteredData = data.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      item.section.toLowerCase().includes(term) ||
-      item.subSection.toLowerCase().includes(term) ||
-      item.types.toLowerCase().includes(term)
-    );
-  });
+  const filteredData = React.useMemo(() => {
+    return globalSearchFilter(data, searchTerm);
+  }, [data, searchTerm]);
 
   const handleExport = () => {
     exportToExcel(
@@ -328,6 +324,7 @@ const LookupConfig: React.FC = () => {
       <AppDataTable
         data={filteredData}
         columns={columns}
+        globalFilter={searchTerm}
         paginator={true}
         rows={10}
       />
@@ -337,8 +334,9 @@ const LookupConfig: React.FC = () => {
         visible={dialog.type === "ADD" || dialog.type === "EDIT"}
         header={dialog.type === "EDIT" ? "Edit Lookup Item" : "Add Lookup Item"}
         onHide={() => setDialog({ type: null, id: null })}
-        confirmLabel="Save"
+        confirmLabel={dialog.type === "EDIT" ? "Update" : "Add"}
         onConfirm={handleSave}
+        iconFlag={false}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <AppDropdown
@@ -352,30 +350,36 @@ const LookupConfig: React.FC = () => {
             }
             required
             disabled={uiState.isSaving}
+            className={styles.inputField}
           />
           <InputField
             id="subSection"
             label="Sub-Section"
+            placeholder="Enter sub-section"
             required
             value={formData.subSection}
             onChange={(e) =>
               setFormData((p) => ({ ...p, subSection: e.target.value }))
             }
             disabled={uiState.isSaving}
+            className={styles.inputField}
           />
           <InputField
             id="types"
             label="Type"
+            placeholder="Enter type"
             required
             value={formData.types}
             onChange={(e) =>
               setFormData((p) => ({ ...p, types: e.target.value }))
             }
             disabled={uiState.isSaving}
+            className={styles.inputField}
           />
           <InputField
             id="maxAmount"
             label="Max Amount"
+            placeholder="Enter max amount"
             value={formData.maxAmount}
             onChange={(e) =>
               setFormData((p) => ({
@@ -385,6 +389,7 @@ const LookupConfig: React.FC = () => {
             }
             required
             disabled={uiState.isSaving}
+            className={styles.inputField}
           />
         </div>
       </Popup>
@@ -399,6 +404,7 @@ const LookupConfig: React.FC = () => {
         }}
         actionType="Delete"
         message={`Are you sure you want to delete\n this item?`}
+       iconFlag={false}
       />
     </div>
   );

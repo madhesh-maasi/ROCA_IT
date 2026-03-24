@@ -131,7 +131,10 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
             id="pe-salary"
             value={data.salaryAfterExemption}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange("salaryAfterExemption", e.target.value)
+              onChange(
+                "salaryAfterExemption",
+                e.target.value.replace(/[^0-9]/g, ""),
+              )
             }
             placeholder="Enter"
             disabled={readOnly}
@@ -267,7 +270,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
               className={styles.commentArea || ""}
               style={{
                 width: "100%",
-                height: "100px",
+                height: 80,
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",

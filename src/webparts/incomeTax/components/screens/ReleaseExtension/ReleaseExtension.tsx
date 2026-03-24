@@ -22,6 +22,7 @@ import {
   updateListItemsBatch,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
+import { globalSearchFilter } from "../../../../../common/utils/functions";
 
 interface IReleasedItem {
   Id: number;
@@ -175,13 +176,7 @@ const ReleaseExtension: React.FC = () => {
   ];
 
   const filteredData = React.useMemo(() => {
-    const lowerSearch = searchTerm.toLowerCase();
-    return releasedList.filter(
-      (emp) =>
-        emp.EmployeeCode?.toLowerCase().includes(lowerSearch) ||
-        emp.EmployeeName?.toLowerCase().includes(lowerSearch) ||
-        emp.Location?.toLowerCase().includes(lowerSearch),
-    );
+    return globalSearchFilter(releasedList, searchTerm);
   }, [searchTerm, releasedList]);
 
   return (
@@ -240,6 +235,7 @@ const ReleaseExtension: React.FC = () => {
         <AppDataTable
           columns={columns}
           data={filteredData}
+          globalFilter={searchTerm}
           paginator
           rows={15}
           selection={selectedEmployees}

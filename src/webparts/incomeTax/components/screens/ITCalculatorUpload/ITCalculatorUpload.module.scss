@@ -117,24 +117,149 @@
 .uploadForm {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 8px;
+  padding: 8px 0;
 
   .formGroup {
     :global(.p-dropdown) {
       width: 100%;
     }
+  }
 
-    .fileLabel {
-      display: block;
-      font-size: 14px;
-      font-weight: 700;
-      color: #495057;
-      margin-bottom: 6px;
+  .dropZone {
+    border: 2px dashed #b1d2d9;
+    border-radius: 12px;
+    background-color: #fcfdfe;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+
+    &:hover,
+    &.dragActive {
+      background-color: #f0f9ff;
+      border-color: #307a8a;
     }
 
-    // Tidy up file picker to fit cleanly in ActionPopup modal
-    :global(.roca-file-picker-container) {
-      margin-top: 4px;
+    .uploadIcon {
+      color: #307a8a;
+      font-size: 3rem;
+      margin-bottom: 8px;
+    }
+
+    .dropText {
+      font-size: 14px;
+      color: #334155;
+      font-weight: 500;
+      line-height: 1.5;
+
+      span {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 400;
+        margin-top: 4px;
+      }
+    }
+
+    .browseBtn {
+      background-color: #307a8a;
+      color: white;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 8px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #25616e;
+      }
+    }
+
+    .selectedFile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      width: 100%;
+
+      i {
+        color: #307a8a;
+        font-size: 1.5rem;
+      }
+
+      span {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: left;
+        color: #1e293b;
+      }
+
+      .removeBtn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 4px;
+
+        &:hover {
+          color: #ef4444;
+        }
+      }
+    }
+  }
+}
+
+// Custom Footer for the modal to match design
+.modalFooter {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  width: 100%;
+  padding-top: 10px;
+
+  button {
+    flex: 1;
+    border-radius: 8px;
+    height: 44px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: "Poppins", sans-serif;
+  }
+
+  .cancelBtn {
+    background: white;
+    border: 1.5px solid #307a8a;
+    color: #307a8a;
+
+    &:hover {
+      background: #f8fafc;
+    }
+  }
+
+  .confirmBtn {
+    background: #307a8a;
+    border: none;
+    color: white;
+
+    &:hover {
+      background: #25616e;
     }
   }
 }

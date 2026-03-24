@@ -24,6 +24,7 @@ import {
   required,
   isUnique,
 } from "../../../../../common/utils/validationUtils";
+import { globalSearchFilter } from "../../../../../common/utils/functions";
 import AppToast, {
   showToast,
 } from "../../../../../common/components/Toast/Toast";
@@ -84,9 +85,9 @@ const SectionConfig: React.FC = () => {
     void init();
   }, []);
 
-  const filteredData = data.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredData = React.useMemo(() => {
+    return globalSearchFilter(data, searchTerm);
+  }, [data, searchTerm]);
 
   const handleExport = () => {
     exportToExcel(
@@ -255,6 +256,7 @@ const SectionConfig: React.FC = () => {
         <AppDataTable
           data={filteredData}
           columns={columns}
+          globalFilter={searchTerm}
           paginator={true}
           rows={10}
         />
@@ -265,23 +267,27 @@ const SectionConfig: React.FC = () => {
         visible={dialog.type === "ADD" || dialog.type === "EDIT"}
         header={dialog.type === "EDIT" ? "Edit Section" : "Add Section"}
         onHide={() => setDialog({ type: null, id: null })}
-        confirmLabel="Save"
+        confirmLabel={dialog.type === "EDIT" ? "Update" : "Add"}
         onConfirm={handleSave}
+        iconFlag={false}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <InputField
             id="sectionName"
             label="Section Name"
+            placeholder="Enter section name"
             value={formData.name}
             onChange={(e) =>
               setFormData((p) => ({ ...p, name: e.target.value }))
             }
             required
             disabled={uiState.isSaving}
+            className={styles.inputField}
           />
           <InputField
             id="maxAmount"
             label="Max Amount"
+            placeholder="Enter max amount"
             value={formData.maxAmount}
             onChange={(e) =>
               setFormData((p) => ({
@@ -291,6 +297,7 @@ const SectionConfig: React.FC = () => {
             }
             required
             disabled={uiState.isSaving}
+            className={styles.inputField}
           />
         </div>
       </Popup>

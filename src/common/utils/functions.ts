@@ -38,3 +38,24 @@ export function getPreviousFinancialYear(fy: string): string {
   const [startYear, endYear] = fy.split("-").map(Number);
   return `${startYear - 1}-${endYear - 1}`;
 }
+
+/**
+ * Filters an array of objects based on a global search term across all (or specified) fields.
+ */
+export function globalSearchFilter<T>(
+  data: T[],
+  searchTerm: string,
+  fields?: (keyof T)[],
+): T[] {
+  if (!searchTerm || searchTerm.trim() === "") return data;
+  const lowerSearch = searchTerm.toLowerCase();
+
+  return data.filter((item) => {
+    const keys = fields || (Object.keys(item as any) as (keyof T)[]);
+    return keys.some((key) => {
+      const value = item[key];
+      if (value === null || value === undefined) return false;
+      return String(value).toLowerCase().includes(lowerSearch);
+    });
+  });
+}

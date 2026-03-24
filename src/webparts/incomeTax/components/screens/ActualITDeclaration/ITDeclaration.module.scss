@@ -4,14 +4,14 @@
   height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  // overflow: hidden;
 }
 
 .contentWrapper {
   flex: 1;
-  overflow-y: auto;
-  padding: 24px 24px 0 24px;
-  scrollbar-width: none;
+  // overflow-y: auto;
+  padding: 0px 10px;
+  // scrollbar-width: none;
 }
 
 .header {
@@ -64,7 +64,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin: 40px 0;
+  margin: 0px 0px 20px 0px;
   position: relative;
   padding: 0 20px;
 }
@@ -111,8 +111,8 @@
 }
 
 .iconCircle {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #ffffff;
   color: #94a3b8;
@@ -181,7 +181,7 @@
 
   textarea {
     width: 100%;
-    min-height: 100px;
+    min-height: 80px;
     padding: 16px;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
@@ -235,7 +235,7 @@
 
 .tableContainer {
   margin-top: 30px;
-  overflow-x: auto;
+  // overflow-x: auto;
 }
 
 .customTable {
@@ -318,7 +318,7 @@
 
 .landlordGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 24px;
   align-items: end;
 }
@@ -371,6 +371,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    display: none;
   }
 }
 
