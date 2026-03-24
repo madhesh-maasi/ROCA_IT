@@ -56,7 +56,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
           <thead>
             <tr>
               <th style={{ width: "15%" }}>Month</th>
-              <th style={{ width: "25%" }}>Metro/Non Metro</th>
+              <th style={{ width: "17%" }}>Metro/Non Metro</th>
               <th style={{ width: "20%" }}>City</th>
               <th style={{ width: "20%" }}>Monthly Rent</th>
             </tr>
@@ -123,7 +123,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
         </table>
       </div>
 
-      <div style={{ marginTop: "40px" }}>
+      <div style={{ marginTop: "20px" }}>
         <div
           style={{
             display: "flex",
@@ -156,7 +156,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   <label>Landlord's Name</label>
                   <InputField
                     id={`ll-name-${idx}`}
-                    // value={ll.name}
+                    value={ll.name}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       onLandlordChange(idx, "name", e.target.value)
                     }
@@ -214,7 +214,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
               className={styles.commentArea || ""}
               style={{
                 width: "100%",
-                height: "100px",
+                height: 80,
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",

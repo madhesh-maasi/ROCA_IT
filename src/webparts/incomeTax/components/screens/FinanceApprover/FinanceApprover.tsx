@@ -26,6 +26,7 @@ import {
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { useAppSelector } from "../../../../../store/hooks";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
+import { globalSearchFilter } from "../../../../../common/utils/functions";
 import Loader from "../../../../../common/components/Loader/Loader";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import { handleError } from "../../../../../common/utils/errorUtils";
@@ -100,13 +101,9 @@ const FinanceApprover: React.FC = () => {
   }, [masterEmployees]);
 
   // ─── Search filter ────────────────────────────────────────────────────────
-  const filtered = adminUsers.filter(
-    (row) =>
-      search === "" ||
-      row.Title?.toLowerCase().includes(search.toLowerCase()) ||
-      row.Email?.toLowerCase().includes(search.toLowerCase()) ||
-      row.EmployeeId?.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = React.useMemo(() => {
+    return globalSearchFilter(adminUsers, search);
+  }, [adminUsers, search]);
 
   // ─── Handle "Add" button inside popup ────────────────────────────────────
   const handleAddUser = async (): Promise<void> => {
@@ -258,6 +255,7 @@ const FinanceApprover: React.FC = () => {
         <AppDataTable
           data={filtered}
           columns={COLUMNS}
+          globalFilter={search}
           paginator
           rows={10}
           emptyMessage={

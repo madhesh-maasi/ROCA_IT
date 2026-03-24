@@ -78,11 +78,10 @@
         :global(.p-inputtext) {
           background-color: #ffffff;
           border: 1px solid #d1d5db;
-          border-right: none;
           color: #4b5563;
           border-top-left-radius: 6px;
           border-bottom-left-radius: 6px;
-          padding: 8px 12px;
+          // padding: 8px 12px;
           box-shadow: none;
 
           &:enabled:focus {

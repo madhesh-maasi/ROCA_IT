@@ -142,14 +142,9 @@ const SubmittedDeclarations: React.FC = () => {
     void fetchData();
   }, [userEmail]);
 
-  // Pick the right dataset based on active tab, then apply FY + search filters
+  // Pick the right dataset based on active tab, then apply FY filter
   const tableData = (activeTab === "Planned" ? plannedRows : actualRows).filter(
-    (row) =>
-      row.financialYear === fy &&
-      (search === "" ||
-        row.requestId.toLowerCase().includes(search.toLowerCase()) ||
-        row.regimeType.toLowerCase().includes(search.toLowerCase()) ||
-        row.status.toString().toLowerCase().includes(search.toLowerCase())),
+    (row) => row.financialYear === fy,
   );
 
   const handleRowClick = (row: any) => {
@@ -188,7 +183,7 @@ const SubmittedDeclarations: React.FC = () => {
             options={fyOptions}
             onChange={(e) => setFy(e.value)}
           />
-          {/* <SearchInput value={search} onChange={(val) => setSearch(val)} /> */}
+          <SearchInput value={search} onChange={(val) => setSearch(val)} />
         </div>
       </div>
 
@@ -196,8 +191,7 @@ const SubmittedDeclarations: React.FC = () => {
       <AppDataTable
         data={tableData}
         columns={COLUMNS}
-        paginator
-        rows={10}
+        globalFilter={search}
         emptyMessage={
           isLoading
             ? "Loading..."

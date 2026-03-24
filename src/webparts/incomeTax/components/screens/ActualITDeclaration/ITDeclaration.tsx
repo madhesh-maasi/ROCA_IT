@@ -94,6 +94,18 @@ const ITDeclaration: React.FC = () => {
   const [isSubmittingRegime, setIsSubmittingRegime] = React.useState(false);
   const [isEditMode, setIsEditMode] = React.useState(false);
 
+  const matchedEmployee = React.useMemo(() => {
+    if (!employeeMaster.length) return null;
+    const targetEmail = declarationItem?.EmployeeEmail || user?.Email;
+    if (!targetEmail) return null;
+
+    return (
+      employeeMaster.find((e) => e.Email === targetEmail) ||
+      employeeMaster.find((e) => user && e.EmployeeId === user.LoginName) ||
+      null
+    );
+  }, [user, employeeMaster, declarationItem]);
+
   // ── Attachment state removed - now stored in section states
 
   const isAdmin = userRole === "Admin" || userRole === "FinanceApprover";
@@ -104,7 +116,7 @@ const ITDeclaration: React.FC = () => {
 
   // Form States
   const [pan, setPan] = React.useState("");
-  const [mobile, setMobile] = React.useState("");
+  const [mobile, setMobile] = React.useState(matchedEmployee?.PhoneNo || "");
   const [rentDetails, setRentDetails] = React.useState<any[]>([
     { month: "April", isMetro: true, city: "", rent: "" },
     { month: "May", isMetro: true, city: "", rent: "" },
@@ -198,18 +210,6 @@ const ITDeclaration: React.FC = () => {
   );
 
   const selectedItemFromStore = useAppSelector(selectSelectedItem);
-
-  const matchedEmployee = React.useMemo(() => {
-    if (!employeeMaster.length) return null;
-    const targetEmail = declarationItem?.EmployeeEmail || user?.Email;
-    if (!targetEmail) return null;
-
-    return (
-      employeeMaster.find((e) => e.Email === targetEmail) ||
-      employeeMaster.find((e) => user && e.EmployeeId === user.LoginName) ||
-      null
-    );
-  }, [user, employeeMaster, declarationItem]);
 
   // Reset edit mode when step changes
   React.useEffect(() => {
@@ -1204,6 +1204,7 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             PAN: pan,
             ApproverCommentsJson: commentsJSON,
+            MobileNumber: mobile.toString(),
           });
           break;
         }
@@ -1438,8 +1439,9 @@ const ITDeclaration: React.FC = () => {
           empEmail,
           "Actual",
           fy,
+          user!,
           reqNo,
-          "ActaulApproved",
+          "ActualApproved",
         );
       } else if (newStatus === "Rework" && empEmail) {
         void sendReworkEmail(
@@ -1449,6 +1451,7 @@ const ITDeclaration: React.FC = () => {
           "Actual",
           fy,
           reqNo,
+          user!,
           commentsSummary,
         );
       }
@@ -1810,6 +1813,7 @@ const ITDeclaration: React.FC = () => {
       PAN: plannedItem.PAN || "",
       RentDetailsJSON: plannedItem.RentDetailsJSON || null,
       Status: "Draft",
+      MobileNumber: plannedItem.MobileNumber,
     });
 
     // Helper: fetch Planned sub-list
@@ -2121,6 +2125,25 @@ const ITDeclaration: React.FC = () => {
                 />
               )}
 
+            {activeStep === "Declaration & Summary" &&
+              status === "Approved" &&
+              (declarationItem?.DeclarationStatus == "Not Submitted" ||
+                !declarationItem?.DeclarationStatus) &&
+              declarationItem?.EmployeeEmail == user?.Email && (
+                <ActionButton
+                  variant="continue"
+                  label="Declaration Form"
+                  onClick={() =>
+                    navigate(`/declarationForm/${declarationItem.Id}`)
+                  }
+                  style={{
+                    background: "white",
+                    color: "#307a8a",
+                    border: "1px solid #307a8a",
+                  }}
+                />
+              )}
+
             {isAdmin &&
               status === "Submitted" &&
               activeStep !== "Declaration & Summary" &&
@@ -2129,7 +2152,6 @@ const ITDeclaration: React.FC = () => {
                 <ActionButton
                   variant="continue"
                   label="Edit"
-                  icon="pi pi-pencil"
                   style={{
                     background: "white",
                     color: "#307a8a",

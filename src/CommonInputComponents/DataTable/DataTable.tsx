@@ -18,6 +18,8 @@ export interface IDataTableProps {
   data: DataTableValueArray;
   /** Column definitions. */
   columns: IColumnDef[];
+  /** Global search filter string. */
+  globalFilter?: string | null;
   /** Show a loading overlay skeleton. */
   loading?: boolean;
   /** Message shown when `data` is empty. */
@@ -40,25 +42,11 @@ export interface IDataTableProps {
 /**
  * A feature-ready data table built on PrimeReact DataTable.
  * Supports pagination, loading state, and empty state out of the box.
- *
- * @example
- * const columns: IColumnDef[] = [
- *   { field: 'name', header: 'Name' },
- *   { field: 'pan', header: 'PAN' },
- * ];
- *
- * <AppDataTable
- *   data={employees}
- *   columns={columns}
- *   loading={isLoading}
- *   paginator
- *   rows={10}
- *   emptyMessage="No records found."
- * />
  */
 const AppDataTable: React.FC<IDataTableProps> = ({
   data,
   columns,
+  globalFilter,
   loading = false,
   emptyMessage = "No records found.",
   paginator = false,
@@ -69,6 +57,11 @@ const AppDataTable: React.FC<IDataTableProps> = ({
   onRowClick,
   cursor = false,
 }) => {
+  // Extract all searchable fields for global filtering
+  const globalFilterFields = React.useMemo(() => {
+    return columns.map((col) => col.field);
+  }, [columns]);
+
   return (
     <div className={`${styles.dataTableContainer} ${className || ""}`}>
       <PrimeDataTable
@@ -85,6 +78,8 @@ const AppDataTable: React.FC<IDataTableProps> = ({
         selection={selection}
         onSelectionChange={onSelectionChange}
         onRowClick={onRowClick}
+        globalFilter={globalFilter}
+        globalFilterFields={globalFilterFields}
         className={`${styles.dataTable} ${cursor ? styles.cursor : ""}`}
       >
         {onSelectionChange && (

@@ -13,7 +13,6 @@ import styles from "./ExcelImport.module.scss";
 export interface IExcelColumn {
   key: string;
   label: string;
-  required?: boolean;
   type?: "string" | "number" | "email";
 }
 
@@ -39,6 +38,8 @@ interface IExcelImportProps {
   onImport: (result: IImportResult) => void;
   accept?: string;
   buttonLabel?: string;
+  icon?: string;
+  iconFlag?: boolean;
 }
 
 export const ExcelImport: React.FC<IExcelImportProps> = ({
@@ -46,6 +47,8 @@ export const ExcelImport: React.FC<IExcelImportProps> = ({
   onImport,
   accept = ".xlsx",
   buttonLabel = "Upload Excel",
+  icon,
+  iconFlag = true,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isParsing, setIsParsing] = React.useState(false);
@@ -85,12 +88,22 @@ export const ExcelImport: React.FC<IExcelImportProps> = ({
 
         // Header Validation
         const firstRow = jsonData[0];
-        const headers = Object.keys(firstRow);
-        const missingColumns = columns
-          .filter((col) => col.required)
-          .filter(
-            (col) => !headers.includes(col.label) && !headers.includes(col.key),
-          );
+        // const headers = Object.keys(firstRow);
+        // const missingColumns = columns
+        //   .filter((col) => col.required)
+        //   .filter(
+        //     (col) => !headers.includes(col.label) && !headers.includes(col.key),
+        //   );
+
+        const headers = Object.keys(firstRow).map((h) =>
+          h.trim().toLowerCase(),
+        );
+
+        const missingColumns = columns.filter(
+          (col) =>
+            !headers.includes(col.label.toLowerCase()) &&
+            !headers.includes(col.key.toLowerCase()),
+        );
 
         if (missingColumns.length > 0) {
           onImport({
@@ -122,10 +135,10 @@ export const ExcelImport: React.FC<IExcelImportProps> = ({
 
             // Required check
             if (
-              col.required &&
-              (value === undefined ||
-                value === null ||
-                String(value).trim() === "")
+              // col.required &&
+              value === undefined ||
+              value === null ||
+              String(value).trim() === ""
             ) {
               errors.push({
                 row: rowNum,
@@ -165,7 +178,8 @@ export const ExcelImport: React.FC<IExcelImportProps> = ({
           });
 
           // Duplicate check (using the first required column or the first column as unique key)
-          const uniqueKeyCol = columns.find((c) => c.required) || columns[0];
+          // const uniqueKeyCol = columns.find((c) => c.required) || columns[0];
+          const uniqueKeyCol = columns[0];
           const uniqueValue = String(validatedRow[uniqueKeyCol.key])
             .trim()
             .toLowerCase();
@@ -238,7 +252,7 @@ export const ExcelImport: React.FC<IExcelImportProps> = ({
       <ActionButton
         variant="export"
         label={isParsing ? "Parsing..." : buttonLabel}
-        icon="pi pi-file-excel"
+        icon={iconFlag ? "pi pi-file-excel" : ""}
         disabled={isParsing}
         onClick={() => fileInputRef.current?.click()}
         className={styles.uploadBtn}

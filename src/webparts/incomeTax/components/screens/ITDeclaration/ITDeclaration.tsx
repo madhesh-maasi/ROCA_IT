@@ -59,6 +59,7 @@ import {
   sendApprovalEmail,
   sendReworkEmail,
 } from "../../../../../common/utils/emailService";
+import { Popup } from "../../../../../CommonInputComponents";
 
 // ── Mapping section names to icons ───────────────────────────────
 const ICON_MAP: Record<string, any> = {
@@ -90,6 +91,18 @@ const ITDeclaration: React.FC = () => {
   const [isSubmittingRegime, setIsSubmittingRegime] = React.useState(false);
   const [isEditMode, setIsEditMode] = React.useState(false);
 
+  const matchedEmployee = React.useMemo(() => {
+    if (!employeeMaster.length) return null;
+    const targetEmail = declarationItem?.EmployeeEmail || user?.Email;
+    if (!targetEmail) return null;
+
+    return (
+      employeeMaster.find((e) => e.Email === targetEmail) ||
+      employeeMaster.find((e) => user && e.EmployeeId === user.LoginName) ||
+      null
+    );
+  }, [user, employeeMaster, declarationItem]);
+
   const isAdmin =
     userRole === "Admin" ||
     userRole === "FinanceApprover" ||
@@ -101,7 +114,7 @@ const ITDeclaration: React.FC = () => {
 
   // Form States
   const [pan, setPan] = React.useState("");
-  const [mobile, setMobile] = React.useState("");
+  const [mobile, setMobile] = React.useState(matchedEmployee?.PhoneNo || "");
   const [rentDetails, setRentDetails] = React.useState<any[]>([
     { month: "April", isMetro: true, city: "", rent: "" },
     { month: "May", isMetro: true, city: "", rent: "" },
@@ -192,18 +205,6 @@ const ITDeclaration: React.FC = () => {
   );
 
   const selectedItemFromStore = useAppSelector(selectSelectedItem);
-
-  const matchedEmployee = React.useMemo(() => {
-    if (!employeeMaster.length) return null;
-    const targetEmail = declarationItem?.EmployeeEmail || user?.Email;
-    if (!targetEmail) return null;
-
-    return (
-      employeeMaster.find((e) => e.Email === targetEmail) ||
-      employeeMaster.find((e) => user && e.EmployeeId === user.LoginName) ||
-      null
-    );
-  }, [user, employeeMaster, declarationItem]);
 
   // Reset edit mode when step changes
   React.useEffect(() => {
@@ -752,7 +753,7 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             PAN: pan,
             ApproverCommentsJson: commentsJSON,
-            MobileNumber: mobile,
+            MobileNumber: mobile.toString(),
           });
           break;
         }
@@ -963,6 +964,7 @@ const ITDeclaration: React.FC = () => {
           empEmail,
           "Planned",
           fy,
+          user!,
           declarationItem.Title,
         );
       } else if (newStatus === "Rework" && empEmail) {
@@ -973,6 +975,7 @@ const ITDeclaration: React.FC = () => {
           "Planned",
           fy,
           declarationItem.Title,
+          user!,
           commentsSummary,
         );
       }
@@ -1027,7 +1030,8 @@ const ITDeclaration: React.FC = () => {
               location: matchedEmployee?.Location || "-",
               doj: matchedEmployee?.DOJ || "-",
               email: matchedEmployee?.Email || user?.Email || "",
-              mobile: matchedEmployee?.PhoneNo || "-",
+              // mobile: matchedEmployee?.PhoneNo || "-",
+              mobile: mobile || matchedEmployee?.PhoneNo!,
             }}
             mobile={mobile || matchedEmployee?.PhoneNo!}
             onMobileChange={setMobile}
@@ -1442,16 +1446,30 @@ const ITDeclaration: React.FC = () => {
                 />
               )}
 
+            {/* {activeStep === "Declaration & Summary" && (
+              <ActionButton
+                variant="continue"
+                label="Preview Form"
+                icon="pi pi-eye"
+                onClick={() => setShowPreview(true)}
+                style={{
+                  background: "white",
+                  color: "#307a8a",
+                  border: "1px solid #307a8a",
+                }}
+              />
+            )} */}
+
             {/* Edit Button */}
             {isAdmin &&
               status === "Submitted" &&
               declarationItem?.TaxRegime == "Old Regime" &&
               !isEditMode &&
-              activeStep !== "Declaration & Summary" && (
+              activeStep !== "Declaration & Summary" &&
+              activeStep !== "Home" && (
                 <ActionButton
                   variant="continue"
                   label="Edit"
-                  icon="pi pi-pencil"
                   style={{
                     background: "white",
                     color: "#307a8a",
@@ -1484,7 +1502,7 @@ const ITDeclaration: React.FC = () => {
                 />
               )}
 
-            {!isFormReadOnly && (
+            {!isFormReadOnly && activeStep !== "Declaration & Summary" && (
               <ActionButton
                 variant="draft"
                 className="primaryBtn"

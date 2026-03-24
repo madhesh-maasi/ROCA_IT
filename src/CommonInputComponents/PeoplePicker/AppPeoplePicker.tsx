@@ -14,6 +14,7 @@ import {
 import { IEmployee } from "../../common/models";
 import styles from "./AppPeoplePicker.module.scss";
 import React from "react";
+import RequiredSympol from "../../common/components/RequiredSympol/RequiredSympol";
 
 export interface IAppPeoplePickerProps {
   /** The currently selected user(s) */
@@ -36,7 +37,6 @@ export interface IAppPeoplePickerProps {
 
 /** Convert an IEmployee record to a Fluent UI IPersonaProps (standard fields only) */
 const employeeToPersona = (emp: IEmployee): IPersonaProps => {
-  // Resolve display name: try Name first (normalised), then Title, then email prefix
   const displayName =
     (emp.Name || emp.Title || "").trim() ||
     (emp.Email ? emp.Email.split("@")[0] : "") ||
@@ -46,8 +46,7 @@ const employeeToPersona = (emp: IEmployee): IPersonaProps => {
     key: String(emp.Id),
     text: displayName,
     secondaryText: emp.Email ?? "",
-    tertiaryText: emp.EmployeeId ?? "",
-    showSecondaryText: true,
+    showSecondaryText: false, // Hide email below name
   };
 };
 
@@ -62,6 +61,100 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
   source = "SiteMembers",
 }) => {
   const context = React.useContext(SPWebPartContext);
+  const peopleStyles = {
+    root: {
+      ".ms-BasePicker-text": {
+        border: "1px solid #ced4da",
+        borderRadius: "8px",
+        padding: "2px 4px",
+        minHeight: "44px",
+        display: "flex",
+        alignItems: "center",
+        transition:
+          "border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+
+        "::after": {
+          display: "none",
+        },
+
+        "&:hover": {
+          borderColor: "#307a8a",
+        },
+      },
+
+      ".ms-BasePicker-input": {
+        height: "36px",
+        padding: "0 12px",
+        fontSize: "14px",
+        border: "none !important",
+        color: "#1e293b",
+      },
+
+      ".ms-SelectionZone": {
+        width: "100%",
+        maxHeight: personSelectionLimit > 1 ? "40px" : "auto",
+        overflowY: "auto",
+        scrollbarWidth: "thin",
+        "::-webkit-scrollbar": {
+          width: "6px",
+        },
+        "::-webkit-scrollbar-thumb": {
+          background: "#cbd5e1",
+          borderRadius: "10px",
+        },
+      },
+
+      ".ms-BasePicker-itemsWrapper": {
+        padding: "4px",
+        gap: "8px",
+        display: "flex",
+        flexWrap: "wrap",
+      },
+
+      ".ms-PickerPersona-container": {
+        margin: "2px 0",
+        background: "#307a8a !important", // Use brand color
+        borderRadius: "100px !important",
+        padding: "2px 8px !important",
+        height: "32px !important",
+        display: "flex",
+        alignItems: "center",
+        maxWidth: "fit-content", // Allow name to determine width
+
+        ".ms-PickerItem-removeButton": {
+          color: "#fff !important",
+          margin: "0 2px 0 6px",
+          width: "20px",
+          height: "20px",
+          padding: 0,
+          borderRadius: "50%",
+          i: {
+            fontSize: "10px !important",
+          },
+        },
+
+        ".ms-Persona": {
+          ".ms-Persona-primaryText": {
+            color: "#fff !important",
+            fontSize: "13px",
+            fontWeight: "500",
+            padding: "0 4px",
+          },
+          ".ms-Persona-secondaryText, .ms-Persona-tertiaryText": {
+            display: "none !important", // Force hide email/metadata
+          },
+        },
+
+        "&.is-selected": {
+          background: "#25616e !important", // Darker on select
+        },
+
+        ":focus-within": {
+          background: "#25616e !important",
+        },
+      },
+    },
+  };
 
   // ── People Data from Redux ────────────────────────────────────────────────
   const employees = useAppSelector(selectEmployees);
@@ -145,11 +238,16 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
 
   return (
     <div className={styles.peoplePickerWrapper}>
-      {titleText && <label className={styles.pickerLabel}>{titleText}</label>}
+      {titleText && (
+        <label className={styles.pickerLabel}>
+          {titleText} {isRequired && RequiredSympol()}
+        </label>
+      )}
       <NormalPeoplePicker
         onResolveSuggestions={onResolveSuggestions}
         // onEmptyResolveSuggestions={onEmptyResolveSuggestions}
         selectedItems={selectedPersonas}
+        styles={peopleStyles}
         onChange={onSelectionChanged}
         itemLimit={personSelectionLimit}
         disabled={disabled || isLoading}

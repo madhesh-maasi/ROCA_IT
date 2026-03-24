@@ -22,7 +22,7 @@ import {
   setSelectedItem,
 } from "../../../../../store/slices/incomeTaxSlice";
 import { useEffect } from "react";
-import { getListItems } from "../../../../../common/utils/pnpService";
+import { getListItems, getDeclarationPDFUrl } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
   curFinanicalYear,
@@ -35,6 +35,7 @@ import { AppToast, showToast } from "../../../../../common/components";
 import { Toast as PrimeToast } from "primereact/toast";
 
 interface IEmployeeRow {
+  id: number;
   requestId: string;
   financialYear: string;
   taxRegimeType: string;
@@ -43,31 +44,14 @@ interface IEmployeeRow {
   employeeName: string;
   dateOfSubmission: string;
   status: StatusVariant;
+  declarationStatus: string;
 }
 
 // Remove static FY_OPTIONS
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
-const COLUMNS: IColumnDef[] = [
-  {
-    field: "requestId",
-    header: "Request ID",
-    body: (row: IEmployeeRow) => (
-      <span className={styles.reqID}>{row.requestId}</span>
-    ),
-  },
-  { field: "taxRegimeType", header: "Tax Regime Type" },
-  { field: "investmentType", header: "Investment Type" },
-  { field: "employeeId", header: "Employee ID" },
-  { field: "employeeName", header: "Employee Name" },
-  { field: "dateOfSubmission", header: "Date of Submission" },
-  {
-    field: "status",
-    header: "Status",
-    body: (row: IEmployeeRow) => <StatusBadge status={row.status} />,
-  },
-];
+// Column definitions move inside the component for dynamic rendering
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -122,6 +106,7 @@ const EmployeeDeclarations: React.FC = () => {
         return isSubmitted;
       })
       .map((item: any) => ({
+        id: item.Id,
         requestId: item.Title || `REQ-${item.Id}`,
         financialYear: item.FinancialYear || "",
         taxRegimeType: item.TaxRegime || "-",
@@ -132,6 +117,7 @@ const EmployeeDeclarations: React.FC = () => {
           ? new Date(item.SubmittedDate).toLocaleDateString("en-IN")
           : "-",
         status: (item.Status || "Submitted").toLowerCase() as StatusVariant,
+        declarationStatus: item.DeclarationStatus || "Not Submitted",
       }));
   }, [items, activeTab]);
 
@@ -140,12 +126,83 @@ const EmployeeDeclarations: React.FC = () => {
       row.financialYear === fy &&
       (selectedRegime === "All" || row.taxRegimeType === selectedRegime) &&
       (selectedStatus === "All" ||
-        row.status.toLowerCase() === selectedStatus.toLowerCase()) &&
-      (search === "" ||
-        row.requestId.toLowerCase().includes(search.toLowerCase()) ||
-        row.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-        row.employeeId.toLowerCase().includes(search.toLowerCase())),
+        row.status.toLowerCase() === selectedStatus.toLowerCase()),
   );
+
+  const statusOptions = React.useMemo(() => {
+    const statuses = Array.from(new Set(tableData.map((r) => r.status)))
+      .filter(Boolean)
+      .sort();
+    return [
+      { label: "All Status", value: "All" },
+      ...statuses.map((s) => ({
+        label: s.charAt(0).toUpperCase() + s.slice(1),
+        value: s,
+      })),
+    ];
+  }, [tableData]);
+
+  const handleDownloadPDF = async (row: IEmployeeRow) => {
+    try {
+      const pdfUrl = await getDeclarationPDFUrl(row.financialYear, row.employeeId);
+      window.open(pdfUrl, "_blank");
+    } catch (error) {
+      console.error("Error fetching PDF URL", error);
+      showToast(toast, "error", "Error", "Could not retrieve the PDF file.");
+    }
+  };
+
+  const columns: IColumnDef[] = React.useMemo(() => {
+    const cols: IColumnDef[] = [
+      {
+        field: "requestId",
+        header: "Request ID",
+        body: (row: IEmployeeRow) => (
+          <span className={styles.reqID}>{row.requestId}</span>
+        ),
+      },
+      { field: "taxRegimeType", header: "Tax Regime Type" },
+      { field: "investmentType", header: "Investment Type" },
+      { field: "employeeId", header: "Employee ID" },
+      { field: "employeeName", header: "Employee Name" },
+      { field: "dateOfSubmission", header: "Date of Submission" },
+      {
+        field: "status",
+        header: "Status",
+        body: (row: IEmployeeRow) => <StatusBadge status={row.status} />,
+      },
+    ];
+
+    if (activeTab === "Actual") {
+      cols.push({
+        field: "declarationStatus",
+        header: "Declaration Status",
+        body: (row: IEmployeeRow) => (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <StatusBadge
+              status={
+                row.declarationStatus === "Submitted"
+                  ? "submitted"
+                  : "not_submitted"
+              }
+            />
+            {row.declarationStatus === "Submitted" && (
+              <i
+                className="pi pi-download"
+                style={{ cursor: "pointer", color: "#307a8a" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownloadPDF(row);
+                }}
+              />
+            )}
+          </div>
+        ),
+      });
+    }
+
+    return cols;
+  }, [activeTab]);
 
   const handleExport = () => {
     const dataToExport = refined.map((row) => ({
@@ -196,26 +253,28 @@ const EmployeeDeclarations: React.FC = () => {
         </div>
         <div className={styles.rightSide}>
           <SearchInput value={search} onChange={(val) => setSearch(val)} />
-          <AppDropdown
-            value={selectedRegime}
-            onChange={(e) => setSelectedRegime(e.value)}
-            options={[
-              { label: "All Regimes", value: "All" },
-              { label: "Old Regime", value: "Old Regime" },
-              { label: "New Regime", value: "New Regime" },
-            ]}
-            placeholder="Tax Regime"
-          />
-          <AppDropdown
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.value)}
-            options={[
-              { label: "All Status", value: "All" },
-              { label: "Submitted", value: "Submitted" },
-              { label: "Approved", value: "Approved" },
-            ]}
-            placeholder="Status"
-          />
+
+          <div style={{ width: "165px" }}>
+            {" "}
+            <AppDropdown
+              value={selectedRegime}
+              onChange={(e) => setSelectedRegime(e.value)}
+              options={[
+                { label: "All", value: "All" },
+                { label: "Old Regime", value: "Old Regime" },
+                { label: "New Regime", value: "New Regime" },
+              ]}
+              placeholder="Tax Regime"
+            />
+          </div>
+          <div style={{ width: "165px" }}>
+            <AppDropdown
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.value)}
+              options={statusOptions}
+              placeholder="Status"
+            />
+          </div>
           <AppDropdown
             value={fy}
             onChange={(e) => setFy(e.value)}
@@ -230,10 +289,10 @@ const EmployeeDeclarations: React.FC = () => {
         </div>
       </div>
 
-      {/* DataTable */}
       <AppDataTable
         data={refined}
-        columns={COLUMNS}
+        columns={columns}
+        globalFilter={search}
         paginator
         rows={10}
         emptyMessage="No records found."

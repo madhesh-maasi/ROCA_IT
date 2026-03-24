@@ -64,9 +64,9 @@ const StatusPopup: React.FC<IStatusPopupProps> = ({
           image: DownloadImg,
           header: "",
           confirmLabel: "",
-          cancelLabel: "OK",
-          showFooter: true,
-          defaultDescription: "Download successfully",
+          cancelLabel: "",
+          showFooter: false,
+          defaultDescription: "Downloaded successfully",
           isSuccess: true,
         };
       case "extend":
@@ -74,8 +74,8 @@ const StatusPopup: React.FC<IStatusPopupProps> = ({
           image: ApprovedImg,
           header: "",
           confirmLabel: "",
-          cancelLabel: "OK",
-          showFooter: true,
+          cancelLabel: "",
+          showFooter: false,
           defaultDescription: "Extend successfully",
           isSuccess: true,
         };
@@ -85,8 +85,8 @@ const StatusPopup: React.FC<IStatusPopupProps> = ({
           image: ApprovedImg,
           header: "",
           confirmLabel: "",
-          cancelLabel: "OK",
-          showFooter: true,
+          cancelLabel: "",
+          showFooter: false,
           defaultDescription: "Submitted successfully",
           isSuccess: true,
         };
@@ -131,7 +131,7 @@ const StatusPopup: React.FC<IStatusPopupProps> = ({
       visible={visible}
       onHide={onHide}
       header={config.header}
-      footer={footer}
+      footer={config.showFooter ? footer : null}
       className={styles.statusPopup}
       maskClassName={styles.popupMask}
       modal

@@ -86,24 +86,6 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             }}
           >
             <label
-              style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
-            >
-              LTA
-            </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.lta || "-"}
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "24px",
-              marginBottom: 10,
-            }}
-          >
-            <label
               style={{
                 fontWeight: 700,
                 width: "23%",
@@ -117,6 +99,25 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
               {totals.houseRental || "-"}
             </div>
           </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "24px",
+              marginBottom: 10,
+            }}
+          >
+            <label
+              style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
+            >
+              LTA
+            </label>
+            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+              {totals.lta || "-"}
+            </div>
+          </div>
+
           <div
             style={{
               display: "flex",
@@ -280,7 +281,7 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
               className={styles.commentArea || ""}
               style={{
                 width: "100%",
-                height: "100px",
+                height: 80,
                 padding: "16px",
                 borderRadius: "12px",
                 border: "1px solid #e2e8f0",

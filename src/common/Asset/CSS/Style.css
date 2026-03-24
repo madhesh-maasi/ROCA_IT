@@ -32,3 +32,8 @@ body {
 [data-automation-id="contentScrollRegion"] {
   overflow-y: hidden !important;
 }
+
+.p-datepicker .p-datepicker-header button {
+  width: unset !important;
+  margin-right: 2px;
+}

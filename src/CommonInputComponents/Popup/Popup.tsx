@@ -25,6 +25,8 @@ export interface IPopupProps extends Omit<
   confirmLabel?: string;
   /** Primary action handler. When provided, a Confirm button is shown in the footer. */
   onConfirm?: () => void;
+  /** Icon flag for the button element. */
+  iconFlag?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ const Popup: React.FC<IPopupProps> = ({
   closeLabel = "Close",
   confirmLabel = "Confirm",
   onConfirm,
+  iconFlag = true,
   ...rest
 }) => {
   const defaultFooter = (
@@ -60,6 +63,7 @@ const Popup: React.FC<IPopupProps> = ({
         label={closeLabel}
         onClick={onHide}
         className="p-button-outlined p-button-secondary"
+        iconFlag={iconFlag}
       />
       {onConfirm && (
         <ActionButton
@@ -67,6 +71,7 @@ const Popup: React.FC<IPopupProps> = ({
           label={confirmLabel}
           onClick={onConfirm}
           className="p-button-primary"
+          iconFlag={iconFlag}
         />
       )}
     </div>

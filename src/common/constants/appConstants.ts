@@ -105,6 +105,7 @@ export const LIST_NAMES = {
   IT_PREVIOUS_EMPLOYER_Actual: "IT_Actual_PreviousEmployer_Details",
   IT_DOCUMENTS: "IT_Documents",
   FINANCE_APPROVER: "IT_FinanceApprover",
+  IT_Templates: "IT_Templates",
 } as const;
 
 /**

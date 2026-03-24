@@ -273,7 +273,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   onChange("lenderPan", e.target.value)
                 }
-                placeholder="enter PAN number"
+                placeholder="Enter PAN number"
                 disabled={readOnly}
               />
             </div>
@@ -292,30 +292,32 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
         </div>
       )}
 
-      <div style={{ marginTop: 10 }}>
-        <div className={styles.stepHeader}>Others</div>
-        <div className={styles.formGroup} style={{ marginTop: "16px" }}>
-          <label>Jointly availed Property Loan</label>
-          <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
-            <AppRadioButton
-              label="Yes"
-              name="isJointlyAvailed"
-              value={true}
-              selectedValue={data.isJointlyAvailed}
-              onChange={(val) => onChange("isJointlyAvailed", val)}
-              disabled={readOnly}
-            />
-            <AppRadioButton
-              label="No"
-              name="isJointlyAvailed"
-              value={false}
-              selectedValue={data.isJointlyAvailed}
-              onChange={(val) => onChange("isJointlyAvailed", val)}
-              disabled={readOnly}
-            />
+      {data.propertyType !== "None" && (
+        <div style={{ marginTop: 10 }}>
+          <div className={styles.stepHeader}>Others</div>
+          <div className={styles.formGroup} style={{ marginTop: "16px" }}>
+            <label>Jointly availed Property Loan</label>
+            <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
+              <AppRadioButton
+                label="Yes"
+                name="isJointlyAvailed"
+                value={true}
+                selectedValue={data.isJointlyAvailed}
+                onChange={(val) => onChange("isJointlyAvailed", val)}
+                disabled={readOnly}
+              />
+              <AppRadioButton
+                label="No"
+                name="isJointlyAvailed"
+                value={false}
+                selectedValue={data.isJointlyAvailed}
+                onChange={(val) => onChange("isJointlyAvailed", val)}
+                disabled={readOnly}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
       {showApproverComments && onCommentChange && (
         <div style={{ marginTop: 10 }}>
           <div className={styles.formGroup}>
@@ -323,7 +325,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
             <textarea
               style={{
                 width: "100%",
-                height: "100px",
+                height: 80,
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",

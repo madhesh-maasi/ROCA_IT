@@ -360,7 +360,8 @@ export const getLatestFileUrl = async (
       .getByTitle(libraryName)
       .items.orderBy("ID", false)
       .top(1)
-      .select("ID", "FileLeafRef", "FileRef")();
+      .select("ID", "FileLeafRef", "FileRef")
+      .filter("IsDelete ne 1")();
 
     if (files.length > 0) {
       return files[0].FileRef;
@@ -427,6 +428,70 @@ export const getLibraryFilesWithMetadata = async (
 };
 
 // ─── IT Documents Upload Helpers ───────────────────────────────────────────────
+
+/**
+ * Upload a PDF to the IT_Documents library under the structured folder:
+ *   IT_Documents / {financialYear} / {employeeCode} / Declarations
+ *
+ */
+export const uploadDeclarationPDF = async (
+  financialYear: string,
+  employeeCode: string,
+  fileBlob: Blob,
+  actualDeclarationId: number,
+): Promise<string> => {
+  const sp = getSP();
+  try {
+    const webInfo = await sp.web.select("ServerRelativeUrl")();
+    const webUrl: string = (webInfo as any).ServerRelativeUrl || "";
+
+    const libraryRelPath = `${webUrl}/IT_Documents`;
+    const fyPath = `${libraryRelPath}/${sanitizeFolderName(financialYear)}`;
+    const empPath = `${fyPath}/${sanitizeFolderName(employeeCode)}`;
+    const sectionPath = `${empPath}/DeclarationForm`;
+
+    // Ensure folders exist
+    for (const path of [fyPath, empPath, sectionPath]) {
+      await sp.web.folders.addUsingPath(path, true);
+    }
+
+    const fileName = `Declaration_${sanitizeFolderName(financialYear)}.pdf`;
+
+    // Upload
+    await sp.web
+      .getFolderByServerRelativePath(sectionPath)
+      .files.addUsingPath(fileName, fileBlob, { Overwrite: true });
+
+    const fileServerRelUrl = `${sectionPath}/${fileName}`;
+    const listItem = await sp.web
+      .getFileByServerRelativePath(fileServerRelUrl)
+      .getItem();
+
+    await listItem.update({
+      ActualDeclarationId: actualDeclarationId,
+      IsDelete: false,
+    });
+
+    return fileServerRelUrl;
+  } catch (err) {
+    await handleError(err, "Uploading Declaration PDF");
+    throw err;
+  }
+};
+
+/**
+ * Construct the standard server-relative URL for a declaration PDF.
+ */
+export const getDeclarationPDFUrl = async (
+  financialYear: string,
+  employeeCode: string,
+): Promise<string> => {
+  const sp = getSP();
+  const webInfo = await sp.web.select("ServerRelativeUrl")();
+  const webUrl: string = (webInfo as any).ServerRelativeUrl || "";
+
+  return `${webUrl}/IT_Documents/${sanitizeFolderName(financialYear)}/${sanitizeFolderName(employeeCode)}/DeclarationForm/Declaration_${sanitizeFolderName(financialYear)}.pdf`;
+};
 
 /**
  * Upload a PDF to the IT_Documents library under the structured folder:
