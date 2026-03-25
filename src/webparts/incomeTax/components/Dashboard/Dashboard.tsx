@@ -17,7 +17,6 @@ import ITCalculatorUpload from "../screens/ITCalculatorUpload/ITCalculatorUpload
 import ITDeclaration from "../screens/ITDeclaration/ITDeclaration";
 import ActualITDeclaration from "../screens/ActualITDeclaration/ITDeclaration";
 import DeclarationFormScreen from "../screens/DeclarationForm/DeclarationFormScreen";
-import PlaceholderScreen from "../screens/PlaceholderScreen/PlaceholderScreen";
 import { useAppDispatch, useAppSelector } from "../../../../store/hooks";
 import { fetchIncomeTaxItems } from "../../../../store/slices/incomeTaxSlice";
 import { selectUserDetails } from "../../../../store/slices/userSlice";
@@ -89,7 +88,10 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
         <Route path="/itCalculatorUpload" element={<ITCalculatorUpload />} />
         <Route path="/itDeclaration" element={<ITDeclaration />} />
         <Route path="/actualItDeclaration" element={<ActualITDeclaration />} />
-        <Route path="/declarationForm/:id" element={<DeclarationFormScreen />} />
+        <Route
+          path="/declarationForm/:id"
+          element={<DeclarationFormScreen />}
+        />
         <Route
           path="*"
           element={<Navigate to="/submittedDeclarations" replace />}

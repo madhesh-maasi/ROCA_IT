@@ -6,32 +6,18 @@ import {
 import AppDataTable, {
   IColumnDef,
 } from "../../../../../CommonInputComponents/DataTable/DataTable";
-import {
-  ActionButton,
-  AppDropdown,
-  IDropdownOption,
-} from "../../../../../CommonInputComponents";
+import { AppDropdown } from "../../../../../CommonInputComponents";
 import { SearchInput } from "../../../../../CommonInputComponents/SearchInput";
-import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
+import { useAppSelector } from "../../../../../store/hooks";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "../screens.module.scss";
 import {
   curFinanicalYear,
   getFYOptions,
 } from "../../../../../common/utils/functions";
-import {
-  getItemById,
-  getListItems,
-  getSP,
-  updateListItem,
-} from "../../../../../common/utils/pnpService";
+import { getSP } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
-import {
-  fetchIncomeTaxItems,
-  selectUserDetails,
-} from "../../../../../store/slices";
-import TaxRegimePopup from "./TaxRegimePopup";
-import { useDispatch } from "react-redux";
+import { selectUserDetails } from "../../../../../store/slices";
 
 // ─── Row definition ─────────────────────────────────────────────────────────────
 
@@ -44,8 +30,6 @@ interface ISubmittedRow {
   dateOfSubmission: string;
   status: StatusVariant | string;
 }
-
-// Remove static FY_OPTIONS
 
 // ─── Columns ────────────────────────────────────────────────────────────────────
 
@@ -177,13 +161,15 @@ const SubmittedDeclarations: React.FC = () => {
           ))}
         </div>
         <div className={styles.rightSide}>
-          <AppDropdown
-            className={styles.fySelect}
-            value={fy}
-            options={fyOptions}
-            onChange={(e) => setFy(e.value)}
-          />
-          <SearchInput value={search} onChange={(val) => setSearch(val)} />
+          <div className={styles.filters}>
+            <AppDropdown
+              className={styles.fySelect}
+              value={fy}
+              options={fyOptions}
+              onChange={(e) => setFy(e.value)}
+            />
+            <SearchInput value={search} onChange={(val) => setSearch(val)} />
+          </div>
         </div>
       </div>
 

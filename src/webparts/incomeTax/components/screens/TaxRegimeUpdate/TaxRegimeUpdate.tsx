@@ -6,9 +6,7 @@ import {
   SearchInput,
   ActionButton,
   AppDropdown,
-  Popup,
   StatusPopup,
-  IconButton,
 } from "../../../../../CommonInputComponents";
 import AppToast, {
   showToast,
@@ -61,7 +59,7 @@ const TaxRegimeUpdate: React.FC = () => {
 
       const items = await getListItems(
         listName,
-        `Status eq 'Draft' or Status eq 'Rework' or Status eq 'Released' and IsExported ne 1`,
+        `Status eq 'Draft' or Status eq 'Rework' or Status eq 'Released' and IsExported ne 1 and FinancialYear eq '${getCurrentFinancialYear()}'`,
       );
       setData(items);
     } catch (err) {
@@ -325,3 +323,6 @@ const TaxRegimeUpdate: React.FC = () => {
 };
 
 export default TaxRegimeUpdate;
+function getCurrentFinancialYear() {
+  throw new Error("Function not implemented.");
+}

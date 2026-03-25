@@ -139,3 +139,9 @@
   //   }
   // }
 }
+
+.filters :global {
+  .p-calendar .p-inputtext {
+    height: 33px !important;
+  }
+}
