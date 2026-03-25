@@ -231,6 +231,14 @@ export const getSiteOwnersGroup = async (): Promise<any> => {
 };
 
 /**
+ * Fetch a SharePoint group by its name.
+ */
+export const getGroupByName = async (groupName: string): Promise<any> => {
+  const sp = getSP();
+  return sp.web.siteGroups.getByName(groupName)();
+};
+
+/**
  * Fetch the site members group.
  */
 export const getSiteMembersGroup = async (): Promise<any> => {
@@ -695,7 +703,6 @@ export const getListItems = async (
     const filterQuery = extraFilter
       ? `IsDelete ne 1 and (${extraFilter})`
       : "IsDelete ne 1";
-    // Note: Assuming the internal name is IsDelete. If it uses Yes/No, it might be 0/1.
     return await sp.web.lists
       .getByTitle(listName)
       .items.filter(filterQuery)

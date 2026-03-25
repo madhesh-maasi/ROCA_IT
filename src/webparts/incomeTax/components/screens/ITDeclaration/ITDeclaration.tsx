@@ -59,7 +59,6 @@ import {
   sendApprovalEmail,
   sendReworkEmail,
 } from "../../../../../common/utils/emailService";
-import { Popup } from "../../../../../CommonInputComponents";
 
 // ── Mapping section names to icons ───────────────────────────────
 const ICON_MAP: Record<string, any> = {

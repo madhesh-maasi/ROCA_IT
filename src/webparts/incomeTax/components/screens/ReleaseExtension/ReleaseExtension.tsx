@@ -34,8 +34,6 @@ interface IReleasedItem {
   Status: string;
 }
 
-// Remove dummy data
-
 const ReleaseExtension: React.FC = () => {
   const dispatch = useAppDispatch();
   const toast = React.useRef<PrimeToast>(null);
@@ -208,15 +206,18 @@ const ReleaseExtension: React.FC = () => {
               placeholder="Search..."
             />
           </div>
-
-          <div className={styles.calendarBlock}>
-            <AppCalendar
-              value={selectedDate}
-              onChange={(e) => setSelectedDate((e.value as Date) || undefined)}
-              showIcon
-              minDate={new Date()}
-              placeholder="Select date"
-            />
+          <div className={styles.filters}>
+            <div className={styles.calendarBlock}>
+              <AppCalendar
+                value={selectedDate}
+                onChange={(e) =>
+                  setSelectedDate((e.value as Date) || undefined)
+                }
+                showIcon
+                minDate={new Date()}
+                placeholder="Select date"
+              />
+            </div>
           </div>
 
           <ActionButton

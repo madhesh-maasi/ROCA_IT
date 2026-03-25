@@ -210,3 +210,13 @@
     margin-right: 4px;
   }
 }
+
+.filters {
+  display: flex;
+  gap: 10px;
+}
+.filters :global {
+  .p-dropdown {
+    height: 33px !important;
+  }
+}

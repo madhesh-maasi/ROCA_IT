@@ -22,7 +22,10 @@ import {
   setSelectedItem,
 } from "../../../../../store/slices/incomeTaxSlice";
 import { useEffect } from "react";
-import { getListItems, getDeclarationPDFUrl } from "../../../../../common/utils/pnpService";
+import {
+  getListItems,
+  getDeclarationPDFUrl,
+} from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
   curFinanicalYear,
@@ -144,7 +147,10 @@ const EmployeeDeclarations: React.FC = () => {
 
   const handleDownloadPDF = async (row: IEmployeeRow) => {
     try {
-      const pdfUrl = await getDeclarationPDFUrl(row.financialYear, row.employeeId);
+      const pdfUrl = await getDeclarationPDFUrl(
+        row.financialYear,
+        row.employeeId,
+      );
       window.open(pdfUrl, "_blank");
     } catch (error) {
       console.error("Error fetching PDF URL", error);
@@ -253,33 +259,33 @@ const EmployeeDeclarations: React.FC = () => {
         </div>
         <div className={styles.rightSide}>
           <SearchInput value={search} onChange={(val) => setSearch(val)} />
-
-          <div style={{ width: "165px" }}>
-            {" "}
+          <div className={styles.filters}>
+            <div style={{ width: "165px" }}>
+              <AppDropdown
+                value={selectedRegime}
+                onChange={(e) => setSelectedRegime(e.value)}
+                options={[
+                  { label: "All", value: "All" },
+                  { label: "Old Regime", value: "Old Regime" },
+                  { label: "New Regime", value: "New Regime" },
+                ]}
+                placeholder="Tax Regime"
+              />
+            </div>
+            <div style={{ width: "165px" }}>
+              <AppDropdown
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.value)}
+                options={statusOptions}
+                placeholder="Status"
+              />
+            </div>
             <AppDropdown
-              value={selectedRegime}
-              onChange={(e) => setSelectedRegime(e.value)}
-              options={[
-                { label: "All", value: "All" },
-                { label: "Old Regime", value: "Old Regime" },
-                { label: "New Regime", value: "New Regime" },
-              ]}
-              placeholder="Tax Regime"
+              value={fy}
+              onChange={(e) => setFy(e.value)}
+              options={fyOptions}
             />
           </div>
-          <div style={{ width: "165px" }}>
-            <AppDropdown
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.value)}
-              options={statusOptions}
-              placeholder="Status"
-            />
-          </div>
-          <AppDropdown
-            value={fy}
-            onChange={(e) => setFy(e.value)}
-            options={fyOptions}
-          />
           <ActionButton
             variant="export"
             icon="pi pi-download"

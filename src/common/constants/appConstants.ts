@@ -108,6 +108,10 @@ export const LIST_NAMES = {
   IT_Templates: "IT_Templates",
 } as const;
 
+export const SHARED_GROUPS = {
+  ADMIN: "Admins",
+} as const;
+
 /**
  * Common date display formats.
  */

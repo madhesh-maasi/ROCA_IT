@@ -3,11 +3,11 @@ import {
   ICurrentUser,
   getCurrentUser,
   getCurrentUserGroups,
-  getSiteOwnersGroup,
+  getGroupByName,
   getSP,
   getAllItems,
 } from "../../common/utils/pnpService";
-import { LIST_NAMES } from "../../common/constants/appConstants";
+import { LIST_NAMES, SHARED_GROUPS } from "../../common/constants/appConstants";
 import { AppRole } from "../../common/models";
 import { handleError } from "../../common/utils/errorUtils";
 
@@ -36,14 +36,14 @@ export const fetchUserContext = createAsyncThunk<
     // 2. Fetch the groups the user belongs to
     const userGroups = await getCurrentUserGroups();
 
-    // 3. Fetch the site owners group
-    const siteOwners = await getSiteOwnersGroup();
+    // 3. Fetch the Admin group
+    const adminGroup = await getGroupByName(SHARED_GROUPS.ADMIN);
 
     let role: AppRole = "User";
 
     // 4. Role determination logic
-    const isSiteOwner = userGroups.some((g: any) => g.Id === siteOwners.Id);
-    if (isSiteOwner) {
+    const isAdmin = userGroups.some((g: any) => g.Id === adminGroup.Id);
+    if (isAdmin) {
       role = "Admin";
     } else {
       // 5. Check Finance Approver list
