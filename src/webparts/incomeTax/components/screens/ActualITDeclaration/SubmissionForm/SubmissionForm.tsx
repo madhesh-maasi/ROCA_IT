@@ -32,6 +32,8 @@ interface ISubmissionFormProps {
   declarationSummary: IDeclarationSummary;
   isAgreed: boolean;
   onAgreedChange?: (val: boolean) => void;
+  submittedPlace: string;
+  onPlaceChange?: (val: string) => void;
   submittedUserName: string;
   onUserNameChange?: (val: string) => void;
   submittedDesignation: string;
@@ -44,6 +46,8 @@ const SubmissionForm: React.FC<ISubmissionFormProps> = ({
   declarationSummary,
   isAgreed,
   onAgreedChange,
+  submittedPlace,
+  onPlaceChange,
   submittedUserName,
   onUserNameChange,
   submittedDesignation,
@@ -200,6 +204,19 @@ const SubmissionForm: React.FC<ISubmissionFormProps> = ({
 
       <footer className={styles.footer}>
         <div className={styles.footerLeft}>
+          <div className={styles.inputField}>
+            <label>Place :</label>
+            {isReadOnly ? (
+              <span className={styles.staticValue}>{submittedPlace}</span>
+            ) : (
+              <input
+                type="text"
+                value={submittedPlace}
+                className={styles.signatureInput}
+                onChange={(e) => onPlaceChange?.(e.target.value)}
+              />
+            )}
+          </div>
           <div className={styles.date}>
             Date:{" "}
             <span className={styles.signatureLine}>

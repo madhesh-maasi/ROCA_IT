@@ -9,6 +9,9 @@ export interface IIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonE
   variant?: "edit" | "delete" | "default" | "download";
   /** Size for Hugeicons (if applicable). Defaults to 18. */
   iconSize?: number;
+  title?: string;
+  className?: string;
+  onClick?: () => void;
 }
 
 /**

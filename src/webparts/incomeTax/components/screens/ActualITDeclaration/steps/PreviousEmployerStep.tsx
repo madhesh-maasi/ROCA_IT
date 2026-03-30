@@ -215,6 +215,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
+              cursor: "pointer",
               padding: "4px 10px",
               borderRadius: "20px",
               background: "#f1f5f9",
@@ -227,11 +228,14 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
             <i
               className="pi pi-file-pdf"
               style={{ color: "#e11d48", fontSize: "12px" }}
+              onClick={() => {
+                window.open(att.FileRef, "_blank", "noopener,noreferrer");
+              }}
             />
-            <a
-              href={att.FileRef}
-              target="_blank"
-              rel="noreferrer"
+            <span
+              onClick={() => {
+                window.open(att.FileRef, "_blank", "noopener,noreferrer");
+              }}
               style={{
                 color: "#334155",
                 textDecoration: "none",
@@ -243,7 +247,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
               title={att.FileLeafRef}
             >
               {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
-            </a>
+            </span>
             {!readOnly && onDeleteAttachment && (
               <i
                 className="pi pi-trash"

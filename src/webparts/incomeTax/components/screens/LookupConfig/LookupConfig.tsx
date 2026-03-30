@@ -176,9 +176,9 @@ const LookupConfig: React.FC = () => {
     const typesErr = validateField(formData.types, [
       required("Types is required"),
     ]);
-    const maxAmtErr = validateField(formData.maxAmount, [
-      required("Max Amount is required"),
-    ]);
+    // const maxAmtErr = validateField(formData.maxAmount, [
+    //   required("Max Amount is required"),
+    // ]);
 
     // Validate uniqueness of the combination
     let duplicateErr = "";
@@ -197,9 +197,15 @@ const LookupConfig: React.FC = () => {
         "This combination of Section, Sub-Section, and Type already exists.";
     }
 
-    if (sectionErr || subSectionErr || typesErr || maxAmtErr || duplicateErr) {
-      const errorMsg =
-        duplicateErr || sectionErr || subSectionErr || typesErr || maxAmtErr;
+    if (
+      sectionErr ||
+      subSectionErr ||
+      typesErr ||
+      // || maxAmtErr
+      duplicateErr
+    ) {
+      const errorMsg = duplicateErr || sectionErr || subSectionErr || typesErr;
+      //  || maxAmtErr;
       showToast(toast, "warn", "Validation Error", errorMsg);
       return;
     }
@@ -384,10 +390,10 @@ const LookupConfig: React.FC = () => {
             onChange={(e) =>
               setFormData((p) => ({
                 ...p,
-                maxAmount: e.target.value.replace(/[^0-9]/g, ""),
+                maxAmount: e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               }))
             }
-            required
+            // required
             disabled={uiState.isSaving}
             className={styles.inputField}
           />
@@ -404,7 +410,7 @@ const LookupConfig: React.FC = () => {
         }}
         actionType="Delete"
         message={`Are you sure you want to delete\n this item?`}
-       iconFlag={false}
+        iconFlag={false}
       />
     </div>
   );

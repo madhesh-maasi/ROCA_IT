@@ -244,14 +244,16 @@ const ITCalculatorUpload: React.FC = () => {
               window.open(rowData.FileRef, "_blank");
             }}
           />
-          <IconButton
-            variant="delete"
-            icon="pi pi-trash"
-            title="Delete"
-            onClick={() => {
-              handleDeletePrompt(rowData);
-            }}
-          />
+          {rowData.FinanceYear == curFinanicalYear && (
+            <IconButton
+              variant="delete"
+              icon="pi pi-trash"
+              title="Delete"
+              onClick={() => {
+                handleDeletePrompt(rowData);
+              }}
+            />
+          )}
         </div>
       ),
     },

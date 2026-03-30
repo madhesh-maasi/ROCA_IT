@@ -18,7 +18,7 @@ interface IHousingLoanData {
   lenderAddress: string;
   lenderPan: string;
   lenderType: string;
-  isJointlyAvailed: boolean;
+  isJointlyAvailed: boolean | string;
 }
 
 interface IHousingLoanStepProps {
@@ -42,10 +42,19 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
 }) => {
   const lenderTypeOptions = [
     { label: "Financial Institution", value: "Financial Institution" },
-    { label: "Bank", value: "Bank" },
+    // { label: "Bank", value: "Bank" },
     { label: "Employer", value: "Employer" },
-    { label: "Others", value: "Others" },
+    // { label: "Others", value: "Others" },
   ];
+
+  const checkMandatoryField = () => {
+    if (data.propertyType === "Self Occupied") {
+      return Number(data.interestAmount) > 0;
+    } else if (data.propertyType === "Let Out Property") {
+      return Number(data.finalLettableValue) > 0;
+    }
+    return false;
+  };
 
   return (
     <div>
@@ -93,9 +102,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                   id="hl-interest"
                   value={data.interestAmount}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    onChange("interestAmount", e.target.value)
+                    onChange(
+                      "interestAmount",
+                      e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+                    )
                   }
-                  placeholder="10,000"
+                  placeholder="Enter amount"
                   style={{ flex: 1 }}
                   disabled={readOnly}
                 />
@@ -115,24 +127,36 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 id="hl-let-out-val"
                 value={data.finalLettableValue}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("finalLettableValue", e.target.value)
+                  onChange(
+                    "finalLettableValue",
+                    e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+                  )
                 }
                 placeholder="Enter value"
                 disabled={readOnly}
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Interest of Housing Loan</label>
+              <label>
+                Interest of Housing Loan{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-let-out-interest"
                 value={data.letOutInterestAmount}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("letOutInterestAmount", e.target.value)
+                  onChange(
+                    "letOutInterestAmount",
+                    e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+                  )
                 }
                 placeholder="Enter amount"
                 disabled={readOnly}
               />
             </div>
+            {/*
             <div className={styles.formGroup}>
               <label>Other Deductions u/s 24</label>
               <InputField
@@ -145,6 +169,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 disabled={readOnly}
               />
             </div>
+            */}
           </div>
         </div>
       )}
@@ -154,7 +179,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
           <div className={styles.stepHeader}>Financial Institution</div>
           <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
             <div className={styles.formGroup}>
-              <label>Lender's name</label>
+              <label>
+                Lender's name{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-lender-name"
                 value={data.lenderName}
@@ -166,7 +196,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Lender's Address</label>
+              <label>
+                Lender's Address{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-lender-addr"
                 value={data.lenderAddress}
@@ -178,7 +213,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
             <div className={styles.formGroup}>
-              <label>PAN of Lender</label>
+              <label>
+                PAN of Lender{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-lender-pan"
                 value={data.lenderPan}
@@ -190,7 +230,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Lender's Type</label>
+              <label>
+                Lender's Type{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <AppDropdown
                 id="hl-lender-type"
                 value={data.lenderType}

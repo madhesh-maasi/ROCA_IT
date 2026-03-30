@@ -36,6 +36,7 @@ const DeclarationFormScreen: React.FC = () => {
   const [isAgreed, setIsAgreed] = React.useState(false);
   const [submittedUserName, setSubmittedUserName] = React.useState("");
   const [submittedDesignation, setSubmittedDesignation] = React.useState("");
+  const [submittedPlace, setSubmittedPlace] = React.useState("");
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -154,6 +155,7 @@ const DeclarationFormScreen: React.FC = () => {
         setSubmittedDesignation(
           mainItem.SubmittedDesignation || employee?.Designation || "",
         );
+        setSubmittedPlace(mainItem.SubmittedPlace || employee?.Location || "");
         setIsAgreed(mainItem.IsAgreed || false);
 
         // Auto-print if param is present
@@ -186,12 +188,12 @@ const DeclarationFormScreen: React.FC = () => {
       setIsSubmitting(false);
       return;
     }
-    if (!submittedUserName || !submittedDesignation) {
+    if (!submittedUserName || !submittedDesignation || !submittedPlace) {
       showToast(
         toast,
         "error",
         "Error",
-        `Please provide ${!submittedUserName ? "User name" : "Designation"}`,
+        `Please provide ${!submittedUserName ? "User name" : !submittedDesignation ? "Designation" : "Place"}`,
       );
       setIsSubmitting(false);
       return;
@@ -218,6 +220,7 @@ const DeclarationFormScreen: React.FC = () => {
         DeclarationStatus: "Submitted",
         SubmittedUserName: submittedUserName,
         SubmittedDesignation: submittedDesignation,
+        SubmittedPlace: submittedPlace,
         SubmissionDate: moment().format("DD/MM/YYYY HH:mm"),
         DeclarationIsAgreed: true,
       });
@@ -254,6 +257,8 @@ const DeclarationFormScreen: React.FC = () => {
             declarationSummary={data.declarationSummary}
             isAgreed={isAgreed}
             onAgreedChange={setIsAgreed}
+            submittedPlace={submittedPlace}
+            onPlaceChange={setSubmittedPlace}
             submittedUserName={submittedUserName}
             onUserNameChange={setSubmittedUserName}
             submittedDesignation={submittedDesignation}

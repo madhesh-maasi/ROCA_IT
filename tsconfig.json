@@ -1,8 +1,11 @@
 {
   "extends": "./node_modules/@microsoft/spfx-web-build-rig/profiles/default/tsconfig-base.json",
   "compilerOptions": {
+    "jsx": "react-jsx",
     "paths": {
-      "@hugeicons/core-free-icons": ["./node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts"]
+      "@hugeicons/core-free-icons": [
+        "./node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts"
+      ]
     }
   }
 }
