@@ -67,7 +67,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onLtaChange(
                 "exemptionAmount",
-                e.target.value.replace(/[^0-9]/g, ""),
+                e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               )
             }
             placeholder="Enter amount"
@@ -95,7 +95,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Journey Start Place</label>
+          <label>
+            Journey Start Place{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-start-place"
             value={ltaData.journeyStartPlace}
@@ -104,10 +109,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter place"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Journey Destination</label>
+          <label>
+            Journey Destination{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-dest"
             value={ltaData.journeyDestination}
@@ -116,6 +127,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter place"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
@@ -127,10 +139,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: any) => onLtaChange("modeOfTravel", e.value)}
             placeholder="Select"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Class of Travel</label>
+          <label>
+            Class of Travel{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-class"
             value={ltaData.classOfTravel}
@@ -139,6 +157,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter class of travel"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
           {/* <AppDropdown
             id="lta-class"
@@ -151,7 +170,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
           /> */}
         </div>
         <div className={styles.formGroup}>
-          <label>Ticket Numbers</label>
+          <label>
+            Ticket Numbers{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-tickets"
             value={ltaData.ticketNumbers}
@@ -160,10 +184,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter numbers"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Year of last LTA Claimed</label>
+          <label>
+            Year of last LTA Claimed{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-last-year"
             value={ltaData.lastClaimedYear}
@@ -175,6 +205,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter year"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
       </div>

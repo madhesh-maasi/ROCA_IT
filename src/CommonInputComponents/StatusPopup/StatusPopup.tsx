@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable /* eslint-disable @typescript-eslint/no-require-imports */
 import * as React from "react";
 import { Dialog } from "primereact/dialog";
 import { ActionButton } from "../ActionButton";

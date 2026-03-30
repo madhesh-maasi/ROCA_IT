@@ -17,7 +17,7 @@ interface IHousingLoanData {
   lenderAddress: string;
   lenderPan: string;
   lenderType: string;
-  isJointlyAvailed: boolean;
+  isJointlyAvailed: boolean | string;
   attachments?: any[];
 }
 
@@ -49,9 +49,9 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
 }) => {
   const lenderTypeOptions = [
     { label: "Financial Institution", value: "Financial Institution" },
-    { label: "Bank", value: "Bank" },
+    // { label: "Bank", value: "Bank" },
     { label: "Employer", value: "Employer" },
-    { label: "Others", value: "Others" },
+    // { label: "Others", value: "Others" },
   ];
 
   /** Single inline row: [AppFilePicker] [📄 filename.pdf 🗑] ... */
@@ -61,10 +61,11 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "end",
+          height: "95%",
           flexWrap: "wrap",
           gap: "8px",
-          marginTop: "10px",
+          // marginTop: "10px",
         }}
       >
         {!readOnly && onUpload && files.length === 0 && (
@@ -84,6 +85,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
+              cursor: "pointer",
               padding: "4px 10px",
               borderRadius: "20px",
               background: "#f1f5f9",
@@ -96,11 +98,14 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
             <i
               className="pi pi-file-pdf"
               style={{ color: "#e11d48", fontSize: "12px" }}
+              onClick={() => {
+                window.open(att.FileRef, "_blank", "noopener,noreferrer");
+              }}
             />
-            <a
-              href={att.FileRef}
-              target="_blank"
-              rel="noreferrer"
+            <span
+              onClick={() => {
+                window.open(att.FileRef, "_blank", "noopener,noreferrer");
+              }}
               style={{
                 color: "#334155",
                 textDecoration: "none",
@@ -112,7 +117,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               title={att.FileLeafRef}
             >
               {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
-            </a>
+            </span>
             {!readOnly && onDeleteAttachment && (
               <i
                 className="pi pi-trash"
@@ -132,6 +137,14 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
     );
   };
 
+  const checkMandatoryField = () => {
+    if (data.propertyType === "Self Occupied") {
+      return Number(data.interestAmount) > 0;
+    } else if (data.propertyType === "Let Out Property") {
+      return Number(data.finalLettableValue) > 0;
+    }
+    return false;
+  };
   return (
     <div>
       <div className={styles.stepHeader}>Type of Property</div>
@@ -178,17 +191,20 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                   id="hl-interest"
                   value={data.interestAmount}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    onChange("interestAmount", e.target.value)
+                    onChange(
+                      "interestAmount",
+                      e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+                    )
                   }
-                  placeholder="10,000"
+                  placeholder="Enter amount"
                   style={{ flex: 1 }}
                   disabled={readOnly}
                 />
               </div>
             </div>
+            {/* Upload below Self Occupied section */}
+            {renderUploadRow(UPLOAD_KEY_SELF)}
           </div>
-          {/* Upload below Self Occupied section */}
-          {renderUploadRow(UPLOAD_KEY_SELF)}
         </div>
       )}
 
@@ -202,25 +218,36 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 id="hl-let-out-val"
                 value={data.finalLettableValue}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("finalLettableValue", e.target.value)
+                  onChange(
+                    "finalLettableValue",
+                    e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+                  )
                 }
                 placeholder="Enter value"
                 disabled={readOnly}
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Interest of Housing Loan</label>
+              <label>
+                Interest of Housing Loan{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-let-out-interest"
                 value={data.letOutInterestAmount}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("letOutInterestAmount", e.target.value)
+                  onChange(
+                    "letOutInterestAmount",
+                    e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+                  )
                 }
                 placeholder="Enter amount"
                 disabled={readOnly}
               />
             </div>
-            <div className={styles.formGroup}>
+            {/* <div className={styles.formGroup}>
               <label>Other Deductions u/s 24</label>
               <InputField
                 id="hl-other-deductions"
@@ -231,10 +258,10 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 placeholder="Enter amount"
                 disabled={readOnly}
               />
-            </div>
+            </div> */}
+            {/* Upload below Let Out Property section */}
+            {renderUploadRow(UPLOAD_KEY_LETOUT)}
           </div>
-          {/* Upload below Let Out Property section */}
-          {renderUploadRow(UPLOAD_KEY_LETOUT)}
         </div>
       )}
       {data.propertyType !== "None" && (
@@ -242,7 +269,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
           <div className={styles.stepHeader}>Financial Institution</div>
           <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
             <div className={styles.formGroup}>
-              <label>Lender's name</label>
+              <label>
+                Lender's name{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-lender-name"
                 value={data.lenderName}
@@ -254,7 +286,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Lender's Address</label>
+              <label>
+                Lender's Address{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-lender-addr"
                 value={data.lenderAddress}
@@ -266,7 +303,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
             <div className={styles.formGroup}>
-              <label>PAN of Lender</label>
+              <label>
+                PAN of Lender{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <InputField
                 id="hl-lender-pan"
                 value={data.lenderPan}
@@ -278,7 +320,12 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Lender's Type</label>
+              <label>
+                Lender's Type{" "}
+                {checkMandatoryField() ? (
+                  <span style={{ color: "red" }}>*</span>
+                ) : null}
+              </label>
               <AppDropdown
                 id="hl-lender-type"
                 value={data.lenderType}

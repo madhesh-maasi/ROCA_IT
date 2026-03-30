@@ -263,7 +263,9 @@ const ExportDeclaration: React.FC = () => {
 
       <div className={styles.filtersBar}>
         <div className={styles.filterGroup}>
-          <label className={styles.groupLabel}>Financial Year</label>
+          <label className={styles.groupLabel} style={{ fontSize: "14px" }}>
+            Financial Year
+          </label>
           <AppDropdown
             options={yearOptions}
             value={selectedYear}
@@ -274,7 +276,9 @@ const ExportDeclaration: React.FC = () => {
         </div>
 
         <div className={styles.filterGroup}>
-          <label className={styles.groupLabel}>Declaration Type</label>
+          <label className={styles.groupLabel} style={{ fontSize: "14px" }}>
+            Declaration Type
+          </label>
           <div className={styles.radioGroup}>
             <AppRadioButton
               name="declarationType"
@@ -294,7 +298,9 @@ const ExportDeclaration: React.FC = () => {
         </div>
 
         <div className={styles.filterGroup}>
-          <label className={styles.groupLabel}>Tax Regime</label>
+          <label className={styles.groupLabel} style={{ fontSize: "14px" }}>
+            Tax Regime
+          </label>
           <div className={styles.radioGroup}>
             <AppRadioButton
               name="taxRegime"

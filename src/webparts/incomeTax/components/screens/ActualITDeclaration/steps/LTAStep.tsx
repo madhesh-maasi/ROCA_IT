@@ -83,7 +83,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onLtaChange(
                 "exemptionAmount",
-                e.target.value.replace(/[^0-9]/g, ""),
+                e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               )
             }
             placeholder="Enter amount"
@@ -111,7 +111,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Journey Start Place</label>
+          <label>
+            Journey Start Place{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-start-place"
             value={ltaData.journeyStartPlace}
@@ -120,10 +125,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter place"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Journey Destination</label>
+          <label>
+            Journey Destination{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-dest"
             value={ltaData.journeyDestination}
@@ -132,6 +143,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter place"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
@@ -143,10 +155,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: any) => onLtaChange("modeOfTravel", e.value)}
             placeholder="Select"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Class of Travel</label>
+          <label>
+            Class of Travel{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-class"
             value={ltaData.classOfTravel}
@@ -155,6 +173,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter class of travel"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
           {/* <AppDropdown
             id="lta-class"
@@ -167,7 +186,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
           /> */}
         </div>
         <div className={styles.formGroup}>
-          <label>Ticket Numbers</label>
+          <label>
+            Ticket Numbers{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-tickets"
             value={ltaData.ticketNumbers}
@@ -176,10 +200,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter numbers"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Year of last LTA Claimed</label>
+          <label>
+            Year of last LTA Claimed{" "}
+            {Number(ltaData.exemptionAmount) > 0 ? (
+              <span style={{ color: "red" }}>*</span>
+            ) : null}
+          </label>
           <InputField
             id="lta-last-year"
             value={ltaData.lastClaimedYear}
@@ -191,6 +221,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter year"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
       </div>
@@ -302,6 +333,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
               alignItems: "center",
               gap: "6px",
               padding: "4px 10px",
+              cursor: "pointer",
               borderRadius: "20px",
               background: "#f1f5f9",
               border: "1px solid #e2e8f0",
@@ -313,11 +345,11 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             <i
               className="pi pi-file-pdf"
               style={{ color: "#e11d48", fontSize: "12px" }}
+              onClick={() => {
+                window.open(att.FileRef, "_blank", "noopener,noreferrer");
+              }}
             />
-            <a
-              href={att.FileRef}
-              target="_blank"
-              rel="noreferrer"
+            <span
               style={{
                 color: "#334155",
                 textDecoration: "none",
@@ -327,9 +359,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 maxWidth: "180px",
               }}
               title={att.FileLeafRef}
+              onClick={() => {
+                window.open(att.FileRef, "_blank", "noopener,noreferrer");
+              }}
             >
               {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
-            </a>
+            </span>
             {!readOnly && onDeleteAttachment && (
               <i
                 className="pi pi-trash"

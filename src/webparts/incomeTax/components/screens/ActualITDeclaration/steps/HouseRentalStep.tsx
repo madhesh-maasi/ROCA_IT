@@ -5,6 +5,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
+import { Cursor } from "@hugeicons/core-free-icons";
 
 interface IRentRow {
   month: string;
@@ -62,7 +63,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
     if (!file) return;
     if (onUpload) await onUpload(key, file);
   };
-
+  const checkPanNeed = () => {
+    return rentDetails.some((row) => Number(row.rent) > 8333);
+  };
   return (
     <div>
       <div className={styles.stepHeader}>House Rental Information</div>
@@ -125,7 +128,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                       onRentChange(
                         idx,
                         "rent",
-                        e.target.value.replace(/[^0-9]/g, ""),
+                        e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
                       )
                     }
                     disabled={readOnly}
@@ -169,7 +172,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
               </div>
               <div className={styles.landlordGrid}>
                 <div className={styles.formGroup}>
-                  <label>Landlord's Name</label>
+                  <label>
+                    Landlord's Name <span>*</span>
+                  </label>
                   <InputField
                     id={`ll-name-${idx}`}
                     value={ll.name}
@@ -181,7 +186,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>PAN of Landlord</label>
+                  <label>
+                    PAN of Landlord {checkPanNeed() ? <span>*</span> : ""}
+                  </label>
                   <InputField
                     id={`ll-pan-${idx}`}
                     value={ll.pan}
@@ -193,7 +200,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Landlord's Address</label>
+                  <label>
+                    Tenant's Address <span>*</span>
+                  </label>
                   <InputField
                     id={`ll-addr-${idx}`}
                     value={ll.address}
@@ -204,23 +213,103 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                     disabled={readOnly}
                   />
                 </div>
-                {!readOnly && (
-                  <div style={{ paddingBottom: "10px" }}>
-                    <i
-                      className="pi pi-trash"
-                      style={{
-                        color: "#e11d48",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                      }}
-                      onClick={() => onDeleteLandlord(idx)}
-                    />
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "24px" }}
+                >
+                  <div>
+                    {!readOnly && onUpload && ll.attachments?.length === 0 && (
+                      <AppFilePicker
+                        buttonLabel="Upload PDF"
+                        accept=".pdf"
+                        onChange={(files) =>
+                          handleFilesPicked(uploadKey, files)
+                        }
+                      />
+                    )}
+                    {ll.attachments?.map((att: any) => (
+                      <div
+                        key={att.Id}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          cursor: "pointer",
+                          padding: "4px 10px",
+                          borderRadius: "20px",
+                          background: "#f1f5f9",
+                          border: "1px solid #e2e8f0",
+                          fontSize: "12px",
+                          color: "#475569",
+                          maxWidth: "260px",
+                        }}
+                      >
+                        <i
+                          className="pi pi-file-pdf"
+                          style={{ color: "#e11d48", fontSize: "12px" }}
+                          onClick={() => {
+                            window.open(
+                              att.FileRef,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }}
+                        />
+                        <span
+                          style={{
+                            color: "#334155",
+                            textDecoration: "none",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            maxWidth: "180px",
+                          }}
+                          title={att.FileLeafRef}
+                          onClick={() => {
+                            window.open(
+                              att.FileRef,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }}
+                        >
+                          {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+                        </span>
+                        {!readOnly && onDeleteAttachment && (
+                          <i
+                            className="pi pi-trash"
+                            style={{
+                              color: "#e11d48",
+                              cursor: "pointer",
+                              fontSize: "11px",
+                              flexShrink: 0,
+                            }}
+                            onClick={() =>
+                              onDeleteAttachment(uploadKey, att.Id)
+                            }
+                            title="Remove attachment"
+                          />
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
+                  {!readOnly && (
+                    <div style={{ paddingTop: "5px" }}>
+                      <i
+                        className="pi pi-trash"
+                        style={{
+                          color: "#e11d48",
+                          cursor: "pointer",
+                          fontSize: "16px",
+                        }}
+                        onClick={() => onDeleteLandlord(idx)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* ── Inline upload row ── */}
-              <div
+              {/* <div
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -229,66 +318,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   marginTop: "12px",
                 }}
               >
-                {!readOnly && onUpload && ll.attachments?.length === 0 && (
-                  <AppFilePicker
-                    buttonLabel="Upload PDF"
-                    accept=".pdf"
-                    onChange={(files) => handleFilesPicked(uploadKey, files)}
-                  />
-                )}
-
-                {ll.attachments?.map((att: any) => (
-                  <div
-                    key={att.Id}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "4px 10px",
-                      borderRadius: "20px",
-                      background: "#f1f5f9",
-                      border: "1px solid #e2e8f0",
-                      fontSize: "12px",
-                      color: "#475569",
-                      maxWidth: "260px",
-                    }}
-                  >
-                    <i
-                      className="pi pi-file-pdf"
-                      style={{ color: "#e11d48", fontSize: "12px" }}
-                    />
-                    <a
-                      href={att.FileRef}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        color: "#334155",
-                        textDecoration: "none",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        maxWidth: "180px",
-                      }}
-                      title={att.FileLeafRef}
-                    >
-                      {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
-                    </a>
-                    {!readOnly && onDeleteAttachment && (
-                      <i
-                        className="pi pi-trash"
-                        style={{
-                          color: "#e11d48",
-                          cursor: "pointer",
-                          fontSize: "11px",
-                          flexShrink: 0,
-                        }}
-                        onClick={() => onDeleteAttachment(uploadKey, att.Id)}
-                        title="Remove attachment"
-                      />
-                    )}
-                  </div>
+                
                 ))}
-              </div>
+              </div> */}
             </div>
           );
         })}

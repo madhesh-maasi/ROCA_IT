@@ -136,7 +136,10 @@ const SectionConfig: React.FC = () => {
       required("Max Amount is required"),
     ]);
 
-    if (nameErr || amtErr) {
+    if (
+      nameErr
+      // || amtErr
+    ) {
       showToast(toast, "warn", "Validation Error", nameErr || amtErr);
       return;
     }
@@ -292,10 +295,9 @@ const SectionConfig: React.FC = () => {
             onChange={(e) =>
               setFormData((p) => ({
                 ...p,
-                maxAmount: e.target.value.replace(/[^0-9]/g, ""),
+                maxAmount: e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               }))
             }
-            required
             disabled={uiState.isSaving}
             className={styles.inputField}
           />

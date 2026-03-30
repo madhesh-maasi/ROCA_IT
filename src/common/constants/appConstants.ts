@@ -55,15 +55,15 @@ export const NAV_CONFIG: INavGroup[] = [
         allowedRoles: ["FinanceApprover"],
       },
       {
-        key: "exportDeclaration",
-        label: "Export Declaration",
-        icon: "exportDeclaration",
-        allowedRoles: ["FinanceApprover"],
-      },
-      {
         key: "taxRegimeUpdate",
         label: "Tax Regime Update",
         icon: "taxRegimeUpdate",
+        allowedRoles: ["FinanceApprover"],
+      },
+      {
+        key: "exportDeclaration",
+        label: "Export Declaration",
+        icon: "exportDeclaration",
         allowedRoles: ["FinanceApprover"],
       },
       {

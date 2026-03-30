@@ -48,6 +48,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   status,
   readOnly,
 }) => {
+  const checkPanNeed = () => {
+    return rentDetails.some((row) => Number(row.rent) > 8333);
+  };
   return (
     <div>
       <div className={styles.stepHeader}>House Rental Information</div>
@@ -106,13 +109,12 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   <InputField
                     id={`rent-${idx}`}
                     value={row.rent}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onRentChange(
-                        idx,
-                        "rent",
-                        e.target.value.replace(/[^0-9]/g, ""),
-                      )
-                    }
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const value = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 7);
+                      onRentChange(idx, "rent", value);
+                    }}
                     disabled={readOnly}
                     placeholder="Enter Rent"
                   />
@@ -153,7 +155,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
               </div>
               <div className={styles.landlordGrid}>
                 <div className={styles.formGroup}>
-                  <label>Landlord's Name</label>
+                  <label>
+                    Landlord's Name <span>*</span>
+                  </label>
                   <InputField
                     id={`ll-name-${idx}`}
                     value={ll.name}
@@ -165,7 +169,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>PAN of Landlord</label>
+                  <label>
+                    PAN of Landlord {checkPanNeed() ? <span>*</span> : ""}
+                  </label>
                   <InputField
                     id={`ll-pan-${idx}`}
                     value={ll.pan}
@@ -177,7 +183,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Landlord's Address</label>
+                  <label>
+                    Tenant's Address <span>*</span>
+                  </label>
                   <InputField
                     id={`ll-addr-${idx}`}
                     value={ll.address}
