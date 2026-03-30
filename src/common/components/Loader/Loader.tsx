@@ -12,7 +12,7 @@ export interface ILoaderProps {
  * A reusable modern loading indicator with a premium feel.
  */
 const Loader: React.FC<ILoaderProps> = ({
-  label = "Preparing your dashboard...",
+  label = "Processing...",
   fullScreen = true,
 }) => {
   return (

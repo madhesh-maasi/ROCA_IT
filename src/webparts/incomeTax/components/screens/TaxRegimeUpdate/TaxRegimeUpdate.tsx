@@ -23,6 +23,9 @@ import {
   getFYOptions,
   globalSearchFilter,
 } from "../../../../../common/utils/functions";
+import { sendTaxRegimeUpdateEmail } from "../../../../../common/utils/emailService";
+import { selectUserDetails } from "../../../../../store/slices/userSlice";
+import { useAppSelector } from "../../../../../store/hooks";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import { ActionPopup, Loader } from "../../../../../common/components";
 
@@ -33,6 +36,7 @@ const REGIME_OPTIONS = [
 
 const TaxRegimeUpdate: React.FC = () => {
   const toast = React.useRef<PrimeToast>(null);
+  const user = useAppSelector(selectUserDetails);
 
   // States
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -85,6 +89,21 @@ const TaxRegimeUpdate: React.FC = () => {
     setShowPopup(false);
     setSelectedEmployee(null);
     setSelectedRegime("");
+  };
+
+  const [showConfirm, setShowConfirm] = React.useState(false);
+
+  const handleUpdateClick = () => {
+    if (!selectedRegime) {
+      showToast(
+        toast,
+        "warn",
+        "Validation",
+        "Please select a tax regime Type.",
+      );
+      return;
+    }
+    setShowConfirm(true);
   };
 
   const handleUpdate = async () => {
@@ -167,6 +186,22 @@ const TaxRegimeUpdate: React.FC = () => {
           "Success",
           "Tax Regime Updated Successfully.",
         );
+
+        // Trigger email notification
+        const empEmail = selectedEmployee.EmployeeEmail || "";
+        if (empEmail) {
+          void sendTaxRegimeUpdateEmail(
+            selectedEmployee.EmployeeName,
+            selectedEmployee.EmployeeCode,
+            empEmail,
+            activeIndex === 0 ? "Planned" : "Actual",
+            curFinanicalYear,
+            user!,
+            newRegime,
+            selectedEmployee.Title,
+          );
+        }
+
         await fetchData();
         handleClosePopup();
       } catch (err) {
@@ -284,7 +319,7 @@ const TaxRegimeUpdate: React.FC = () => {
       <ActionPopup
         visible={showPopup}
         onHide={handleClosePopup}
-        onConfirm={handleUpdate}
+        onConfirm={handleUpdateClick}
         actionType="Updated"
         title="Update Tax Regime"
         cancelLabel="Cancel"
@@ -319,6 +354,20 @@ const TaxRegimeUpdate: React.FC = () => {
           )}
         </div>
       </ActionPopup>
+
+      <ActionPopup
+        visible={showConfirm}
+        onHide={() => setShowConfirm(false)}
+        onConfirm={() => {
+          setShowConfirm(false);
+          void handleUpdate();
+        }}
+        actionType="Approve"
+        title="Confirm Tax Regime"
+        message="Once selected, it cannot be changed for this financial year."
+        confirmLabel="Yes"
+        cancelLabel="No"
+      />
     </div>
   );
 };

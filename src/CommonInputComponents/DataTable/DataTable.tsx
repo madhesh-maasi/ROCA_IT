@@ -10,7 +10,7 @@ export interface IColumnDef extends ColumnProps {
   /** Maps to the data object key to display. */
   field: string;
   /** Column header label. */
-  header: string;
+  header: any;
 }
 
 export interface IDataTableProps {
@@ -37,6 +37,7 @@ export interface IDataTableProps {
   /** Callback fired when a row is clicked */
   onRowClick?: (e: { data: any; originalEvent: React.MouseEvent }) => void;
   cursor?: boolean;
+  dataKey?: string;
 }
 
 /**
@@ -56,6 +57,7 @@ const AppDataTable: React.FC<IDataTableProps> = ({
   className,
   onRowClick,
   cursor = false,
+  dataKey,
 }) => {
   // Extract all searchable fields for global filtering
   const globalFilterFields = React.useMemo(() => {
@@ -66,6 +68,7 @@ const AppDataTable: React.FC<IDataTableProps> = ({
     <div className={`${styles.dataTableContainer} ${className || ""}`}>
       <PrimeDataTable
         value={data}
+        dataKey={dataKey || "id"}
         loading={loading}
         emptyMessage={emptyMessage}
         paginator={paginator}

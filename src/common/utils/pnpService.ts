@@ -655,6 +655,7 @@ export const getITDocuments = async (
  */
 export const downloadAttachmentsAsZip = async (
   declarationId: number,
+  declarationTitle: string,
   fy: string,
   empCode: string,
 ): Promise<void> => {
@@ -681,7 +682,7 @@ export const downloadAttachmentsAsZip = async (
 
     // 3. Generate and save the ZIP
     const content = await zip.generateAsync({ type: "blob" });
-    const zipName = `${fy}-${empCode}.zip`.replace(/\s+/g, "_");
+    const zipName = `${declarationTitle}.zip`.replace(/\s+/g, "_");
     saveAs(content, zipName);
   } catch (err) {
     await handleError(err, "Downloading attachments as ZIP");
@@ -982,5 +983,42 @@ export const getFieldChoices = async (
       `Fetching choices for ${internalFieldName} in ${listName}`,
     );
     return [];
+  }
+};
+
+/**
+ * Get the current maximum sequence number for a declaration financial year and type.
+ * Useful for batch operations to avoid multiple queries.
+ */
+export const getNextSequence = async (
+  listName: string,
+  financialYear: string,
+  typeCode: "PLN" | "ACT",
+): Promise<number> => {
+  const sp = getSP();
+  try {
+    const items = await sp.web.lists
+      .getByTitle(listName)
+      .items.filter(`FinancialYear eq '${financialYear}' and Title ne null`)
+      .select("Title")();
+
+    let maxSeq = 0;
+    const pattern = `-${typeCode}-`;
+
+    items.forEach((item: any) => {
+      if (item.Title && item.Title.includes(pattern)) {
+        const parts = item.Title.split("-");
+        const seqPart = parts[parts.length - 1];
+        const seq = parseInt(seqPart, 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+    });
+
+    return maxSeq;
+  } catch (err) {
+    await handleError(err, "Error getting next sequence");
+    return 0;
   }
 };

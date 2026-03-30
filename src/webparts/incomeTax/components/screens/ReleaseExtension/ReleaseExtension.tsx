@@ -26,21 +26,26 @@ import {
   curFinanicalYear,
   globalSearchFilter,
 } from "../../../../../common/utils/functions";
+import { sendExtensionEmail } from "../../../../../common/utils/emailService";
+import { selectUserDetails } from "../../../../../store/slices/userSlice";
 
 interface IReleasedItem {
   Id: number;
   EmployeeCode: string;
   EmployeeName: string;
+  Email: string;
   Location: string;
   DeclarationType: string;
   DeclarationEndDate: string;
   Status: string;
+  Title: string;
 }
 
 const ReleaseExtension: React.FC = () => {
   const dispatch = useAppDispatch();
   const toast = React.useRef<PrimeToast>(null);
   const employeeMaster = useAppSelector(selectEmployees);
+  const user = useAppSelector(selectUserDetails);
 
   // UI State
   const [isLoading, setIsLoading] = React.useState(false);
@@ -82,10 +87,12 @@ const ReleaseExtension: React.FC = () => {
             Id: item.Id,
             EmployeeCode: item.EmployeeCode || "-",
             EmployeeName: item.EmployeeName || "-",
+            Email: empMaster?.Email || item.EmployeeEmail || "-",
             Location: empMaster?.Location || "-",
             DeclarationType: item.DeclarationType || "-",
             DeclarationEndDate: item.DeclarationEndDate || "",
             Status: item.Status || "-",
+            Title: item.Title || "-",
           };
         });
       setReleasedList(activeItems);
@@ -141,6 +148,22 @@ const ReleaseExtension: React.FC = () => {
           : LIST_NAMES.ACTUAL_DECLARATION;
 
       await updateListItemsBatch(listName, updates);
+
+      // Trigger email notifications in background
+      selectedEmployees.forEach((emp) => {
+        if (emp.Email && emp.Email !== "-") {
+          void sendExtensionEmail(
+            emp.EmployeeName,
+            emp.EmployeeCode,
+            emp.Email,
+            activeIndex === 0 ? "Planned" : "Actual",
+            curFinanicalYear,
+            user!,
+            selectedDate.toLocaleDateString("en-IN"),
+            emp.Title,
+          );
+        }
+      });
 
       showToast(
         toast,

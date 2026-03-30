@@ -42,11 +42,14 @@ const employeeToPersona = (emp: IEmployee): IPersonaProps => {
     (emp.Email ? emp.Email.split("@")[0] : "") ||
     `Employee ${emp.Id}`;
 
+  // Include Employee ID and Email in secondary text for better search visibility
+  const secondary = [emp.EmployeeId, emp.Email].filter(Boolean).join(" | ");
+
   return {
     key: String(emp.Id),
     text: displayName,
-    secondaryText: emp.Email ?? "",
-    showSecondaryText: false, // Hide email below name
+    secondaryText: secondary,
+    showSecondaryText: false, // Show email/id below name
   };
 };
 
@@ -140,8 +143,13 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
             fontWeight: "500",
             padding: "0 4px",
           },
-          ".ms-Persona-secondaryText, .ms-Persona-tertiaryText": {
-            display: "none !important", // Force hide email/metadata
+          ".ms-Persona-secondaryText": {
+            color: "#e2e8f0 !important", // Lighter color for secondary text
+            fontSize: "11px",
+            padding: "0 4px",
+          },
+          ".ms-Persona-tertiaryText": {
+            display: "none !important",
           },
         },
 
@@ -162,8 +170,21 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
   const isLoadingEmployees = useAppSelector(selectEmployeesLoading);
   const isLoadingMembers = useAppSelector(selectMembersLoading);
 
+  const findEmployee = (email: string) => {
+    return employees.find(
+      (emp) => emp.Email?.toLowerCase() === email?.toLowerCase(),
+    );
+  };
+
   const employeesToSearch: IEmployee[] =
-    source === "EmployeeMaster" ? employees : siteMembers;
+    source === "EmployeeMaster"
+      ? employees
+      : siteMembers.map((emp: IEmployee) => {
+          return {
+            ...emp,
+            EmployeeId: findEmployee(emp.Email!)?.EmployeeId || "",
+          };
+        });
   const isLoading =
     source === "EmployeeMaster" ? isLoadingEmployees : isLoadingMembers;
 
@@ -204,7 +225,8 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
         const matches =
           (emp.Name || emp.Title)?.toLowerCase().includes(query) ||
           emp.Email?.toLowerCase().includes(query) ||
-          (emp.EmployeeId && emp.EmployeeId.toLowerCase().includes(query));
+          (emp.EmployeeId &&
+            String(emp.EmployeeId).toLowerCase().includes(query));
         return !alreadySelected && matches;
       })
       .map(employeeToPersona);

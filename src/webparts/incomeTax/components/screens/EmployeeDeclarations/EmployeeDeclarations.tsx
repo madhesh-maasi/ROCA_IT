@@ -34,8 +34,12 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
 import styles from "../screens.module.scss";
-import { AppToast, showToast } from "../../../../../common/components";
+import { AppToast, showToast, Loader } from "../../../../../common/components";
 import { Toast as PrimeToast } from "primereact/toast";
+import { Checkbox } from "primereact/checkbox";
+import { updateListItem } from "../../../../../common/utils/pnpService";
+import { sendApprovalEmail } from "../../../../../common/utils/emailService";
+import { selectUserDetails } from "../../../../../store/slices/userSlice";
 
 interface IEmployeeRow {
   id: number;
@@ -45,18 +49,12 @@ interface IEmployeeRow {
   investmentType: string;
   employeeId: string;
   employeeName: string;
+  employeeEmail: string;
   dateOfSubmission: string;
   status: StatusVariant;
   declarationStatus: string;
+  isChecked?: boolean;
 }
-
-// Remove static FY_OPTIONS
-
-// ─── Column definitions ───────────────────────────────────────────────────────
-
-// Column definitions move inside the component for dynamic rendering
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 const EmployeeDeclarations: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -74,6 +72,11 @@ const EmployeeDeclarations: React.FC = () => {
   const [selectedRegime, setSelectedRegime] = React.useState("All");
   const [selectedStatus, setSelectedStatus] = React.useState("All");
   const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
+  const [selectedRows, setSelectedRows] = React.useState<IEmployeeRow[]>([]);
+  const selectedRowsRef = React.useRef<IEmployeeRow[]>(selectedRows);
+  selectedRowsRef.current = selectedRows;
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const currentUser = useAppSelector(selectUserDetails);
 
   const fyOptions = React.useMemo(() => {
     const allItems = [...items, ...actualItems];
@@ -124,13 +127,15 @@ const EmployeeDeclarations: React.FC = () => {
         investmentType: item.DeclarationType || "",
         employeeId: item.EmployeeCode || "-",
         employeeName: item.EmployeeName || "-",
+        employeeEmail: item.EmployeeEmail || "",
         dateOfSubmission: item.SubmittedDate
           ? new Date(item.SubmittedDate).toLocaleDateString("en-IN")
           : "-",
         status: (item.Status || "Submitted").toLowerCase() as StatusVariant,
         declarationStatus: item.DeclarationStatus || "Not Submitted",
+        isChecked: false,
       }));
-  }, [items, activeTab]);
+  }, [items, actualItems, activeTab]);
 
   const refined = tableData.filter(
     (row) =>
@@ -139,6 +144,14 @@ const EmployeeDeclarations: React.FC = () => {
       (selectedStatus === "All" ||
         row.status.toLowerCase() === selectedStatus.toLowerCase()),
   );
+
+  // Map the selection status into the row data to force PrimeReact row re-renders
+  const finalData = React.useMemo(() => {
+    return refined.map((row) => ({
+      ...row,
+      isChecked: selectedRows.some((r) => Number(r.id) === Number(row.id)),
+    }));
+  }, [refined, selectedRows]);
 
   const statusOptions = React.useMemo(() => {
     const statuses = Array.from(new Set(tableData.map((r) => r.status)))
@@ -166,8 +179,136 @@ const EmployeeDeclarations: React.FC = () => {
     }
   };
 
-  const columns: IColumnDef[] = React.useMemo(() => {
+  const handleBulkApprove = async () => {
+    if (selectedRows.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      const listName =
+        activeTab === "Planned"
+          ? LIST_NAMES.PLANNED_DECLARATION
+          : LIST_NAMES.ACTUAL_DECLARATION;
+
+      for (const row of selectedRows) {
+        await updateListItem(listName, row.id, { Status: "Approved" });
+
+        if (row.employeeEmail) {
+          await sendApprovalEmail(
+            row.employeeName,
+            row.employeeId,
+            row.employeeEmail,
+            activeTab,
+            row.financialYear,
+            currentUser as any,
+            row.requestId,
+            row.id,
+          );
+        }
+      }
+
+      showToast(
+        toast,
+        "success",
+        "Success",
+        `${selectedRows.length} declarations approved successfully.`,
+      );
+
+      // Refresh data
+      if (activeTab === "Planned") {
+        await dispatch(
+          fetchIncomeTaxItems({
+            getItems: () =>
+              getListItems(
+                LIST_NAMES.PLANNED_DECLARATION,
+                `FinancialYear eq '${curFinanicalYear}'`,
+              ),
+          }),
+        );
+      } else {
+        await dispatch(
+          fetchActualIncomeTaxItems({
+            getItems: () =>
+              getListItems(
+                LIST_NAMES.ACTUAL_DECLARATION,
+                `FinancialYear eq '${curFinanicalYear}'`,
+              ),
+          }),
+        );
+      }
+
+      setSelectedRows([]);
+    } catch (error) {
+      console.error("Error during bulk approval", error);
+      showToast(
+        toast,
+        "error",
+        "Error",
+        "An error occurred during bulk approval.",
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Compute selectable rows & "all selected" state fresh every render
+  const selectableRows = refined.filter(
+    (r) =>
+      r.taxRegimeType === "New Regime" && r.status.toLowerCase() !== "approved",
+  );
+
+  const isAllSelected =
+    selectableRows.length > 0 &&
+    selectableRows.every((row) =>
+      selectedRows.some((r) => Number(r.id) === Number(row.id)),
+    );
+
+  // Compute columns with memoization to ensure re-render when selection changes
+  const columns = React.useMemo(() => {
     const cols: IColumnDef[] = [
+      {
+        field: "selection",
+        header: (
+          <Checkbox
+            checked={isAllSelected}
+            disabled={selectableRows.length === 0}
+            onChange={(e) => {
+              const checked = e.checked === true;
+              if (checked) {
+                setSelectedRows([...selectableRows]);
+              } else {
+                setSelectedRows([]);
+              }
+            }}
+          />
+        ),
+        body: (row: IEmployeeRow) => {
+          const isSelectable =
+            row.taxRegimeType === "New Regime" &&
+            row.status.toLowerCase() == "submitted";
+
+          if (!isSelectable) return null;
+
+          const isChecked = !!row.isChecked;
+
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                key={isChecked ? `checked_${row.id}` : `unchecked_${row.id}`}
+                checked={isChecked}
+                onChange={(e) => {
+                  if (e.checked) {
+                    setSelectedRows((prev) => [...prev, row]);
+                  } else {
+                    setSelectedRows((prev) =>
+                      prev.filter((r) => Number(r.id) !== Number(row.id)),
+                    );
+                  }
+                }}
+              />
+            </div>
+          );
+        },
+      },
       {
         field: "requestId",
         header: "Request ID",
@@ -214,9 +355,15 @@ const EmployeeDeclarations: React.FC = () => {
         ),
       });
     }
-
     return cols;
-  }, [activeTab]);
+  }, [
+    selectedRows,
+    refined,
+    activeTab,
+    isAllSelected,
+    selectableRows,
+    handleDownloadPDF,
+  ]);
 
   const handleExport = () => {
     const dataToExport = refined.map((row) => ({
@@ -245,6 +392,7 @@ const EmployeeDeclarations: React.FC = () => {
   return (
     <div className={styles.screen}>
       <AppToast toastRef={toast} />
+      {isProcessing && <Loader />}
       <StatusPopup
         visible={showDownloadPopup}
         onHide={() => setShowDownloadPopup(false)}
@@ -265,53 +413,74 @@ const EmployeeDeclarations: React.FC = () => {
             </button>
           ))}
         </div>
-        <div className={styles.rightSide}>
-          <SearchInput value={search} onChange={(val) => setSearch(val)} />
-          <div className={styles.filters}>
-            <div style={{ width: "165px" }}>
-              <AppDropdown
-                value={selectedRegime}
-                onChange={(e) => setSelectedRegime(e.value)}
-                options={[
-                  { label: "All", value: "All" },
-                  { label: "Old Regime", value: "Old Regime" },
-                  { label: "New Regime", value: "New Regime" },
-                ]}
-                placeholder="Tax Regime"
-              />
-            </div>
-            <div style={{ width: "165px" }}>
-              <AppDropdown
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.value)}
-                options={statusOptions}
-                placeholder="Status"
-              />
-            </div>
+      </div>
+      <div
+        className={styles.rightSide}
+        style={{ width: "100%", justifyContent: "flex-end", marginBottom: 10 }}
+      >
+        <SearchInput value={search} onChange={(val) => setSearch(val)} />
+        <div className={styles.filters}>
+          <div style={{ width: "165px" }}>
             <AppDropdown
-              value={fy}
-              onChange={(e) => setFy(e.value)}
-              options={fyOptions}
+              value={selectedRegime}
+              onChange={(e) => setSelectedRegime(e.value)}
+              options={[
+                { label: "All", value: "All" },
+                { label: "Old Regime", value: "Old Regime" },
+                { label: "New Regime", value: "New Regime" },
+              ]}
+              placeholder="Tax Regime"
             />
           </div>
-          <ActionButton
-            variant="export"
-            icon="pi pi-download"
-            label="Export"
-            onClick={handleExport}
+          <div style={{ width: "175px" }}>
+            <AppDropdown
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.value)}
+              options={statusOptions}
+              placeholder="Status"
+            />
+          </div>
+          <AppDropdown
+            value={fy}
+            onChange={(e) => setFy(e.value)}
+            options={fyOptions}
           />
         </div>
+        <ActionButton
+          variant="export"
+          icon="pi pi-download"
+          label="Export"
+          onClick={handleExport}
+        />
+        {selectedRows.length > 0 && !isProcessing && (
+          <ActionButton
+            variant="export"
+            icon="pi pi-check"
+            label={`Approve`}
+            onClick={handleBulkApprove}
+          />
+        )}
       </div>
 
       <AppDataTable
-        data={refined}
+        data={finalData}
         columns={columns}
+        dataKey="id"
         globalFilter={search}
         paginator
         rows={10}
         emptyMessage="No records found."
         cursor={true}
         onRowClick={(e: any) => {
+          // Skip navigation if user clicked on a checkbox
+          const target = e.originalEvent?.target as HTMLElement;
+          if (
+            target?.closest(".p-checkbox") ||
+            target?.closest("[data-pc-name='checkbox']")
+          ) {
+            return;
+          }
+
           const rowData = e.data as IEmployeeRow;
           const sourceItems = activeTab === "Planned" ? items : actualItems;
           const originalItem = sourceItems.find(
