@@ -96,8 +96,14 @@ const ReleaseDeclaration: React.FC = () => {
     try {
       setIsLoading(true);
       const [planned, actual] = await Promise.all([
-        getListItems(LIST_NAMES.PLANNED_DECLARATION),
-        getListItems(LIST_NAMES.ACTUAL_DECLARATION),
+        getListItems(
+          LIST_NAMES.PLANNED_DECLARATION,
+          `FinancialYear eq '${curFinanicalYear}'`,
+        ),
+        getListItems(
+          LIST_NAMES.ACTUAL_DECLARATION,
+          `FinancialYear eq '${curFinanicalYear}'`,
+        ),
       ]);
 
       const processRecords = (records: any[], type: string) =>
