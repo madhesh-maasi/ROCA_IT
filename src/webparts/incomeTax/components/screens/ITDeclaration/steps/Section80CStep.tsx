@@ -33,11 +33,12 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
   return (
     <div>
       <div className={styles.stepHeader}>Section 80C Deductions</div>
-      <div className={styles.noteBox}>
-        Note : Only{" "}
-        <strong>Rs {sectionMaxAmount?.toLocaleString() || "1,50,000"}</strong>{" "}
-        is deductible under this section
-      </div>
+      {sectionMaxAmount && (
+        <div className={styles.noteBox}>
+          Note : Only <strong>Rs {sectionMaxAmount?.toLocaleString()}</strong>{" "}
+          is deductible under this section
+        </div>
+      )}
 
       <div className={styles.tableContainer}>
         <table className={styles.customTable}>
@@ -73,7 +74,7 @@ const Section80CStep: React.FC<ISection80CStepProps> = ({
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       onAmountChange(
                         item.id,
-                        e.target.value.replace(/[^0-9]/g, ""),
+                        e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
                       )
                     }
                     placeholder="0"

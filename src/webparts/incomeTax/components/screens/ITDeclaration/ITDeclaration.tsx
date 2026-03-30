@@ -58,6 +58,7 @@ import { validatePAN } from "../../../../../common/utils/validationUtils";
 import {
   sendApprovalEmail,
   sendReworkEmail,
+  sendReopenEmail,
 } from "../../../../../common/utils/emailService";
 
 // ── Mapping section names to icons ───────────────────────────────
@@ -102,10 +103,7 @@ const ITDeclaration: React.FC = () => {
     );
   }, [user, employeeMaster, declarationItem]);
 
-  const isAdmin =
-    userRole === "Admin" ||
-    userRole === "FinanceApprover" ||
-    userRole === "Finance Approver";
+  const isAdmin = userRole === "FinanceApprover";
 
   const status = declarationItem?.Status || "Draft";
   const isFormReadOnly =
@@ -161,7 +159,7 @@ const ITDeclaration: React.FC = () => {
     lenderAddress: "",
     lenderPan: "",
     lenderType: "",
-    isJointlyAvailed: false,
+    isJointlyAvailed: "",
     approverComments: "",
   });
   const [previousEmployerData, setPreviousEmployerData] = React.useState({
@@ -381,7 +379,8 @@ const ITDeclaration: React.FC = () => {
     }
 
     setPan(panToSet);
-    setMobile(mobile || mainItem.MobileNumber);
+    setMobile(mobile);
+    setActiveStep(mainItem.ActiveStep || "Home");
     setDeclarationAgreement({
       agreed: mainItem.IsAcknowledged,
       place: mainItem.Place || "",
@@ -581,147 +580,170 @@ const ITDeclaration: React.FC = () => {
     }
   };
 
-  const validation = async (): Promise<boolean> => {
+  const validateStep = async (stepName: string): Promise<boolean> => {
     let _errMsg: string = "";
-    const activeLls = landlords.filter((ll) => !ll.isDeleted);
-    const isLandlordRequired = rentDetails.some((r) => Number(r.rent) > 8333);
-    const isLandlordNameAndAdd = rentDetails.some((r) => Number(r.rent) > 0);
 
-    let filledMonthsIdx = rentDetails
-      .map((r, i) => (r.isMetro !== "" && r.isMetro !== null ? i : -1))
-      .filter((idx) => idx !== -1);
+    switch (stepName) {
+      case "Basic Information":
+        if (!pan.trim()) {
+          _errMsg = "PAN is required";
+        } else if (!validatePAN(pan)) {
+          _errMsg = "Invalid PAN format";
+        }
+        break;
 
-    const minIdx = Math.min(...filledMonthsIdx);
-    const maxIdx = Math.max(...filledMonthsIdx);
+      case "House Rental":
+        if (declarationItem.TaxRegime === "Old Regime") {
+          const activeLls = landlords.filter((ll) => !ll.isDeleted);
+          const isLandlordRequired = rentDetails.some(
+            (r) => Number(r.rent) > 8333,
+          );
+          const isLandlordNameAndAdd = rentDetails.some(
+            (r) => Number(r.rent) > 0,
+          );
 
-    const curHRADetails = rentDetails.filter(
-      (row, idx) => idx >= minIdx && idx <= maxIdx && row.isMetro === "",
-    );
+          let filledMonthsIdx = rentDetails
+            .map((r, i) => (r.isMetro !== "" && r.isMetro !== null ? i : -1))
+            .filter((idx) => idx !== -1);
 
-    // validation condition
-    if (!pan.trim()) {
-      _errMsg = "PAN is required";
-    } else if (!validatePAN(pan)) {
-      _errMsg = "Invalid PAN format";
-    } else if (declarationItem.TaxRegime == "Old Regime") {
-      if (curHRADetails.length > 0) {
-        for (let i = minIdx; i <= maxIdx; i++) {
-          if (rentDetails[i].isMetro === "") {
+          if (filledMonthsIdx.length > 0) {
+            const minIdx = Math.min(...filledMonthsIdx);
+            const maxIdx = Math.max(...filledMonthsIdx);
+
+            for (let i = minIdx; i <= maxIdx; i++) {
+              if (rentDetails[i].isMetro === "") {
+                _errMsg =
+                  "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
+                break;
+              }
+              if (!rentDetails[i].city.trim()) {
+                _errMsg = `City is required for ${rentDetails[i].month}`;
+                break;
+              }
+              if (!rentDetails[i].rent.trim()) {
+                _errMsg = `Rent is required for ${rentDetails[i].month}`;
+                break;
+              }
+            }
+          }
+
+          if (!_errMsg) {
+            if (
+              isLandlordNameAndAdd &&
+              (activeLls.some((ll) => !ll.name?.trim()) ||
+                activeLls.some((ll) => !ll.address?.trim()))
+            ) {
+              if (activeLls.some((ll) => !ll.name?.trim())) {
+                _errMsg = "Landlord name is required";
+              } else if (activeLls.some((ll) => !ll.address?.trim())) {
+                _errMsg = "Tenant address is required";
+              }
+            } else if (
+              isLandlordRequired &&
+              activeLls.some((ll) => !ll.pan?.trim())
+            ) {
+              _errMsg = "Landlord PAN is required";
+            } else if (
+              isLandlordRequired &&
+              activeLls.some((r) => !validatePAN(r.pan?.trim()))
+            ) {
+              _errMsg = "Invalid Landlord PAN format";
+            }
+          }
+        }
+        break;
+
+      case "LTA":
+        if (
+          declarationItem.TaxRegime === "Old Regime" &&
+          Number(ltaData.exemptionAmount) > 0 &&
+          (!ltaData.journeyStartDate ||
+            !ltaData.journeyEndDate ||
+            !ltaData.journeyStartPlace ||
+            !ltaData.journeyDestination ||
+            !ltaData.modeOfTravel ||
+            !ltaData.classOfTravel ||
+            !ltaData.ticketNumbers ||
+            !ltaData.lastClaimedYear)
+        ) {
+          if (!ltaData.journeyStartDate) {
+            _errMsg = "Journey start date is required";
+          } else if (!ltaData.journeyEndDate) {
+            _errMsg = "Journey end date is required";
+          } else if (ltaData.journeyEndDate < ltaData.journeyStartDate) {
             _errMsg =
-              "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
-            break;
-          }
-          if (!rentDetails[i].city.trim()) {
-            _errMsg = `City is required for ${rentDetails[i]}`;
-            break;
-          }
-          if (!rentDetails[i].rent.trim()) {
-            _errMsg = `Rent is required for ${rentDetails[i]}`;
-            break;
+              "Journey end date should be greater than journey start date";
+          } else if (!ltaData.journeyStartPlace.trim()) {
+            _errMsg = "Journey start place is required";
+          } else if (!ltaData.journeyDestination.trim()) {
+            _errMsg = "Journey destination is required";
+          } else if (!ltaData.modeOfTravel) {
+            _errMsg = "Mode of travel is required";
+          } else if (!ltaData.classOfTravel.trim()) {
+            _errMsg = "Class of travel is required";
+          } else if (!ltaData.ticketNumbers.trim()) {
+            _errMsg = "Ticket number is required";
+          } else if (!ltaData.lastClaimedYear) {
+            _errMsg = "Last claimed year is required";
           }
         }
-      }
-      //  else if (isLandlordRequired && !hasValidLandlord) {
-      //   _errMsg =
-      //     "Landlord details are mandatory when the individual monthly rent exceeds Rs 8,333.";
-      // }
-      else if (
-        isLandlordNameAndAdd &&
-        (activeLls.some((ll) => !ll.name?.trim()) ||
-          activeLls.some((ll) => !ll.address?.trim()))
-      ) {
-        if (activeLls.some((ll) => !ll.name?.trim())) {
-          _errMsg = "Landlord name is required";
-        } else if (activeLls.some((ll) => !ll.address?.trim())) {
-          _errMsg = "Landlord address is required";
-        }
-      } else if (
-        isLandlordRequired &&
-        activeLls.some((ll) => !ll.pan?.trim())
-      ) {
-        _errMsg = "Landlord PAN is required";
-      } else if (
-        isLandlordRequired &&
-        activeLls.some((r) => !validatePAN(r.pan?.trim()))
-      ) {
-        _errMsg = "Invalid Landlord PAN format";
-      } else if (
-        Number(ltaData.exemptionAmount) > 0 &&
-        (!ltaData.journeyStartDate ||
-          !ltaData.journeyEndDate ||
-          !ltaData.journeyStartPlace ||
-          !ltaData.journeyDestination ||
-          !ltaData.modeOfTravel ||
-          !ltaData.classOfTravel ||
-          !ltaData.ticketNumbers ||
-          !ltaData.lastClaimedYear)
-      ) {
-        if (!ltaData.journeyStartDate) {
-          _errMsg = "Journey start date is required";
-        } else if (!ltaData.journeyEndDate) {
-          _errMsg = "Journey end date is required";
-        } else if (ltaData.journeyEndDate < ltaData.journeyStartDate) {
-          _errMsg =
-            "Journey end date should be greater than journey start date";
-        } else if (!ltaData.journeyStartPlace.trim()) {
-          _errMsg = "Journey start place is required";
-        } else if (!ltaData.journeyDestination.trim()) {
-          _errMsg = "Journey destination is required";
-        } else if (!ltaData.modeOfTravel) {
-          _errMsg = "Mode of travel is required";
-        } else if (!ltaData.classOfTravel.trim()) {
-          _errMsg = "Class of travel is required";
-        } else if (!ltaData.ticketNumbers.trim()) {
-          _errMsg = "Ticket number is required";
-        } else if (!ltaData.lastClaimedYear) {
-          _errMsg = "Last claimed year is required";
-        }
-      } else if (
-        housingLoanData.propertyType != "None" &&
-        ((housingLoanData.propertyType == "Let Out Property" &&
-          !housingLoanData.finalLettableValue) ||
-          !housingLoanData.letOutInterestAmount ||
-          !housingLoanData.otherDeductionsUs24) &&
-        (!housingLoanData.interestAmount ||
-          !housingLoanData.lenderName ||
-          !housingLoanData.lenderAddress ||
-          !housingLoanData.lenderType)
-      ) {
-        if (housingLoanData.propertyType == "Let Out Property") {
-          if (!housingLoanData.finalLettableValue) {
-            _errMsg = "Final lettable value is required";
-          } else if (!housingLoanData.letOutInterestAmount) {
-            _errMsg = "Let out interest amount is required";
-          } else if (!housingLoanData.otherDeductionsUs24) {
-            _errMsg = "Other deductions u/s 24 is required";
+        break;
+
+      case "Housing Loan Repayment":
+        if (
+          declarationItem.TaxRegime === "Old Regime" &&
+          housingLoanData.propertyType !== "None" &&
+          ((housingLoanData.propertyType === "Let Out Property" &&
+            !housingLoanData.finalLettableValue) ||
+            !housingLoanData.letOutInterestAmount) &&
+          //  ||
+          // !housingLoanData.otherDeductionsUs24
+          (!housingLoanData.interestAmount ||
+            !housingLoanData.lenderName ||
+            !housingLoanData.lenderAddress ||
+            !housingLoanData.lenderType)
+        ) {
+          if (housingLoanData.propertyType === "Let Out Property") {
+            if (!housingLoanData.finalLettableValue) {
+              _errMsg = "Final lettable value is required";
+            } else if (!housingLoanData.letOutInterestAmount) {
+              _errMsg = "Let out interest amount is required";
+            }
+            // else if (!housingLoanData.otherDeductionsUs24) {
+            //   _errMsg = "Other deductions u/s 24 is required";
+            // }
+          } else if (!housingLoanData.interestAmount) {
+            _errMsg = "Interest amount is required";
+          } else if (!housingLoanData.lenderName) {
+            _errMsg = "Lender name is required";
+          } else if (!housingLoanData.lenderAddress) {
+            _errMsg = "Lender address is required";
+          } else if (!housingLoanData.lenderPan) {
+            _errMsg = "Lender PAN is required";
+          } else if (!validatePAN(housingLoanData.lenderPan)) {
+            _errMsg = "Invalid Lender PAN format";
+          } else if (!housingLoanData.lenderType) {
+            _errMsg = "Lender type is required";
           }
-        } else if (!housingLoanData.interestAmount) {
-          _errMsg = "Interest amount is required";
-        } else if (!housingLoanData.lenderName) {
-          _errMsg = "Lender name is required";
-        } else if (!housingLoanData.lenderAddress) {
-          _errMsg = "Lender address is required";
-        } else if (!housingLoanData.lenderPan) {
-          _errMsg = "Lender PAN is required";
-        } else if (!validatePAN(housingLoanData.lenderPan)) {
-          _errMsg = "Invalid Lender PAN format";
-        } else if (!housingLoanData.lenderType) {
-          _errMsg = "Lender type is required";
         }
-      } else if (
-        previousEmployerData.employerPan?.trim() &&
-        !validatePAN(previousEmployerData.employerPan.trim())
-      ) {
-        _errMsg = "Invalid Previous Employer PAN format";
-      } else if (!declarationAgreement.agreed) {
-        _errMsg = "Declaration agreement is not agreed";
-      } else if (!declarationAgreement.place.trim()) {
-        _errMsg = "Place is required";
-      }
-    } else if (!declarationAgreement.agreed) {
-      _errMsg = "Declaration agreement is not agreed";
-    } else if (!declarationAgreement.place.trim()) {
-      _errMsg = "Place is required";
+        break;
+
+      case "Previous Employer Details":
+        if (
+          previousEmployerData.employerPan?.trim() &&
+          !validatePAN(previousEmployerData.employerPan.trim())
+        ) {
+          _errMsg = "Invalid Previous Employer PAN format";
+        }
+        break;
+
+      case "Declaration & Summary":
+        if (!declarationAgreement.agreed) {
+          _errMsg = "Declaration agreement is not agreed";
+        } else if (!declarationAgreement.place.trim()) {
+          _errMsg = "Place is required";
+        }
+        break;
     }
 
     if (_errMsg) {
@@ -730,8 +752,18 @@ const ITDeclaration: React.FC = () => {
     }
     return false;
   };
-  const handleSaveStep = async (stepToSave?: string) => {
-    const step = stepToSave || activeStep;
+
+  const validation = async (): Promise<boolean> => {
+    // Check all steps for overall submission validation
+    const validationSteps = steps.map((s) => s.key);
+    for (const step of validationSteps) {
+      const isInvalid = await validateStep(step);
+      if (isInvalid) return true;
+    }
+    return false;
+  };
+  const handleSaveStep = async (nextStep?: string) => {
+    const step = activeStep;
     if (!declarationItem) return;
 
     try {
@@ -752,7 +784,8 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             PAN: pan,
             ApproverCommentsJson: commentsJSON,
-            MobileNumber: mobile.toString(),
+            MobileNumber: mobile?.toString(),
+            ActiveStep: nextStep || activeStep,
           });
           break;
         }
@@ -760,6 +793,7 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             RentDetailsJSON: JSON.stringify(rentDetails),
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           await upsertRelatedListBatch(
             LIST_NAMES.IT_LANDLORD_DETAILS,
@@ -779,6 +813,7 @@ const ITDeclaration: React.FC = () => {
           if (ltaData.exemptionAmount.trim()) {
             await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
               ApproverCommentsJson: commentsJSON,
+              ActiveStep: nextStep || activeStep,
             });
             await upsertRelatedListBatch(
               LIST_NAMES.IT_LTA,
@@ -804,6 +839,7 @@ const ITDeclaration: React.FC = () => {
         case "Section 80C Deductions":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           const itemsToSave80C = items80C.filter(
             (i) => Number(i.declaredAmount) > 0,
@@ -823,6 +859,7 @@ const ITDeclaration: React.FC = () => {
         case "Section 80 Deductions":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           const itemsToSave80D = items80D.filter(
             (i) => Number(i.declaredAmount) > 0,
@@ -839,9 +876,10 @@ const ITDeclaration: React.FC = () => {
           );
           break;
 
-        case "Housing Loan Repayment": {
+        case "Housing Loan Repayment":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           await upsertRelatedListBatch(
             LIST_NAMES.IT_HOUSING_LOAN,
@@ -861,11 +899,11 @@ const ITDeclaration: React.FC = () => {
             }),
           );
           break;
-        }
 
         case "Previous Employer Details":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           const pe = previousEmployerData;
           await upsertRelatedListBatch(
@@ -890,6 +928,7 @@ const ITDeclaration: React.FC = () => {
         case "Declaration & Summary":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           break;
       }
@@ -977,6 +1016,16 @@ const ITDeclaration: React.FC = () => {
           user!,
           commentsSummary,
         );
+      } else if (newStatus === "Draft" && empEmail) {
+        void sendReopenEmail(
+          empName,
+          empId,
+          empEmail,
+          "Planned",
+          fy,
+          user!,
+          declarationItem.Title,
+        );
       }
 
       setShowPopup({
@@ -1030,9 +1079,9 @@ const ITDeclaration: React.FC = () => {
               doj: matchedEmployee?.DOJ || "-",
               email: matchedEmployee?.Email || user?.Email || "",
               // mobile: matchedEmployee?.PhoneNo || "-",
-              mobile: mobile || matchedEmployee?.PhoneNo!,
+              mobile: mobile || "-",
             }}
-            mobile={mobile || matchedEmployee?.PhoneNo!}
+            mobile={mobile}
             onMobileChange={setMobile}
             pan={pan}
             onPanChange={setPan}
@@ -1340,7 +1389,15 @@ const ITDeclaration: React.FC = () => {
               steps={steps}
               activeStep={activeStep}
               onStepClick={async (key) => {
-                await handleSaveStep();
+                const lastsaveIdx = steps.findIndex(
+                  (s) => s.key === declarationItem.ActiveStep,
+                );
+                const idx = steps.findIndex((s) => s.key === key);
+                if (idx > lastsaveIdx) {
+                  const isInvalid = await validateStep(activeStep);
+                  if (isInvalid) return;
+                  await handleSaveStep(key);
+                }
                 setActiveStep(key);
                 setIsEditMode(false);
               }}
@@ -1381,8 +1438,9 @@ const ITDeclaration: React.FC = () => {
                 onClick={async () => {
                   const idx = steps.findIndex((s) => s.key === activeStep);
                   if (idx > 0) {
-                    await handleSaveStep();
-                    setActiveStep(steps[idx - 1].key);
+                    const prevStep = steps[idx - 1].key;
+                    await handleSaveStep(prevStep);
+                    setActiveStep(prevStep);
                     setIsEditMode(false);
                   }
                 }}
@@ -1535,8 +1593,11 @@ const ITDeclaration: React.FC = () => {
                 onClick={async () => {
                   const idx = steps.findIndex((s) => s.key === activeStep);
                   if (idx < steps.length - 1) {
-                    await handleSaveStep();
-                    setActiveStep(steps[idx + 1].key);
+                    const isInvalid = await validateStep(activeStep);
+                    if (isInvalid) return;
+                    const nextStep = steps[idx + 1].key;
+                    await handleSaveStep(nextStep);
+                    setActiveStep(nextStep);
                   } else {
                     const isValid = await validation();
                     if (isValid) return;

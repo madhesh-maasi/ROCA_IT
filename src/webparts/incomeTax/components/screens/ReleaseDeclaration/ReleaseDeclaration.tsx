@@ -29,6 +29,7 @@ import {
   getListItems,
   addListItemsBatch,
   getAllItems,
+  getNextSequence,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import Loader from "../../../../../common/components/Loader/Loader";
@@ -303,7 +304,7 @@ const ReleaseDeclaration: React.FC = () => {
 
       if (formData.ReleaseType === "Release All") {
         itemsToRelease = employeeMaster.map((emp) => ({
-          Title: `REQ-${_financialYear}-${emp.EmployeeId}`,
+          Title: "", // Will be generated before saving
           EmployeeName: emp.Title || emp.Name,
           EmployeeCode: emp.EmployeeId,
           EmployeeEmail: emp.Email,
@@ -317,7 +318,7 @@ const ReleaseDeclaration: React.FC = () => {
         targetEmails.forEach((email: string) => {
           const matchedEmp = employeeMaster.find((e) => e.Email === email);
           itemsToRelease.push({
-            Title: `REQ-${_financialYear}-${matchedEmp ? matchedEmp.EmployeeId : ""}`,
+            Title: "", // Will be generated before saving
             EmployeeName: matchedEmp
               ? matchedEmp.Title || matchedEmp.Name
               : email,
@@ -333,7 +334,7 @@ const ReleaseDeclaration: React.FC = () => {
 
         excelEmployees.forEach((row) => {
           itemsToRelease.push({
-            Title: `REQ-${_financialYear}-${row.EmployeeID}`,
+            Title: "", // Will be generated before saving
             EmployeeName: row.Title,
             EmployeeCode: row.EmployeeID,
             EmployeeEmail: row.Email,
@@ -402,10 +403,20 @@ const ReleaseDeclaration: React.FC = () => {
         }
 
         // Attach PlannedDeclarationId (lookup) to each item and write to Actual list
-        const actualItems = actualFinal.map((item) => ({
-          ...item,
-          PlannedDeclarationId: plannedMap.get(item.EmployeeCode)?.Id || null,
-        }));
+        let nextSeqNum = await getNextSequence(
+          LIST_NAMES.ACTUAL_DECLARATION,
+          _financialYear,
+          "ACT",
+        );
+
+        const actualItems = actualFinal.map((item) => {
+          nextSeqNum++;
+          return {
+            ...item,
+            Title: `${_financialYear}-ACT-${nextSeqNum.toString().padStart(4, "0")}`,
+            PlannedDeclarationId: plannedMap.get(item.EmployeeCode)?.Id || null,
+          };
+        });
 
         await addListItemsBatch(LIST_NAMES.ACTUAL_DECLARATION, actualItems);
 
@@ -482,7 +493,21 @@ const ReleaseDeclaration: React.FC = () => {
         return;
       }
 
-      await addListItemsBatch(LIST_NAMES.PLANNED_DECLARATION, finalItems);
+      let currentSeqNum = await getNextSequence(
+        LIST_NAMES.PLANNED_DECLARATION,
+        _financialYear,
+        "PLN",
+      );
+
+      const finalWithIds = finalItems.map((item) => {
+        currentSeqNum++;
+        return {
+          ...item,
+          Title: `${_financialYear}-PLN-${currentSeqNum.toString().padStart(4, "0")}`,
+        };
+      });
+
+      await addListItemsBatch(LIST_NAMES.PLANNED_DECLARATION, finalWithIds);
 
       showToast(
         toast,
@@ -497,7 +522,7 @@ const ReleaseDeclaration: React.FC = () => {
       const deadlineStr = formData.OnOrBefore
         ? formData.OnOrBefore.toLocaleDateString("en-IN")
         : "";
-      const emailTargets = finalItems
+      const emailTargets = finalWithIds
         .filter((item) => item.EmployeeEmail)
         .map((item) => ({
           email: item.EmployeeEmail as string,
@@ -540,11 +565,13 @@ const ReleaseDeclaration: React.FC = () => {
 
   // Format the redux state for the DataTable
   const employeeTableData = React.useMemo(() => {
-    const data = employeeMaster.map((emp: IEmployee) => ({
-      employeeId: emp.EmployeeId || "-",
-      employeeName: emp.Name || emp.Title || "-",
-      location: emp.Location || "-",
-    }));
+    const data = employeeMaster
+      .filter((emp: IEmployee) => emp.EmployeeId?.toString().startsWith("9"))
+      .map((emp: IEmployee) => ({
+        employeeId: emp.EmployeeId || "-",
+        employeeName: emp.Name || emp.Title || "-",
+        location: emp.Location || "-",
+      }));
     return globalSearchFilter(data, searchTerm);
   }, [employeeMaster, searchTerm]);
 

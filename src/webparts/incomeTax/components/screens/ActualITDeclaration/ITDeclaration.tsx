@@ -62,6 +62,7 @@ import TaxRegimePopup from "../SubmittedDeclarations/TaxRegimePopup";
 import {
   sendApprovalEmail,
   sendReworkEmail,
+  sendReopenEmail,
 } from "../../../../../common/utils/emailService";
 
 // ── Mapping section names to icons ───────────────────────────────
@@ -108,7 +109,8 @@ const ITDeclaration: React.FC = () => {
 
   // ── Attachment state removed - now stored in section states
 
-  const isAdmin = userRole === "Admin" || userRole === "FinanceApprover";
+  // const isAdmin = userRole === "Admin" || userRole === "FinanceApprover";
+  const isAdmin = userRole === "FinanceApprover";
 
   const status = declarationItem?.Status || "Draft";
   const isFormReadOnly =
@@ -165,7 +167,7 @@ const ITDeclaration: React.FC = () => {
     lenderAddress: "",
     lenderPan: "",
     lenderType: "",
-    isJointlyAvailed: false,
+    isJointlyAvailed: "",
     approverComments: "",
     attachments: [],
   });
@@ -239,6 +241,20 @@ const ITDeclaration: React.FC = () => {
       let item: any = selectedItemFromStore
         ? { ...selectedItemFromStore }
         : null;
+
+      const queryParams = new URLSearchParams(location.search);
+      const itemIdParam = queryParams.get("itemId");
+
+      if (!item && itemIdParam) {
+        try {
+          item = await sp.web.lists
+            .getByTitle(LIST_NAMES.ACTUAL_DECLARATION)
+            .items.getById(parseInt(itemIdParam))
+            .select("*")();
+        } catch (err) {
+          console.error("Error fetching declaration by itemId", err);
+        }
+      }
 
       if (!item) {
         // Fetch the user's Actual Declaration for the current FY
@@ -454,6 +470,7 @@ const ITDeclaration: React.FC = () => {
 
     setPan(panToSet);
     setMobile(mobile || mainItem.MobileNumber);
+    setActiveStep(mainItem.ActiveStep || "Home");
     setDeclarationAgreement({
       agreed: mainItem.IsAcknowledged,
       place: mainItem.Place || "",
@@ -726,12 +743,12 @@ const ITDeclaration: React.FC = () => {
     const fy: string = declarationItem.FinancialYear || "";
     const empCode: string = matchedEmployee?.EmployeeId || "UNKNOWN";
 
-    if (file.size > 30 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       showToast(
         toast,
         "error",
         "File Too Large",
-        "Attachment size must be less than 30MB.",
+        "Attachment size must be less than 10MB.",
       );
       return;
     }
@@ -875,7 +892,12 @@ const ITDeclaration: React.FC = () => {
       setIsLoading(true);
       const fy = declarationItem.FinancialYear;
       const empCode = matchedEmployee?.EmployeeId || "Unknown";
-      await downloadAttachmentsAsZip(declarationItem.Id, fy, empCode);
+      await downloadAttachmentsAsZip(
+        declarationItem.Id,
+        declarationItem.Title,
+        fy,
+        empCode,
+      );
       showToast(
         toast,
         "success",
@@ -969,212 +991,216 @@ const ITDeclaration: React.FC = () => {
     }
   };
 
-  const validation = async (): Promise<boolean> => {
+  const validateStep = async (stepName: string): Promise<boolean> => {
     let _errMsg: string = "";
-    const activeLls = landlords.filter((ll) => !ll.isDeleted);
-    const isLandlordRequired = rentDetails.some((r) => Number(r.rent) > 8333);
-    const isLandlordNameAndAdd = rentDetails.some((r) => r.rent);
-    const hasValidLandlord = activeLls.some(
-      (ll) => ll.name && ll.pan && ll.address,
-    );
-    let filledMonthsIdx = rentDetails
-      .map((r, i) =>
-        r.isMetro !== "" &&
-        r.isMetro !== null &&
-        r.rent !== "" &&
-        r.rent !== null &&
-        r.city !== "" &&
-        r.city !== null
-          ? i
-          : -1,
-      )
-      .filter((idx) => idx !== -1);
 
-    const minIdx = Math.min(...filledMonthsIdx);
-    const maxIdx = Math.max(...filledMonthsIdx);
+    switch (stepName) {
+      case "Basic Information":
+        if (!pan.trim()) {
+          _errMsg = "PAN is required";
+        } else if (!validatePAN(pan)) {
+          _errMsg = "Invalid PAN format";
+        }
+        break;
 
-    const curHRADetails = rentDetails.filter(
-      (row, idx) => idx >= minIdx && idx <= maxIdx && row.isMetro === "",
-    );
+      case "House Rental":
+        if (declarationItem.TaxRegime === "Old Regime") {
+          const activeLls = landlords.filter((ll) => !ll.isDeleted);
+          const isLandlordRequired = rentDetails.some(
+            (r) => Number(r.rent) > 8333,
+          );
+          const isLandlordNameAndAdd = rentDetails.some(
+            (r) => Number(r.rent) > 0,
+          );
 
-    // validation condition
-    if (!pan.trim()) {
-      _errMsg = "PAN is required";
-    } else if (!validatePAN(pan)) {
-      _errMsg = "Invalid PAN format";
-    } else if (declarationItem.TaxRegime == "Old Regime") {
-      if (curHRADetails.length > 0) {
-        for (let i = minIdx; i <= maxIdx; i++) {
-          if (rentDetails[i].isMetro === "") {
+          let filledMonthsIdx = rentDetails
+            .map((r, i) => (r.isMetro !== "" && r.isMetro !== null ? i : -1))
+            .filter((idx) => idx !== -1);
+
+          if (filledMonthsIdx.length > 0) {
+            const minIdx = Math.min(...filledMonthsIdx);
+            const maxIdx = Math.max(...filledMonthsIdx);
+
+            for (let i = minIdx; i <= maxIdx; i++) {
+              if (rentDetails[i].isMetro === "") {
+                _errMsg =
+                  "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
+                break;
+              }
+              if (!rentDetails[i].city.trim()) {
+                _errMsg = `City is required for ${rentDetails[i].month}`;
+                break;
+              }
+              if (!rentDetails[i].rent.trim()) {
+                _errMsg = `Rent is required for ${rentDetails[i].month}`;
+                break;
+              }
+            }
+          }
+
+          if (!_errMsg) {
+            if (
+              isLandlordNameAndAdd &&
+              (activeLls.some((ll) => !ll.name) ||
+                activeLls.some((ll) => !ll.address))
+            ) {
+              if (activeLls.some((ll) => !ll.name)) {
+                _errMsg = "Landlord name is required";
+              } else if (activeLls.some((ll) => !ll.address)) {
+                _errMsg = "Tenant address is required";
+              }
+            } else if (isLandlordRequired && activeLls.some((ll) => !ll.pan)) {
+              _errMsg = "Landlord PAN is required";
+            } else if (
+              isLandlordRequired &&
+              activeLls.some((r) => !validatePAN(r.pan?.trim()))
+            ) {
+              _errMsg = "Invalid Landlord PAN format";
+            } else if (
+              activeLls.some(
+                (ll) => !ll.isDeleted && ll.name && !ll.attachments.length,
+              )
+            ) {
+              _errMsg = "Attachment is mandatory for all active landlords";
+            }
+          }
+        }
+        break;
+
+      case "LTA":
+        if (
+          declarationItem.TaxRegime === "Old Regime" &&
+          Number(ltaData.exemptionAmount) > 0 &&
+          (!ltaData.journeyStartDate ||
+            !ltaData.journeyEndDate ||
+            !ltaData.journeyStartPlace ||
+            !ltaData.journeyDestination ||
+            !ltaData.modeOfTravel ||
+            !ltaData.classOfTravel ||
+            !ltaData.ticketNumbers ||
+            !ltaData.lastClaimedYear ||
+            !ltaData.attachments ||
+            ltaData.attachments.length === 0)
+        ) {
+          if (!ltaData.journeyStartDate) {
+            _errMsg = "Journey start date is required";
+          } else if (!ltaData.journeyEndDate) {
+            _errMsg = "Journey end date is required";
+          } else if (ltaData.journeyEndDate < ltaData.journeyStartDate) {
             _errMsg =
-              "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
-            break;
-          }
-          if (!rentDetails[i].city.trim()) {
-            _errMsg = `City is required for ${rentDetails[i]}`;
-            break;
-          }
-          if (!rentDetails[i].rent.trim()) {
-            _errMsg = `Rent is required for ${rentDetails[i]}`;
-            break;
+              "Journey end date should be greater than journey start date";
+          } else if (!ltaData.journeyStartPlace.trim()) {
+            _errMsg = "Journey start place is required";
+          } else if (!ltaData.journeyDestination.trim()) {
+            _errMsg = "Journey destination is required";
+          } else if (!ltaData.modeOfTravel) {
+            _errMsg = "Mode of travel is required";
+          } else if (!ltaData.classOfTravel.trim()) {
+            _errMsg = "Class of travel is required";
+          } else if (!ltaData.ticketNumbers.trim()) {
+            _errMsg = "Ticket number is required";
+          } else if (!ltaData.lastClaimedYear) {
+            _errMsg = "Last claimed year is required";
+          } else if (!ltaData.attachments || ltaData.attachments.length === 0) {
+            _errMsg = "Attachment is mandatory for LTA exemption";
           }
         }
-      } else if (
-        isLandlordNameAndAdd &&
-        (activeLls.some((ll) => !ll.name) ||
-          activeLls.some((ll) => !ll.address))
-      ) {
-        if (activeLls.some((ll) => !ll.name)) {
-          _errMsg = "Landlord name is required";
-        } else if (activeLls.some((ll) => !ll.address)) {
-          _errMsg = "Landlord address is required";
-        }
-      } else if (isLandlordRequired && activeLls.some((ll) => !ll.pan)) {
-        _errMsg = "Landlord PAN is required";
-      } else if (
-        isLandlordRequired &&
-        activeLls.some((r) => !validatePAN(r.pan?.trim()))
-      ) {
-        _errMsg = "Invalid Landlord PAN format";
-      } else if (
-        activeLls.some(
-          (ll) => !ll.isDeleted && ll.name && !ll.attachments.length,
-        )
-      ) {
-        activeLls.forEach((ll) => {
-          if (!ll.isDeleted && ll.name) {
-            if (!ll.attachments || ll.attachments.length === 0) {
-              _errMsg = `Attachment is mandatory for landlord: ${ll.name}`;
-            }
-          }
-        });
-      } else if (
-        Number(ltaData.exemptionAmount) > 0 &&
-        (!ltaData.journeyStartDate ||
-          !ltaData.journeyEndDate ||
-          !ltaData.journeyStartPlace ||
-          !ltaData.journeyDestination ||
-          !ltaData.modeOfTravel ||
-          !ltaData.classOfTravel ||
-          !ltaData.ticketNumbers ||
-          !ltaData.lastClaimedYear ||
-          !ltaData.attachments ||
-          ltaData.attachments.length === 0)
-      ) {
-        if (!ltaData.journeyStartDate) {
-          _errMsg = "Journey start date is required";
-        } else if (!ltaData.journeyEndDate) {
-          _errMsg = "Journey end date is required";
-        } else if (ltaData.journeyEndDate < ltaData.journeyStartDate) {
-          _errMsg =
-            "Journey end date should be greater than journey start date";
-        } else if (!ltaData.journeyStartPlace.trim()) {
-          _errMsg = "Journey start place is required";
-        } else if (!ltaData.journeyDestination.trim()) {
-          _errMsg = "Journey destination is required";
-        } else if (!ltaData.modeOfTravel) {
-          _errMsg = "Mode of travel is required";
-        } else if (!ltaData.classOfTravel.trim()) {
-          _errMsg = "Class of travel is required";
-        } else if (!ltaData.ticketNumbers.trim()) {
-          _errMsg = "Ticket number is required";
-        } else if (!ltaData.lastClaimedYear) {
-          _errMsg = "Last claimed year is required";
-        } else if (!ltaData.attachments || ltaData.attachments.length === 0) {
-          _errMsg = "Attachment is mandatory for LTA exemption";
-        }
-      } else if (
-        items80C.some(
-          (item) => Number(item.declaredAmount) > 0 && !item.attachments.length,
-        )
-      ) {
-        for (const item of items80C) {
-          if (Number(item.declaredAmount) > 0) {
-            if (!item.attachments || item.attachments.length === 0) {
-              _errMsg = `Attachment is mandatory for ${item.investmentType}`;
-              break;
+        break;
+
+      case "Section 80C Deductions":
+        if (declarationItem.TaxRegime === "Old Regime") {
+          for (const item of items80C) {
+            if (Number(item.declaredAmount) > 0) {
+              if (!item.attachments || item.attachments.length === 0) {
+                _errMsg = `Attachment is mandatory for ${item.investmentType}`;
+                break;
+              }
             }
           }
         }
-      } else if (
-        items80D.some(
-          (item) => Number(item.declaredAmount) > 0 && !item.attachments.length,
-        )
-      ) {
-        for (const item of items80D) {
-          if (Number(item.declaredAmount) > 0) {
-            if (!item.attachments || item.attachments.length === 0) {
-              _errMsg = `Attachment is mandatory for ${item.investmentType}`;
-              break;
+        break;
+
+      case "Section 80 Deductions":
+        if (declarationItem.TaxRegime === "Old Regime") {
+          for (const item of items80D) {
+            if (Number(item.declaredAmount) > 0) {
+              if (!item.attachments || item.attachments.length === 0) {
+                _errMsg = `Attachment is mandatory for ${item.investmentType}`;
+                break;
+              }
             }
           }
         }
-      } else if (
-        housingLoanData.propertyType != "None" &&
-        ((housingLoanData.propertyType == "Let Out Property" &&
-          !housingLoanData.finalLettableValue) ||
-          !housingLoanData.letOutInterestAmount ||
-          !housingLoanData.otherDeductionsUs24) &&
-        (!housingLoanData.interestAmount ||
-          !housingLoanData.lenderName ||
-          !housingLoanData.lenderAddress ||
-          !housingLoanData.lenderType)
-      ) {
-        if (housingLoanData.propertyType == "Let Out Property") {
-          if (!housingLoanData.finalLettableValue) {
-            _errMsg = "Final lettable value is required";
-          } else if (!housingLoanData.letOutInterestAmount) {
-            _errMsg = "Let out interest amount is required";
-          } else if (!housingLoanData.otherDeductionsUs24) {
-            _errMsg = "Other deductions u/s 24 is required";
+        break;
+
+      case "Housing Loan Repayment":
+        if (declarationItem.TaxRegime === "Old Regime") {
+          if (
+            housingLoanData.propertyType !== "None" &&
+            ((housingLoanData.propertyType === "Let Out Property" &&
+              !housingLoanData.finalLettableValue) ||
+              !housingLoanData.letOutInterestAmount) &&
+            // ||
+            // !housingLoanData.otherDeductionsUs24)
+            (!housingLoanData.interestAmount ||
+              !housingLoanData.lenderName ||
+              !housingLoanData.lenderAddress ||
+              !housingLoanData.lenderType)
+          ) {
+            if (housingLoanData.propertyType === "Let Out Property") {
+              if (!housingLoanData.finalLettableValue) {
+                _errMsg = "Final lettable value is required";
+              } else if (!housingLoanData.letOutInterestAmount) {
+                _errMsg = "Let out interest amount is required";
+              }
+              // else if (!housingLoanData.otherDeductionsUs24) {
+              //   _errMsg = "Other deductions u/s 24 is required";
+              // }
+            } else if (!housingLoanData.interestAmount) {
+              _errMsg = "Interest amount is required";
+            } else if (!housingLoanData.lenderName) {
+              _errMsg = "Lender name is required";
+            } else if (!housingLoanData.lenderAddress) {
+              _errMsg = "Lender address is required";
+            } else if (!housingLoanData.lenderPan) {
+              _errMsg = "Lender PAN is required";
+            } else if (!validatePAN(housingLoanData.lenderPan)) {
+              _errMsg = "Invalid Lender PAN format";
+            } else if (!housingLoanData.lenderType) {
+              _errMsg = "Lender type is required";
+            }
           }
-        } else if (!housingLoanData.interestAmount) {
-          _errMsg = "Interest amount is required";
-        } else if (!housingLoanData.lenderName) {
-          _errMsg = "Lender name is required";
-        } else if (!housingLoanData.lenderAddress) {
-          _errMsg = "Lender address is required";
-        } else if (!housingLoanData.lenderPan) {
-          _errMsg = "Lender PAN is required";
-        } else if (!validatePAN(housingLoanData.lenderPan)) {
-          _errMsg = "Invalid Lender PAN format";
-        } else if (!housingLoanData.lenderType) {
-          _errMsg = "Lender type is required";
+
+          if (
+            !_errMsg &&
+            (housingLoanData.propertyType === "Self Occupied" ||
+              housingLoanData.propertyType === "Let Out Property") &&
+            (!housingLoanData.attachments ||
+              housingLoanData.attachments.length === 0)
+          ) {
+            _errMsg = `Attachment is mandatory for ${housingLoanData.propertyType} Housing Loan`;
+          }
         }
-      } else if (
-        previousEmployerData.employerPan &&
-        !validatePAN(previousEmployerData.employerPan)
-      ) {
-        _errMsg = "Invalid Previous Employer PAN format";
-      } else if (
-        (housingLoanData.propertyType === "Self Occupied" ||
-          housingLoanData.propertyType === "Let Out Property") &&
-        (!housingLoanData.attachments ||
-          housingLoanData.attachments.length === 0)
-      ) {
-        if (housingLoanData.propertyType === "Self Occupied") {
-          _errMsg = "Attachment is mandatory for Self Occupied Housing Loan";
-        } else if (housingLoanData.propertyType === "Let Out Property") {
-          _errMsg = "Attachment is mandatory for Let Out Property Housing Loan";
+        break;
+
+      case "Previous Employer Details":
+        if (
+          previousEmployerData.employerPan &&
+          !validatePAN(previousEmployerData.employerPan)
+        ) {
+          _errMsg = "Invalid Previous Employer PAN format";
         }
-      }
-      //  else if (
-      //   previousEmployerData.employerName.trim() &&
-      //   (!previousEmployerData.attachments ||
-      //     previousEmployerData.attachments.length === 0)
-      // ) {
-      //   _errMsg = "Attachment is mandatory for Previous Employer Details";
-      // }
-      else if (!declarationAgreement.agreed) {
-        _errMsg = "Declaration agreement is not agreed";
-      } else if (!declarationAgreement.place.trim()) {
-        _errMsg = "Place is required";
-      }
-    } else if (!declarationAgreement.agreed) {
-      _errMsg = "Declaration agreement is not agreed";
-    } else if (!declarationAgreement.place.trim()) {
-      _errMsg = "Place is required";
+        break;
+
+      case "Declaration & Summary":
+        if (!declarationAgreement.agreed) {
+          _errMsg = "Declaration agreement is not agreed";
+        } else if (!declarationAgreement.place.trim()) {
+          _errMsg = "Place is required";
+        }
+        break;
     }
+
     if (_errMsg) {
       showToast(toast, "error", "Error", _errMsg);
       return true;
@@ -1182,8 +1208,18 @@ const ITDeclaration: React.FC = () => {
     return false;
   };
 
-  const handleSaveStep = async (stepToSave?: string) => {
-    const step = stepToSave || activeStep;
+  const validation = async (): Promise<boolean> => {
+    // Check all steps for overall submission validation
+    const validationSteps = steps.map((s) => s.key);
+    for (const step of validationSteps) {
+      const isInvalid = await validateStep(step);
+      if (isInvalid) return true;
+    }
+    return false;
+  };
+
+  const handleSaveStep = async (nextStep?: string) => {
+    const step = activeStep;
     if (!declarationItem) return;
 
     try {
@@ -1204,7 +1240,8 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             PAN: pan,
             ApproverCommentsJson: commentsJSON,
-            MobileNumber: mobile.toString(),
+            MobileNumber: mobile?.toString(),
+            ActiveStep: nextStep || activeStep,
           });
           break;
         }
@@ -1213,6 +1250,7 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             RentDetailsJSON: JSON.stringify(rentDetails),
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
 
           // Soft-delete attachments of deleted landlords
@@ -1252,6 +1290,7 @@ const ITDeclaration: React.FC = () => {
         case "LTA": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           await upsertRelatedListBatch(
             LIST_NAMES.IT_LTA_Actual,
@@ -1277,6 +1316,7 @@ const ITDeclaration: React.FC = () => {
         case "Section 80C Deductions": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           const itemsToSave80C = items80C.filter(
             (i) => Number(i.declaredAmount) > 0,
@@ -1298,6 +1338,7 @@ const ITDeclaration: React.FC = () => {
         case "Section 80 Deductions": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           const itemsToSave80D = items80D.filter(
             (i) => Number(i.declaredAmount) > 0,
@@ -1319,6 +1360,7 @@ const ITDeclaration: React.FC = () => {
         case "Housing Loan Repayment": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           await upsertRelatedListBatch(
             LIST_NAMES.IT_HOUSING_LOAN_Actual,
@@ -1344,6 +1386,7 @@ const ITDeclaration: React.FC = () => {
         case "Previous Employer Details": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
+            ActiveStep: nextStep || activeStep,
           });
           const pe = previousEmployerData;
           await upsertRelatedListBatch(
@@ -1441,6 +1484,7 @@ const ITDeclaration: React.FC = () => {
           fy,
           user!,
           reqNo,
+          declarationItem.Id,
           "ActualApproved",
         );
       } else if (newStatus === "Rework" && empEmail) {
@@ -1453,6 +1497,16 @@ const ITDeclaration: React.FC = () => {
           reqNo,
           user!,
           commentsSummary,
+        );
+      } else if (newStatus === "Draft" && empEmail) {
+        void sendReopenEmail(
+          empName,
+          empId,
+          empEmail,
+          "Actual",
+          fy,
+          user!,
+          reqNo,
         );
       }
 
@@ -1506,9 +1560,9 @@ const ITDeclaration: React.FC = () => {
               location: matchedEmployee?.Location || "-",
               doj: matchedEmployee?.DOJ || "-",
               email: matchedEmployee?.Email || user?.Email || "",
-              mobile: matchedEmployee?.PhoneNo || "-",
+              mobile: mobile || "-",
             }}
-            mobile={mobile || matchedEmployee?.PhoneNo!}
+            mobile={mobile}
             onMobileChange={setMobile}
             pan={pan}
             onPanChange={setPan}
@@ -2022,7 +2076,15 @@ const ITDeclaration: React.FC = () => {
               steps={steps}
               activeStep={activeStep}
               onStepClick={async (key) => {
-                await handleSaveStep();
+                const lastsaveIdx = steps.findIndex(
+                  (s) => s.key === declarationItem.ActiveStep,
+                );
+                const idx = steps.findIndex((s) => s.key === key);
+                if (idx > lastsaveIdx) {
+                  const isInvalid = await validateStep(activeStep);
+                  if (isInvalid) return;
+                  await handleSaveStep(key);
+                }
                 setActiveStep(key);
                 setIsEditMode(false);
               }}
@@ -2063,8 +2125,9 @@ const ITDeclaration: React.FC = () => {
                 onClick={async () => {
                   const idx = steps.findIndex((s) => s.key === activeStep);
                   if (idx > 0) {
-                    await handleSaveStep();
-                    setActiveStep(steps[idx - 1].key);
+                    const prevStep = steps[idx - 1].key;
+                    await handleSaveStep(prevStep);
+                    setActiveStep(prevStep);
                     setIsEditMode(false);
                   }
                 }}
@@ -2129,7 +2192,8 @@ const ITDeclaration: React.FC = () => {
               status === "Approved" &&
               (declarationItem?.DeclarationStatus == "Not Submitted" ||
                 !declarationItem?.DeclarationStatus) &&
-              declarationItem?.EmployeeEmail == user?.Email && (
+              declarationItem?.EmployeeEmail.toLowerCase() ==
+                user?.Email.toLowerCase() && (
                 <ActionButton
                   variant="continue"
                   label="Declaration Form"
@@ -2173,8 +2237,11 @@ const ITDeclaration: React.FC = () => {
                   onClick={async () => {
                     const idx = steps.findIndex((s) => s.key === activeStep);
                     if (idx < steps.length - 1) {
-                      await handleSaveStep();
-                      setActiveStep(steps[idx + 1].key);
+                      const isInvalid = await validateStep(activeStep);
+                      if (isInvalid) return;
+                      const nextStep = steps[idx + 1].key;
+                      await handleSaveStep(nextStep);
+                      setActiveStep(nextStep);
                     }
                   }}
                   style={{
@@ -2196,8 +2263,11 @@ const ITDeclaration: React.FC = () => {
                 onClick={async () => {
                   const idx = steps.findIndex((s) => s.key === activeStep);
                   if (idx < steps.length - 1) {
-                    await handleSaveStep();
-                    setActiveStep(steps[idx + 1].key);
+                    const isInvalid = await validateStep(activeStep);
+                    if (isInvalid) return;
+                    const nextStep = steps[idx + 1].key;
+                    await handleSaveStep(nextStep);
+                    setActiveStep(nextStep);
                   } else {
                     const isValid = await validation();
                     if (isValid) return;

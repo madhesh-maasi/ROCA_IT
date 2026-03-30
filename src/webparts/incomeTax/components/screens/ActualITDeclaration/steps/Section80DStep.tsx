@@ -40,11 +40,12 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
   return (
     <div>
       <div className={styles.stepHeader}>Section 80D Deductions</div>
-      <div className={styles.noteBox}>
-        Note : Only{" "}
-        <strong>Rs {sectionMaxAmount?.toLocaleString() || "50,000"}</strong> is
-        deductible under this section
-      </div>
+      {sectionMaxAmount && (
+        <div className={styles.noteBox}>
+          Note : Only <strong>Rs {sectionMaxAmount?.toLocaleString()}</strong>{" "}
+          is deductible under this section
+        </div>
+      )}
 
       <div className={styles.tableContainer}>
         <table className={styles.customTable}>
@@ -94,7 +95,7 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         onAmountChange(
                           item.id,
-                          e.target.value.replace(/[^0-9]/g, ""),
+                          e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
                         )
                       }
                       placeholder="0"
@@ -127,6 +128,7 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                         <div
                           key={att.Id}
                           style={{
+                            cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "5px",
@@ -142,11 +144,22 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                           <i
                             className="pi pi-file-pdf"
                             style={{ color: "#e11d48", fontSize: "11px" }}
+                            onClick={() =>
+                              window.open(
+                                att.FileRef,
+                                "_blank",
+                                "noopener,noreferrer",
+                              )
+                            }
                           />
-                          <a
-                            href={att.FileRef}
-                            target="_blank"
-                            rel="noreferrer"
+                          <span
+                            onClick={() =>
+                              window.open(
+                                att.FileRef,
+                                "_blank",
+                                "noopener,noreferrer",
+                              )
+                            }
                             style={{
                               color: "#334155",
                               textDecoration: "none",
@@ -158,7 +171,8 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                             title={att.FileLeafRef}
                           >
                             {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
-                          </a>
+                          </span>
+
                           {!readOnly && onDeleteAttachment && (
                             <i
                               className="pi pi-trash"

@@ -4,6 +4,7 @@ import {
   AppDropdown,
   ActionButton,
 } from "../../../../../CommonInputComponents";
+import { ActionPopup } from "../../../../../common/components";
 import styles from "./TaxRegimePopup.module.scss";
 
 export interface ITaxRegimePopupProps {
@@ -25,11 +26,17 @@ const TaxRegimePopup: React.FC<ITaxRegimePopupProps> = ({
   isLoading,
 }) => {
   const [selectedRegime, setSelectedRegime] = React.useState<string>("");
+  const [showConfirm, setShowConfirm] = React.useState<boolean>(false);
 
   const handleSubmit = () => {
     if (selectedRegime) {
-      onSubmit(selectedRegime);
+      setShowConfirm(true);
     }
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowConfirm(false);
+    onSubmit(selectedRegime);
   };
 
   const footer = (
@@ -51,6 +58,7 @@ const TaxRegimePopup: React.FC<ITaxRegimePopupProps> = ({
   );
 
   return (
+    <>
     <Popup
       visible={visible}
       onHide={onHide}
@@ -84,6 +92,17 @@ const TaxRegimePopup: React.FC<ITaxRegimePopupProps> = ({
         </div>
       </div>
     </Popup>
+    <ActionPopup
+      visible={showConfirm}
+      onHide={() => setShowConfirm(false)}
+      onConfirm={handleConfirmSubmit}
+      actionType="Approve"
+      title="Confirm Tax Regime"
+      message="Once selected, it cannot be changed for this financial year."
+      confirmLabel="Yes"
+      cancelLabel="No"
+    />
+    </>
   );
 };
 

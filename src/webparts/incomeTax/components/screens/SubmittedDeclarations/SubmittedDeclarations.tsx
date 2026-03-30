@@ -76,9 +76,14 @@ const SubmittedDeclarations: React.FC = () => {
   const location = useLocation();
   const userEmail = useAppSelector(selectUserDetails)?.Email;
 
-  const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(
-    location.state?.tab || "Planned",
-  );
+  const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const tabParam = queryParams.get("tab");
+    if (tabParam === "Planned" || tabParam === "Actual") {
+      return tabParam as "Planned" | "Actual";
+    }
+    return location.state?.tab || "Planned";
+  });
   const [search, setSearch] = React.useState("");
   const [fy, setFy] = React.useState(curFinanicalYear);
 
