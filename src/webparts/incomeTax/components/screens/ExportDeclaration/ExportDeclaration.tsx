@@ -111,7 +111,7 @@ const ExportDeclaration: React.FC = () => {
       // Incremental: IsExported ne 1
       // Complete: IsExported eq 1
       const isExportedFilter = activeTab === "Incremental" ? "ne 1" : "eq 1";
-      const filter = `Status eq 'Approved' and IsExported ${isExportedFilter}`;
+      const filter = `Status eq 'Approved' and IsExported ${isExportedFilter} and FinancialYear eq '${curFinanicalYear}'`;
 
       const allDecls: IDeclarationItem[] = await getListItems(listName, filter);
 

@@ -23,6 +23,7 @@ import { selectUserDetails } from "../../../../store/slices/userSlice";
 import { getListItems } from "../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../common/constants/appConstants";
 import styles from "./Dashboard.module.scss";
+import { curFinanicalYear } from "../../../../common/utils/functions";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,12 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
       fetchIncomeTaxItems({
         getItems: () => {
           if (role === "Admin" || role === "FinanceApprover") {
-            return getListItems(LIST_NAMES.PLANNED_DECLARATION);
+            return getListItems(
+              LIST_NAMES.PLANNED_DECLARATION,
+              `FinancialYear eq '${curFinanicalYear}'`,
+            );
           } else {
-            const filterStr = `EmployeeEmail eq '${user.Email}'`;
+            const filterStr = `EmployeeEmail eq '${user.Email}' and FinancialYear eq '${curFinanicalYear}'`;
             return getListItems(LIST_NAMES.PLANNED_DECLARATION, filterStr);
           }
         },
@@ -112,3 +116,6 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
 };
 
 export default Dashboard;
+function getCurrentFinancialYear() {
+  throw new Error("Function not implemented.");
+}

@@ -84,14 +84,22 @@ const EmployeeDeclarations: React.FC = () => {
     const fetchItems = async () => {
       await dispatch(
         fetchIncomeTaxItems({
-          getItems: () => getListItems(LIST_NAMES.PLANNED_DECLARATION),
+          getItems: () =>
+            getListItems(
+              LIST_NAMES.PLANNED_DECLARATION,
+              `FinancialYear eq '${curFinanicalYear}'`,
+            ),
         }),
       );
     };
     const fetchActualItems = async () => {
       await dispatch(
         fetchActualIncomeTaxItems({
-          getItems: () => getListItems(LIST_NAMES.ACTUAL_DECLARATION),
+          getItems: () =>
+            getListItems(
+              LIST_NAMES.ACTUAL_DECLARATION,
+              `FinancialYear eq '${curFinanicalYear}'`,
+            ),
         }),
       );
     };

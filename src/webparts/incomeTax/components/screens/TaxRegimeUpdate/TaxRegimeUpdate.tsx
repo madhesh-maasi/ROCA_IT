@@ -19,6 +19,7 @@ import {
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
+  curFinanicalYear,
   getFYOptions,
   globalSearchFilter,
 } from "../../../../../common/utils/functions";
@@ -59,7 +60,7 @@ const TaxRegimeUpdate: React.FC = () => {
 
       const items = await getListItems(
         listName,
-        `Status eq 'Draft' or Status eq 'Rework' or Status eq 'Released' and IsExported ne 1 and FinancialYear eq '${getCurrentFinancialYear()}'`,
+        `Status eq 'Draft' or Status eq 'Rework' or Status eq 'Released' and IsExported ne 1 and FinancialYear eq '${curFinanicalYear}'`,
       );
       setData(items);
     } catch (err) {

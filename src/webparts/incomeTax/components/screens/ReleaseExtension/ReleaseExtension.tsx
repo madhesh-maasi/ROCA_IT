@@ -22,7 +22,10 @@ import {
   updateListItemsBatch,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
-import { globalSearchFilter } from "../../../../../common/utils/functions";
+import {
+  curFinanicalYear,
+  globalSearchFilter,
+} from "../../../../../common/utils/functions";
 
 interface IReleasedItem {
   Id: number;
@@ -59,7 +62,10 @@ const ReleaseExtension: React.FC = () => {
         activeIndex === 0
           ? LIST_NAMES.PLANNED_DECLARATION
           : LIST_NAMES.ACTUAL_DECLARATION;
-      const items = await getListItems(listName);
+      const items = await getListItems(
+        listName,
+        `FinancialYear eq '${curFinanicalYear}'`,
+      );
 
       const activeItems = items
         .filter(
