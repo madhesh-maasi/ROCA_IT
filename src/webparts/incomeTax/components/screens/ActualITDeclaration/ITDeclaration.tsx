@@ -885,19 +885,82 @@ const ITDeclaration: React.FC = () => {
       setIsLoading(false);
     }
   };
+  type CustomWindow = Window & {
+    showSaveFilePicker?: (options?: any) => Promise<any>;
+  };
 
+  const customWindow = window as CustomWindow;
+  // const handleDownloadAll = async () => {
+  //   if (!declarationItem) return;
+  //   try {
+  //     setIsLoading(true);
+  //     const fy = declarationItem.FinancialYear;
+  //     const empCode = matchedEmployee?.EmployeeId || "Unknown";
+  //     await downloadAttachmentsAsZip(
+  //       declarationItem.Id,
+  //       declarationItem.Title,
+  //       fy,
+  //       empCode,
+  //     );
+  //     showToast(
+  //       toast,
+  //       "success",
+  //       "Download Started",
+  //       "Your attachments are being zipped and downloaded.",
+  //     );
+  //   } catch (err) {
+  //     showToast(
+  //       toast,
+  //       "error",
+  //       "Download Failed",
+  //       "Could not download attachments.",
+  //     );
+  //     console.error(err);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  // ── Soft-delete an attachment (IsDelete = true) ───────────────────────────
   const handleDownloadAll = async () => {
     if (!declarationItem) return;
+
+    let fileHandle: FileSystemFileHandle | null = null;
+
+    try {
+      // ✅ MUST be first (user gesture)
+      if (customWindow.showSaveFilePicker) {
+        fileHandle = await customWindow.showSaveFilePicker({
+          suggestedName: `${declarationItem.Title}.zip`,
+          types: [
+            {
+              description: "ZIP Files",
+              accept: {
+                "application/zip": [".zip"],
+              },
+            },
+          ],
+        });
+      }
+    } catch (err) {
+      console.warn("User cancelled file picker");
+      return; // stop execution if user cancels
+    }
+
     try {
       setIsLoading(true);
+
       const fy = declarationItem.FinancialYear;
       const empCode = matchedEmployee?.EmployeeId || "Unknown";
+
       await downloadAttachmentsAsZip(
         declarationItem.Id,
         declarationItem.Title,
         fy,
         empCode,
+        fileHandle, // ✅ pass it here
       );
+
       showToast(
         toast,
         "success",
@@ -916,8 +979,6 @@ const ITDeclaration: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  // ── Soft-delete an attachment (IsDelete = true) ───────────────────────────
   const handleDeleteAttachment = async (key: string, fileId: number) => {
     try {
       setIsLoading(true);
@@ -1373,7 +1434,7 @@ const ITDeclaration: React.FC = () => {
               LenderAddress: hl.lenderAddress,
               PANofLender: hl.lenderPan,
               LenderType: hl.lenderType,
-              IsJointlyAvailedPropertyLoan: hl.isJointlyAvailed,
+              IsJointlyAvailedPropertyLoan: hl.isJointlyAvailed || false,
               FinalLettableValue: hl.finalLettableValue,
               LetOutInterest: hl.letOutInterestAmount,
               OtherDeductions: hl.otherDeductionsUs24,
@@ -2282,6 +2343,7 @@ const ITDeclaration: React.FC = () => {
                             IsAcknowledged: declarationAgreement.agreed,
                             Place: declarationAgreement.place,
                             SubmittedDate: new Date().toISOString(),
+                            ActiveStep: "",
                           },
                         );
                         setShowPopup({

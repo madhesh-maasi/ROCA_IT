@@ -653,43 +653,91 @@ export const getITDocuments = async (
  * @param fy            - Financial Year (for filename).
  * @param empCode       - Employee Code (for filename).
  */
+// export const downloadAttachmentsAsZip = async (
+//   declarationId: number,
+//   declarationTitle: string,
+//   fy: string,
+//   empCode: string,
+// ): Promise<void> => {
+//   const sp = getSP();
+//   try {
+//     // 1. Fetch all documents for this declaration
+//     const docs = await getITDocuments(declarationId);
+//     if (docs.length === 0) {
+//       throw new Error("No attachments found for this declaration.");
+//     }
+
+//     const zip = new JSZip();
+
+//     // 2. Fetch file blobs and add to ZIP
+//     const fetchPromises = docs.map(async (doc) => {
+//       const fileContext = await sp.web
+//         .getFileByServerRelativePath(doc.FileRef)
+//         .getBlob();
+//       // We use FileLeafRef as the name in the ZIP
+//       zip.file(doc.FileLeafRef, fileContext);
+//     });
+
+//     await Promise.all(fetchPromises);
+
+//     // 3. Generate and save the ZIP
+//     const content = await zip.generateAsync({ type: "blob" });
+//     const zipName = `${declarationTitle}.zip`.replace(/\s+/g, "_");
+//     saveAs(content, zipName);
+//   } catch (err) {
+//     await handleError(err, "Downloading attachments as ZIP");
+//     throw err;
+//   }
+// };
 export const downloadAttachmentsAsZip = async (
   declarationId: number,
   declarationTitle: string,
   fy: string,
   empCode: string,
+  fileHandle?: FileSystemFileHandle | null, // ✅ NEW
 ): Promise<void> => {
   const sp = getSP();
+
   try {
-    // 1. Fetch all documents for this declaration
     const docs = await getITDocuments(declarationId);
-    if (docs.length === 0) {
+
+    if (!docs || docs.length === 0) {
       throw new Error("No attachments found for this declaration.");
     }
 
     const zip = new JSZip();
 
-    // 2. Fetch file blobs and add to ZIP
-    const fetchPromises = docs.map(async (doc) => {
-      const fileContext = await sp.web
-        .getFileByServerRelativePath(doc.FileRef)
-        .getBlob();
-      // We use FileLeafRef as the name in the ZIP
-      zip.file(doc.FileLeafRef, fileContext);
-    });
+    await Promise.all(
+      docs.map(async (doc) => {
+        const fileBlob = await sp.web
+          .getFileByServerRelativePath(doc.FileRef)
+          .getBlob();
 
-    await Promise.all(fetchPromises);
+        zip.file(doc.FileLeafRef, fileBlob);
+      }),
+    );
 
-    // 3. Generate and save the ZIP
     const content = await zip.generateAsync({ type: "blob" });
-    const zipName = `${declarationTitle}.zip`.replace(/\s+/g, "_");
-    saveAs(content, zipName);
+
+    const zipName = `${declarationTitle}_${fy}_${empCode}.zip`.replace(
+      /\s+/g,
+      "_",
+    );
+
+    // ✅ Use selected location
+    if (fileHandle) {
+      const writable = await fileHandle.createWritable();
+      await writable.write(content);
+      await writable.close();
+    } else {
+      // fallback
+      saveAs(content, zipName);
+    }
   } catch (err) {
     await handleError(err, "Downloading attachments as ZIP");
     throw err;
   }
 };
-
 // ─── Generic CRUD Helpers ──────────────────────────────────────────────────
 
 /**
