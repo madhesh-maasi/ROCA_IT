@@ -95,12 +95,16 @@ const ITCalculatorUpload: React.FC = () => {
   };
 
   const handleConfirmUpload = async () => {
-    if (!selectedYear) {
-      showToast(toast, "warn", "Validation", "Please select a Financial Year");
-      return;
-    }
     if (!selectedFile) {
       showToast(toast, "warn", "Validation", "Please select an Excel file");
+      return;
+    } else if (selectedFile.size > 5 * 1024 * 1024) {
+      showToast(
+        toast,
+        "error",
+        "File Too Large",
+        "Attachment size must be less than 5MB.",
+      );
       return;
     }
 
@@ -275,7 +279,7 @@ const ITCalculatorUpload: React.FC = () => {
       /> */}
 
       <div className={styles.header}>
-        <h2>IT Computation</h2>
+        <h2>IT Computation Upload</h2>
       </div>
 
       <div className={styles.headerToolbar}>
@@ -296,11 +300,13 @@ const ITCalculatorUpload: React.FC = () => {
 
         <div className={styles.actions}>
           <div>
-            <SearchInput
-              value={searchTerm}
-              onChange={setSearchTerm}
-              placeholder="Search"
-            />
+            {activeTab == "previous" && (
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Search"
+              />
+            )}
           </div>
           {activeTab === "current" && (
             <ActionButton
@@ -318,7 +324,7 @@ const ITCalculatorUpload: React.FC = () => {
           columns={columns}
           data={filteredData}
           globalFilter={searchTerm}
-          paginator
+          paginator={activeTab == "previous"}
           rows={10}
         />
       </div>
@@ -390,7 +396,7 @@ const ITCalculatorUpload: React.FC = () => {
             <button
               className={styles.confirmBtn}
               onClick={handleConfirmUpload}
-              disabled={!selectedFile || !selectedYear}
+              // disabled={!selectedFile || !selectedYear}
             >
               Upload
             </button>

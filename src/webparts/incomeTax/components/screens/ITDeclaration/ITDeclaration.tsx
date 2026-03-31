@@ -892,7 +892,7 @@ const ITDeclaration: React.FC = () => {
               LenderAddress: hl.lenderAddress,
               PANofLender: hl.lenderPan,
               LenderType: hl.lenderType,
-              IsJointlyAvailedPropertyLoan: hl.isJointlyAvailed,
+              IsJointlyAvailedPropertyLoan: hl.isJointlyAvailed || false,
               FinalLettableValue: hl.finalLettableValue,
               LetOutInterest: hl.letOutInterestAmount,
               OtherDeductions: hl.otherDeductionsUs24,
@@ -1612,6 +1612,7 @@ const ITDeclaration: React.FC = () => {
                             IsAcknowledged: declarationAgreement.agreed,
                             Place: declarationAgreement.place,
                             SubmittedDate: new Date().toISOString(),
+                            ActiveStep: "",
                           },
                         );
                         setShowPopup({

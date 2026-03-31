@@ -271,7 +271,13 @@ const DeclarationFormScreen: React.FC = () => {
           <ActionButton
             variant="cancel"
             label="Cancel"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (window.history.length <= 2) {
+                navigate("/");
+              } else {
+                navigate(-1);
+              }
+            }}
           />
           {!data.isReadOnly && (
             <ActionButton

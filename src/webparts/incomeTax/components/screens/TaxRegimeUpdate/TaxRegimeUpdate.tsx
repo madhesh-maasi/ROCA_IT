@@ -91,20 +91,6 @@ const TaxRegimeUpdate: React.FC = () => {
     setSelectedRegime("");
   };
 
-  const [showConfirm, setShowConfirm] = React.useState(false);
-
-  const handleUpdateClick = () => {
-    if (!selectedRegime) {
-      showToast(
-        toast,
-        "warn",
-        "Validation",
-        "Please select a tax regime Type.",
-      );
-      return;
-    }
-    setShowConfirm(true);
-  };
 
   const handleUpdate = async () => {
     if (!selectedRegime) {
@@ -319,7 +305,7 @@ const TaxRegimeUpdate: React.FC = () => {
       <ActionPopup
         visible={showPopup}
         onHide={handleClosePopup}
-        onConfirm={handleUpdateClick}
+        onConfirm={handleUpdate}
         actionType="Updated"
         title="Update Tax Regime"
         cancelLabel="Cancel"
@@ -354,20 +340,6 @@ const TaxRegimeUpdate: React.FC = () => {
           )}
         </div>
       </ActionPopup>
-
-      <ActionPopup
-        visible={showConfirm}
-        onHide={() => setShowConfirm(false)}
-        onConfirm={() => {
-          setShowConfirm(false);
-          void handleUpdate();
-        }}
-        actionType="Approve"
-        title="Confirm Tax Regime"
-        message="Once selected, it cannot be changed for this financial year."
-        confirmLabel="Yes"
-        cancelLabel="No"
-      />
     </div>
   );
 };

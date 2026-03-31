@@ -45,7 +45,6 @@ const FinanceApprover: React.FC = () => {
 
   // ─── Site Admin Users ─────────────────────────────────────────────────────
   const [adminUsers, setAdminUsers] = React.useState<IAdminUser[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
   const masterEmployees = useAppSelector(selectEmployees);
 
   // ─── Add User Popup ───────────────────────────────────────────────────────
@@ -70,7 +69,7 @@ const FinanceApprover: React.FC = () => {
 
   const init = async (): Promise<void> => {
     try {
-      setIsLoading(true);
+      setIsAdding(true);
       const users = await getAllItems(
         LIST_NAMES.FINANCE_APPROVER,
         ["User/Title", "User/EMail"],
@@ -89,16 +88,17 @@ const FinanceApprover: React.FC = () => {
       }));
 
       setAdminUsers(mappedUsers);
+      setIsAdding(false);
     } catch (err) {
       await handleError(err, "Loading finance approvers list", toast);
     } finally {
-      setIsLoading(false);
+      setIsAdding(false);
     }
   };
 
   React.useEffect(() => {
     void init();
-  }, [masterEmployees]);
+  }, []);
 
   // ─── Search filter ────────────────────────────────────────────────────────
   const filtered = React.useMemo(() => {
@@ -228,12 +228,25 @@ const FinanceApprover: React.FC = () => {
             icon="pi pi-download"
             className="primaryBtn"
             onClick={() => {
-              const exportData = adminUsers.map((u) => ({
+              const exportData = filtered.map((u) => ({
                 "Employee ID": u.EmployeeId || "-",
                 "Employee Name": u.Title,
               }));
-              exportToExcel(exportData, "Finance_Approvers");
-              setShowDownloadPopup(true);
+              if (exportData.length) {
+                exportToExcel(exportData, "Finance_Approvers");
+                setShowDownloadPopup(true);
+                setTimeout(() => {
+                  setShowDownloadPopup(false);
+                }, 3000);
+              } else {
+                showToast(
+                  toast,
+                  "error",
+                  "Export",
+                  "No data available for export",
+                  4000,
+                );
+              }
             }}
           />
 
@@ -258,9 +271,7 @@ const FinanceApprover: React.FC = () => {
           globalFilter={search}
           paginator
           rows={10}
-          emptyMessage={
-            isLoading ? "Loading..." : "No Finance Approvers found."
-          }
+          emptyMessage={"No Finance Approvers found."}
         />
       </div>
 
@@ -269,7 +280,7 @@ const FinanceApprover: React.FC = () => {
         onHide={() => setShowAddPopup(false)}
         header="Add Finance Approver"
         width="480px"
-        confirmLabel="Add"
+        confirmLabel="Submit"
         onConfirm={() => {
           void handleAddUser();
         }}

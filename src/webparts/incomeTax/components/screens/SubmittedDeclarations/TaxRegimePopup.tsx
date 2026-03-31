@@ -59,49 +59,49 @@ const TaxRegimePopup: React.FC<ITaxRegimePopupProps> = ({
 
   return (
     <>
-    <Popup
-      visible={visible}
-      onHide={onHide}
-      header="Tax Regime"
-      footer={footer}
-      width="450px"
-    >
-      <div className={styles.container}>
-        <div className={styles.noteBox}>
-          <span className={styles.noteHeader}>Note</span>
-          <ul className={styles.noteList}>
-            <li>
-              As per the notification from government please select your tax
-              regime
-            </li>
-            <li>Once selected cannot be changed for this financial year</li>
-          </ul>
-        </div>
+      <Popup
+        visible={visible}
+        onHide={onHide}
+        header="Tax Regime"
+        footer={footer}
+        width="450px"
+      >
+        <div className={styles.container}>
+          <div className={styles.noteBox}>
+            <span className={styles.noteHeader}>Note</span>
+            <ul className={styles.noteList}>
+              <li>
+                As per the notification from government please select your tax
+                regime
+              </li>
+              <li>Once selected cannot be changed for this financial year</li>
+            </ul>
+          </div>
 
-        <div className={styles.formField}>
-          <label className={styles.label}>
-            Tax Regime Type <span className={styles.required}>*</span>
-          </label>
-          <AppDropdown
-            value={selectedRegime}
-            options={REGIME_OPTIONS}
-            onChange={(e) => setSelectedRegime(e.value)}
-            placeholder="Select"
-            className={styles.dropdown}
-          />
+          <div className={styles.formField}>
+            <label className={styles.label}>
+              Tax Regime Type <span className={styles.required}>*</span>
+            </label>
+            <AppDropdown
+              value={selectedRegime}
+              options={REGIME_OPTIONS}
+              onChange={(e) => setSelectedRegime(e.value)}
+              placeholder="Select"
+              className={styles.dropdown}
+            />
+          </div>
         </div>
-      </div>
-    </Popup>
-    <ActionPopup
-      visible={showConfirm}
-      onHide={() => setShowConfirm(false)}
-      onConfirm={handleConfirmSubmit}
-      actionType="Approve"
-      title="Confirm Tax Regime"
-      message="Once selected, it cannot be changed for this financial year."
-      confirmLabel="Yes"
-      cancelLabel="No"
-    />
+      </Popup>
+      <ActionPopup
+        visible={showConfirm}
+        onHide={() => setShowConfirm(false)}
+        onConfirm={handleConfirmSubmit}
+        actionType="Approve"
+        title="Confirm Tax Regime"
+        message="Once selected, it cannot be changed for this financial year."
+        confirmLabel="Yes"
+        cancelLabel="No"
+      />
     </>
   );
 };

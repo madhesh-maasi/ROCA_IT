@@ -83,7 +83,8 @@ const EmployeeDeclarations: React.FC = () => {
     return getFYOptions(allItems);
   }, [items, actualItems]);
 
-  useEffect(() => {
+  const init = async (): Promise<void> => {
+    setIsProcessing(true);
     const fetchItems = async () => {
       await dispatch(
         fetchIncomeTaxItems({
@@ -106,8 +107,13 @@ const EmployeeDeclarations: React.FC = () => {
         }),
       );
     };
-    void fetchItems();
-    void fetchActualItems();
+    void (await fetchItems());
+    void (await fetchActualItems());
+    setIsProcessing(false);
+  };
+
+  useEffect(() => {
+    void init();
   }, []);
 
   const tableData: IEmployeeRow[] = React.useMemo(() => {
@@ -202,6 +208,7 @@ const EmployeeDeclarations: React.FC = () => {
             currentUser as any,
             row.requestId,
             row.id,
+            "ActualApproved",
           );
         }
       }
@@ -398,7 +405,7 @@ const EmployeeDeclarations: React.FC = () => {
         onHide={() => setShowDownloadPopup(false)}
         type="download"
       />
-      <h2 className={styles.pageTitle}>Submitted Declarations</h2>
+      <h2 className={styles.pageTitle}>Employee Declarations</h2>
 
       {/* Toolbar */}
       <div className={styles.toolbar}>
