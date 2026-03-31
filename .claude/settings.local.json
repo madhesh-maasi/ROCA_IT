@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"\\\\.png\\\\|\\\\.jpg\\\\|\\\\.svg\\\\|\\\\.jpeg\" /c/Projects/SPFX/ROCA_IT/src/common/*.d.ts /c/Projects/SPFX/ROCA_IT/src/webparts/incomeTax/loc/*.d.ts)"
+    ]
+  }
+}

@@ -240,7 +240,9 @@ const ITDeclaration: React.FC = () => {
       ) {
         setShowRegimePopup(true);
       } else if (item?.TaxRegime) {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadDynamicSteps(item.TaxRegime);
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadSavedData(item);
       }
       setIsLoading(false);
@@ -286,29 +288,43 @@ const ITDeclaration: React.FC = () => {
           },
           { key: "House Rental", label: "House Rental", icon: Building06Icon },
           { key: "LTA", label: "LTA", icon: PlaneIcon },
-          {
-            key: "Section 80C Deductions",
-            label: "Section 80C Deductions",
-            icon: ChartBarLineIcon,
-          },
-          {
-            key: "Section 80 Deductions",
-            label: "Section 80 Deductions",
-            icon: ChartBarLineIcon,
-          },
-          {
-            key: "Housing Loan Repayment",
-            label: "Housing Loan Repayment",
-            icon: MoneyReceiveCircleIcon,
-          },
-          ...dynamicSteps.filter(
-            (s) =>
-              ![
+          ...dynamicSteps
+            .filter((s) =>
+              [
                 "Section 80C Deductions",
                 "Section 80 Deductions",
                 "Housing Loan Repayment",
               ].includes(s.key),
-          ),
+            )
+            .map((s: any) => {
+              return {
+                key: s.key,
+                label: s.key,
+                icon:
+                  s.key === "Section 80C Deductions" ||
+                  s.key === "Section 80 Deductions"
+                    ? ChartBarLineIcon
+                    : s.key === "Housing Loan Repayment"
+                      ? MoneyReceiveCircleIcon
+                      : ChartBarLineIcon,
+              };
+            }),
+          // {
+          //   key: "Section 80C Deductions",
+          //   label: "Section 80C Deductions",
+          //   icon: ChartBarLineIcon,
+          // },
+          // {
+          //   key: "Section 80 Deductions",
+          //   label: "Section 80 Deductions",
+          //   icon: ChartBarLineIcon,
+          // },
+          // {
+          //   key: "Housing Loan Repayment",
+          //   label: "Housing Loan Repayment",
+          //   icon: MoneyReceiveCircleIcon,
+          // },
+
           {
             key: "Previous Employer Details",
             label: "Previous Employer Details",
@@ -836,7 +852,7 @@ const ITDeclaration: React.FC = () => {
           break;
         }
 
-        case "Section 80C Deductions":
+        case "Section 80C Deductions": {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
             ActiveStep: nextStep || activeStep,
@@ -855,8 +871,9 @@ const ITDeclaration: React.FC = () => {
             }),
           );
           break;
+        }
 
-        case "Section 80 Deductions":
+        case "Section 80 Deductions": {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
             ActiveStep: nextStep || activeStep,
@@ -875,6 +892,7 @@ const ITDeclaration: React.FC = () => {
             }),
           );
           break;
+        }
 
         case "Housing Loan Repayment":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
@@ -900,7 +918,7 @@ const ITDeclaration: React.FC = () => {
           );
           break;
 
-        case "Previous Employer Details":
+        case "Previous Employer Details": {
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
             ActiveStep: nextStep || activeStep,
@@ -925,6 +943,7 @@ const ITDeclaration: React.FC = () => {
             }),
           );
           break;
+        }
         case "Declaration & Summary":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
@@ -1037,6 +1056,7 @@ const ITDeclaration: React.FC = () => {
       // Wait 3 seconds then navigate back
       setTimeout(() => {
         setShowPopup((prev) => ({ ...prev, visible: false }));
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         handleNavigateBack();
       }, 3000);
     } catch (error) {

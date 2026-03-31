@@ -437,6 +437,20 @@ export const getLibraryFilesWithMetadata = async (
 
 // ─── IT Documents Upload Helpers ───────────────────────────────────────────────
 
+/** Returns a yyyyMMddHHmmss timestamp string (local time). */
+const buildTimestamp = (): string => {
+  const d = new Date();
+  const pad = (n: number, len = 2) => String(n).padStart(len, "0");
+  return (
+    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
+    `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+  );
+};
+
+/** Strips characters that are invalid in SharePoint folder names. */
+const sanitizeFolderName = (name: string): string =>
+  name.replace(/[#%*:<>?/\\|"]/g, "_").trim();
+
 /**
  * Upload a PDF to the IT_Documents library under the structured folder:
  *   IT_Documents / {financialYear} / {employeeCode} / Declarations
@@ -576,20 +590,6 @@ export const uploadITDocument = async (
     throw err;
   }
 };
-
-/** Returns a yyyyMMddHHmmss timestamp string (local time). */
-const buildTimestamp = (): string => {
-  const d = new Date();
-  const pad = (n: number, len = 2) => String(n).padStart(len, "0");
-  return (
-    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
-    `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
-  );
-};
-
-/** Strips characters that are invalid in SharePoint folder names. */
-const sanitizeFolderName = (name: string): string =>
-  name.replace(/[#%*:<>?/\\|"]/g, "_").trim();
 
 /**
  * Fetch non-deleted files from the IT_Documents library for a given Actual
@@ -838,7 +838,7 @@ export const addListItemsBatch = async (
     const [batchedSP, execute] = sp.batched();
 
     chunk.forEach((item) => {
-      batchedSP.web.lists.getByTitle(listName).items.add({
+      void batchedSP.web.lists.getByTitle(listName).items.add({
         ...item,
         IsDelete: false,
       });
@@ -867,7 +867,7 @@ export const updateListItemsBatch = async (
     const [batchedSP, execute] = sp.batched();
 
     chunk.forEach((update) => {
-      batchedSP.web.lists
+      void batchedSP.web.lists
         .getByTitle(listName)
         .items.getById(update.id)
         .update(update.data);
@@ -925,12 +925,12 @@ export const upsertRelatedListBatch = async (
       }
 
       if (targetId) {
-        batchedSP.web.lists
+        void batchedSP.web.lists
           .getByTitle(listName)
           .items.getById(targetId)
           .update(data);
       } else {
-        batchedSP.web.lists.getByTitle(listName).items.add(data);
+        void batchedSP.web.lists.getByTitle(listName).items.add(data);
       }
     });
 

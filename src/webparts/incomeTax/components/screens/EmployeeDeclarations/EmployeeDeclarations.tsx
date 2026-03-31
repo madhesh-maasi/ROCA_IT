@@ -354,7 +354,7 @@ const EmployeeDeclarations: React.FC = () => {
                 style={{ cursor: "pointer", color: "#307a8a" }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDownloadPDF(row);
+                  void handleDownloadPDF(row);
                 }}
               />
             )}

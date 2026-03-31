@@ -1,6 +1,9 @@
 import * as React from "react";
 import styles from "./AppHeader.module.scss";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const RocaNewLogo = require("../../../../common/Asset/Images/RocaNewLogo.jpg");
+
 const AppHeader: React.FC = () => {
   return (
     <header className={styles.header}>
@@ -8,10 +11,7 @@ const AppHeader: React.FC = () => {
         <span className={styles.brandTitle}>IT Declaration System</span>
       </div>
       <div className={styles.logo}>
-        <img
-          src={require("../../../../common/Asset/Images/RocaNewLogo.jpg")}
-          alt=""
-        />
+        <img src={RocaNewLogo} alt="" />
       </div>
     </header>
   );

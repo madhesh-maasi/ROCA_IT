@@ -3,6 +3,7 @@ import styles from "./SubmissionForm.module.scss";
 import moment from "moment";
 
 // Import Roca logo
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const rocaLogo = require("../../../../../../common/Asset/Images/RocaNewLogo.jpg");
 
 export interface IEmployeeInfo {

@@ -186,7 +186,7 @@ const ExportDeclaration: React.FC = () => {
           await sendExportEmail(
             _FinanceApporvers,
             // "Finance Team",
-            userDetails?.Title!,
+            userDetails?.Title || "",
             `${fileName}.xlsx`,
             base64Data,
             selectedYear,
