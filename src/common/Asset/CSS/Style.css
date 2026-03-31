@@ -4,14 +4,14 @@
   box-sizing: border-box;
 }
 *::-webkit-scrollbar {
-  width: 12px;
+  width: 6px;
   background-color: #f5f5f5;
 }
 
 *::-webkit-scrollbar-thumb {
   border-radius: 10px;
   -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-  background-color: #555;
+  background-color: #5793a0a3;
 }
 
 body {

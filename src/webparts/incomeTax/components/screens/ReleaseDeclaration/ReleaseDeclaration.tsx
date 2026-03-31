@@ -439,6 +439,7 @@ const ReleaseDeclaration: React.FC = () => {
             email: item.EmployeeEmail as string,
             name: item.EmployeeName || "",
             id: item.EmployeeCode || "",
+            reqno: item.Title || "",
           }));
         if (emailTargets.length > 0) {
           void sendReleaseEmails(
@@ -528,6 +529,7 @@ const ReleaseDeclaration: React.FC = () => {
           email: item.EmployeeEmail as string,
           name: item.EmployeeName || "",
           id: item.EmployeeCode || "",
+          reqno: item.Title || "",
         }));
       if (emailTargets.length > 0) {
         void sendReleaseEmails(

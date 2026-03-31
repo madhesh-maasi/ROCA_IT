@@ -103,7 +103,7 @@ const ITCalculator: React.FC = () => {
         <h2 className={screenStyles.pageTitle}>IT Computation</h2>
 
         <div className={styles.calculatorCard}>
-          <h3 className={styles.reportTitle}>Income Tax Computation Report</h3>
+          <h3 className={styles.reportTitle}>Income Tax Computation</h3>
           <div style={{ display: "flex", gap: "8px" }}>
             {/* {canUpload && (
               <AppFilePicker

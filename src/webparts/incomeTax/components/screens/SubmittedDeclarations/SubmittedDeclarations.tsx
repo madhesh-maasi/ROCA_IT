@@ -18,6 +18,7 @@ import {
 import { getSP } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { selectUserDetails } from "../../../../../store/slices";
+import { Loader } from "../../../../../common";
 
 // ─── Row definition ─────────────────────────────────────────────────────────────
 
@@ -40,10 +41,11 @@ const COLUMNS: IColumnDef[] = [
     body: (row: ISubmittedRow) => (
       <span className={styles.reqID}>{row.requestId}</span>
     ),
+    sortable: false,
   },
-  { field: "financialYear", header: "Financial Year" },
-  { field: "regimeType", header: "Regime Type" },
-  { field: "dateOfSubmission", header: "Date of Submission" },
+  { field: "financialYear", header: "Financial Year", sortable: false },
+  { field: "regimeType", header: "Regime Type", sortable: false },
+  { field: "dateOfSubmission", header: "Date of Submission", sortable: false },
   {
     field: "status",
     header: "Status",
@@ -85,6 +87,7 @@ const SubmittedDeclarations: React.FC = () => {
     return location.state?.tab || "Planned";
   });
   const [search, setSearch] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
   const [fy, setFy] = React.useState(curFinanicalYear);
 
   const [plannedRows, setPlannedRows] = React.useState<ISubmittedRow[]>([]);
@@ -93,13 +96,12 @@ const SubmittedDeclarations: React.FC = () => {
   const fyOptions = React.useMemo(() => {
     return getFYOptions([...plannedRows, ...actualRows]);
   }, [plannedRows, actualRows]);
-  const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
     if (!userEmail) return;
 
     const fetchData = async () => {
-      setIsLoading(true);
+      setLoading(true);
       try {
         const sp = getSP();
         const today = new Date().toISOString().split(".")[0] + "Z";
@@ -124,7 +126,7 @@ const SubmittedDeclarations: React.FC = () => {
       } catch (err) {
         console.error("SubmittedDeclarations: fetch error", err);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
@@ -149,51 +151,53 @@ const SubmittedDeclarations: React.FC = () => {
   };
 
   return (
-    <div className={styles.screen}>
-      <h2 className={styles.pageTitle}>Submitted Declaration</h2>
+    <>
+      {loading ? (
+        <Loader />
+      ) : (
+        <div className={styles.screen}>
+          <h2 className={styles.pageTitle}>Submitted Declaration</h2>
 
-      {/* Toolbar */}
-      <div className={styles.toolbar}>
-        <div className={styles.tabToggle}>
-          {(["Planned", "Actual"] as const).map((tab) => (
-            <button
-              key={tab}
-              className={`${styles.tabBtn} ${activeTab === tab ? styles.active : ""}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        <div className={styles.rightSide}>
-          <div className={styles.filters}>
-            <AppDropdown
-              className={styles.fySelect}
-              value={fy}
-              options={fyOptions}
-              onChange={(e) => setFy(e.value)}
-            />
-            <SearchInput value={search} onChange={(val) => setSearch(val)} />
+          {/* Toolbar */}
+          <div className={styles.toolbar}>
+            <div className={styles.tabToggle}>
+              {(["Planned", "Actual"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  className={`${styles.tabBtn} ${activeTab === tab ? styles.active : ""}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+            <div className={styles.rightSide}>
+              <div className={styles.filters}>
+                <AppDropdown
+                  className={styles.fySelect}
+                  value={fy}
+                  options={fyOptions}
+                  onChange={(e) => setFy(e.value)}
+                />
+                {/* <SearchInput value={search} onChange={(val) => setSearch(val)} /> */}
+              </div>
+            </div>
           </div>
+
+          {/* DataTable */}
+          <AppDataTable
+            data={tableData}
+            columns={COLUMNS}
+            globalFilter={search}
+            emptyMessage={`No ${activeTab} declarations found for FY ${fy}.`}
+            onRowClick={(row) => handleRowClick(row)}
+          />
+
+          {/* Note */}
+          <div className={styles.noteBox}>please click on the request ID</div>
         </div>
-      </div>
-
-      {/* DataTable */}
-      <AppDataTable
-        data={tableData}
-        columns={COLUMNS}
-        globalFilter={search}
-        emptyMessage={
-          isLoading
-            ? "Loading..."
-            : `No ${activeTab} declarations found for FY ${fy}.`
-        }
-        onRowClick={(row) => handleRowClick(row)}
-      />
-
-      {/* Note */}
-      <div className={styles.noteBox}>please click on the request ID</div>
-    </div>
+      )}
+    </>
   );
 };
 

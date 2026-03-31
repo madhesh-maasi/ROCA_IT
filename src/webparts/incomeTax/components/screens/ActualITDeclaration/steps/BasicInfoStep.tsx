@@ -62,7 +62,7 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
             id="basic-info-mobile"
             value={mobile}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onMobileChange(e.target.value)
+              onMobileChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))
             }
             placeholder="Enter Mobile Number"
             disabled={readOnly}

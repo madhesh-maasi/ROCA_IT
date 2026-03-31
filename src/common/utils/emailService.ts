@@ -74,7 +74,7 @@ const buildEmailBody = (payload: IEmailPayload): string => {
     deepLink = `${siteUrl}/#/actualItDeclaration?itemId=${itemId}`;
   }
 
-  const detailsBlock = `<br /><br /><b>Declaration Details:</b><br /><br />Declaration Type: <b>${declarationType}</b><br /><br />Financial Year: <b>FY ${financialYear}</b><br /><br />Request Number: <b>${reqno || "N/A"}</b>`;
+  const detailsBlock = `<br /><br /><b>Declaration Details:</b><br /><br />Declaration Type: <b>${declarationType}</b><br /><br />Financial Year: <b>${financialYear}</b><br /><br />Request Number: <b>${reqno || "-"}</b>`;
 
   if (action === "Released") {
     actionBody = `<p>Dear ${employeeName},<br /><br />Income Tax Investment Workflow is active now for updating your investments.${detailsBlock}<br /><br />You have to update the investments on or before <b>${deadline ?? "the deadline"}</b>.<br /><br />Please note that once submitted you cannot alter.<br /><br />Please <a href="${deepLink}">click here</a> to access the portal.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
@@ -211,7 +211,7 @@ export const sendDeclarationEmail = async (
  * @param deadline         Human-readable deadline string (optional)
  */
 export const sendReleaseEmails = async (
-  employees: { email: string; name: string; id: string }[],
+  employees: { email: string; name: string; id: string; reqno?: string }[],
   declarationType: "Planned" | "Actual",
   financialYear: string,
   user: ICurrentUser,
@@ -227,6 +227,7 @@ export const sendReleaseEmails = async (
       toEmail: emp.email,
       deadline,
       user,
+      reqno: emp.reqno,
     }),
   );
   await Promise.allSettled(tasks);
