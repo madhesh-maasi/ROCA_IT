@@ -294,6 +294,7 @@ const ITDeclaration: React.FC = () => {
 
             if (regime) {
               // Automatically clone if regime is known from Planned
+              // eslint-disable-next-line @typescript-eslint/no-use-before-define
               await handleClonePlannedData(item.Id, plannedId, regime);
               // Refresh Actual Declaration after clone
               const refreshed = await sp.web.lists
@@ -327,8 +328,11 @@ const ITDeclaration: React.FC = () => {
       setDeclarationItem(item);
 
       if (regime) {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadDynamicSteps(regime);
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadSavedData(item);
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadAttachments(item);
       }
 
@@ -374,29 +378,42 @@ const ITDeclaration: React.FC = () => {
           },
           { key: "House Rental", label: "House Rental", icon: Building06Icon },
           { key: "LTA", label: "LTA", icon: PlaneIcon },
-          {
-            key: "Section 80C Deductions",
-            label: "Section 80C Deductions",
-            icon: ChartBarLineIcon,
-          },
-          {
-            key: "Section 80 Deductions",
-            label: "Section 80 Deductions",
-            icon: ChartBarLineIcon,
-          },
-          {
-            key: "Housing Loan Repayment",
-            label: "Housing Loan Repayment",
-            icon: MoneyReceiveCircleIcon,
-          },
-          ...dynamicSteps.filter(
-            (s) =>
-              ![
+          ...dynamicSteps
+            .filter((s) =>
+              [
                 "Section 80C Deductions",
                 "Section 80 Deductions",
                 "Housing Loan Repayment",
               ].includes(s.key),
-          ),
+            )
+            .map((s: any) => {
+              return {
+                key: s.key,
+                label: s.key,
+                icon:
+                  s.key === "Section 80C Deductions" ||
+                  s.key === "Section 80 Deductions"
+                    ? ChartBarLineIcon
+                    : s.key === "Housing Loan Repayment"
+                      ? MoneyReceiveCircleIcon
+                      : ChartBarLineIcon,
+              };
+            }),
+          // {
+          //   key: "Section 80C Deductions",
+          //   label: "Section 80C Deductions",
+          //   icon: ChartBarLineIcon,
+          // },
+          // {
+          //   key: "Section 80 Deductions",
+          //   label: "Section 80 Deductions",
+          //   icon: ChartBarLineIcon,
+          // },
+          // {
+          //   key: "Housing Loan Repayment",
+          //   label: "Housing Loan Repayment",
+          //   icon: MoneyReceiveCircleIcon,
+          // },
           {
             key: "Previous Employer Details",
             label: "Previous Employer Details",
@@ -1580,6 +1597,7 @@ const ITDeclaration: React.FC = () => {
       // Wait 3 seconds then navigate back
       setTimeout(() => {
         setShowPopup((prev) => ({ ...prev, visible: false }));
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         handleNavigateBack();
       }, 3000);
     } catch (error) {
