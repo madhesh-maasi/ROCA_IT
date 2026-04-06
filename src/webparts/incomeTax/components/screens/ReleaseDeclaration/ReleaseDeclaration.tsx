@@ -42,6 +42,7 @@ import {
 import RequiredSympol from "../../../../../common/components/RequiredSympol/RequiredSympol";
 import { sendReleaseEmails } from "../../../../../common/utils/emailService";
 import { selectUserDetails } from "../../../../../store/slices";
+import moment from "moment";
 
 interface IReleaseData {
   DeclarationType: string;
@@ -117,18 +118,18 @@ const ReleaseDeclaration: React.FC = () => {
             employeeName: item.EmployeeName || emp?.Title || "-",
             declarationType: type,
             releasedDate: item.Created
-              ? new Date(item.Created).toLocaleDateString("en-IN")
+              ? moment(item.Created).format("DD/MM/YYYY")
               : "",
             status: (item.Status || "Draft").toLowerCase(),
             location: emp?.Location || "-",
             financialYear: item.FinancialYear || "N/A",
           };
         });
-
-      setReleasedList([
-        ...processRecords(planned, "Planned"),
-        ...processRecords(actual, "Actual"),
-      ]);
+      if (actual.length > 0) {
+        setReleasedList([...processRecords(actual, "Actual")]);
+      } else {
+        setReleasedList([...processRecords(planned, "Planned")]);
+      }
 
       // Conditional Default: If current year's actual declaration data > 0, show Actual. Otherwise Planned.
       const currentYearActuals = actual.filter(
@@ -303,17 +304,23 @@ const ReleaseDeclaration: React.FC = () => {
       const isActual = formData.DeclarationType === "Actual";
 
       if (formData.ReleaseType === "Release All") {
-        itemsToRelease = employeeMaster.map((emp) => ({
-          Title: "", // Will be generated before saving
-          EmployeeName: emp.Title || emp.Name,
-          EmployeeCode: emp.EmployeeId,
-          EmployeeEmail: emp.Email,
-          FinancialYear: _financialYear,
-          Status: "Released",
-          DeclarationType: formData.DeclarationType,
-          DeclarationEndDate: formData.OnOrBefore?.toISOString(),
-          IsDelete: false,
-        }));
+        itemsToRelease = employeeMaster
+          .filter((emp: IEmployee) =>
+            emp.EmployeeId?.toString().startsWith("9"),
+          )
+          .map((emp) => ({
+            Title: "", // Will be generated before saving
+            EmployeeName: emp.Title || emp.Name,
+            EmployeeCode: emp.EmployeeId,
+            EmployeeEmail: emp.Email,
+            FinancialYear: _financialYear,
+            Status: "Released",
+            DeclarationType: formData.DeclarationType,
+            DeclarationEndDate: new Date(
+              new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
+            ),
+            IsDelete: false,
+          }));
       } else if (formData.ReleaseType === "Release Selected") {
         targetEmails.forEach((email: string) => {
           const matchedEmp = employeeMaster.find((e) => e.Email === email);
@@ -327,24 +334,35 @@ const ReleaseDeclaration: React.FC = () => {
             Status: "Released",
             FinancialYear: _financialYear,
             DeclarationType: formData.DeclarationType,
-            DeclarationEndDate: formData.OnOrBefore?.toISOString(),
+            DeclarationEndDate: new Date(
+              new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
+            ),
             IsDelete: false,
           });
         });
 
-        excelEmployees.forEach((row) => {
-          itemsToRelease.push({
-            Title: "", // Will be generated before saving
-            EmployeeName: row.Title,
-            EmployeeCode: row.EmployeeID,
-            EmployeeEmail: row.Email,
-            Status: "Released",
-            FinancialYear: _financialYear,
-            DeclarationType: formData.DeclarationType,
-            DeclarationEndDate: formData.OnOrBefore?.toISOString(),
-            IsDelete: false,
+        excelEmployees
+          .filter((emp: IEmployee) =>
+            emp.EmployeeId?.toString().startsWith("9"),
+          )
+          .forEach((row) => {
+            const curEmp = employeeMaster.find(
+              (emp) => emp.EmployeeId === row.EmployeeID?.toString(),
+            );
+            itemsToRelease.push({
+              Title: "", // Will be generated before saving
+              EmployeeName: curEmp ? curEmp.Title || curEmp.Name : row.Title,
+              EmployeeCode: curEmp ? curEmp.EmployeeId : row.EmployeeID,
+              EmployeeEmail: curEmp ? curEmp.Email : row.Email,
+              Status: "Released",
+              FinancialYear: _financialYear,
+              DeclarationType: formData.DeclarationType,
+              DeclarationEndDate: new Date(
+                new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
+              ),
+              IsDelete: false,
+            });
           });
-        });
 
         // Deduplicate itemsToRelease by EmployeeCode (in case of double selection from PP and Excel)
         const uniqueItems = new Map();
@@ -516,7 +534,7 @@ const ReleaseDeclaration: React.FC = () => {
         "Success",
         skippedCount > 0
           ? `Released ${finalItems.length} declarations. Skipped ${skippedCount} duplicates.`
-          : "Declaration Released successfully.",
+          : `Successfully released ${finalItems.length} declarations.`,
       );
 
       // Send release email notifications
@@ -693,9 +711,31 @@ const ReleaseDeclaration: React.FC = () => {
   const handleExport = () => {
     const dataToExport =
       activeIndex === 0 ? employeeTableData : releasedTableData;
+    const columns = activeIndex === 0 ? empColumns : releasedColumns;
     const fileName = activeIndex === 0 ? "Employee_List" : "Released_List";
 
-    exportToExcel(dataToExport, fileName);
+    if (dataToExport.length === 0) {
+      showToast(toast, "warn", "No Data", "No data to export.");
+      return;
+    }
+
+    const exportData = dataToExport.map((row: any) => {
+      const formattedRow: any = {};
+      columns.forEach((col) => {
+        if (col.field) {
+          const value = row[col.field];
+          if (col.field === "status" && typeof value === "string") {
+            formattedRow[col.header] =
+              value.charAt(0).toUpperCase() + value.slice(1);
+          } else {
+            formattedRow[col.header] = value;
+          }
+        }
+      });
+      return formattedRow;
+    });
+
+    exportToExcel(exportData, fileName);
     setShowDownloadPopup(true);
     setTimeout(() => {
       setShowDownloadPopup(false);
@@ -765,6 +805,12 @@ const ReleaseDeclaration: React.FC = () => {
                       SelectedUsers: [],
                     }));
                     setExcelEmployees([]);
+                  } else {
+                    setFormData((p) => ({
+                      ...p,
+                      ReleaseType: "",
+                      SelectedUsers: [],
+                    }));
                   }
                 }}
               />
@@ -782,6 +828,12 @@ const ReleaseDeclaration: React.FC = () => {
                       SelectedUsers: [],
                     }));
                     setExcelEmployees([]);
+                  } else {
+                    setFormData((p) => ({
+                      ...p,
+                      ReleaseType: "",
+                      SelectedUsers: [],
+                    }));
                   }
                 }}
               />
@@ -792,7 +844,7 @@ const ReleaseDeclaration: React.FC = () => {
         {formData.ReleaseType === "Release Selected" && (
           <div className={styles.selectionRow}>
             <div className={styles.col}>
-              <label>Choose Employees</label>
+              <label>Choose Employees {RequiredSympol()}</label>
               <div className={styles.selectionControls}>
                 <div className={styles.peoplePickerWrapper}>
                   <AppPeoplePicker
@@ -894,6 +946,7 @@ const ReleaseDeclaration: React.FC = () => {
                 }))
               }
               showIcon
+              placeholder="Select"
               minDate={new Date()}
             />
           </div>
@@ -923,13 +976,25 @@ const ReleaseDeclaration: React.FC = () => {
             <div className={styles.tabToggle}>
               <button
                 className={`${styles.tabBtn} ${activeIndex === 0 ? styles.active : ""}`}
-                onClick={() => setActiveIndex(0)}
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedFY(_financialYear);
+                  setSelectedStatus("All");
+                  setSelectedType("All");
+                  setActiveIndex(0);
+                }}
               >
                 Employee List
               </button>
               <button
                 className={`${styles.tabBtn} ${activeIndex === 1 ? styles.active : ""}`}
-                onClick={() => setActiveIndex(1)}
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedFY(_financialYear);
+                  setSelectedStatus("All");
+                  setSelectedType("All");
+                  setActiveIndex(1);
+                }}
               >
                 Released List
               </button>
@@ -999,7 +1064,7 @@ const ReleaseDeclaration: React.FC = () => {
               columns={empColumns}
               data={employeeTableData}
               globalFilter={searchTerm}
-              paginator
+              paginator={empColumns.length > 0}
               rows={10}
             />
           )}
@@ -1008,7 +1073,7 @@ const ReleaseDeclaration: React.FC = () => {
               columns={releasedColumns}
               data={releasedTableData}
               globalFilter={searchTerm}
-              paginator
+              paginator={releasedColumns.length > 0}
               rows={10}
             />
           )}

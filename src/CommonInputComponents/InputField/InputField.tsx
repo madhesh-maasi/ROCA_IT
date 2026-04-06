@@ -51,6 +51,7 @@ const InputField: React.FC<IInputFieldProps> = ({
         className={`${styles.inputText} ${hasError ? "p-invalid" : ""}`}
         aria-required={required}
         aria-describedby={hasError ? `${id}-error` : undefined}
+        autoComplete="off"
         {...rest}
       />
       {hasError && (

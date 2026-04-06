@@ -34,6 +34,7 @@ import {
 import { useAppSelector } from "../../../../../store/hooks";
 import { selectUserDetails } from "../../../../../store/slices/userSlice";
 import { selectEmployees } from "../../../../../store/slices/employeeSlice";
+import RequiredSympol from "../../../../../common/components/RequiredSympol/RequiredSympol";
 
 interface IDeclarationItem {
   ID: number;
@@ -275,9 +276,9 @@ const ExportDeclaration: React.FC = () => {
           />
         </div>
 
-        <div className={styles.filterGroup}>
+        <div className={styles.filterGroup} style={{ gap: 14 }}>
           <label className={styles.groupLabel} style={{ fontSize: "14px" }}>
-            Declaration Type
+            Declaration Type {RequiredSympol()}
           </label>
           <div className={styles.radioGroup}>
             <AppRadioButton
@@ -297,9 +298,9 @@ const ExportDeclaration: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.filterGroup}>
+        <div className={styles.filterGroup} style={{ gap: 14 }}>
           <label className={styles.groupLabel} style={{ fontSize: "14px" }}>
-            Tax Regime
+            Tax Regime {RequiredSympol()}
           </label>
           <div className={styles.radioGroup}>
             <AppRadioButton

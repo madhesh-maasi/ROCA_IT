@@ -48,10 +48,7 @@ const LookupConfig: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState("");
 
   // Consolidated UI States
-  const [uiState, setUiState] = React.useState({
-    isLoading: true,
-    isSaving: false,
-  });
+  const [loader, setLoader] = React.useState<boolean>(false);
 
   // Consolidated Dialog State
   const [dialog, setDialog] = React.useState<{
@@ -90,7 +87,7 @@ const LookupConfig: React.FC = () => {
   const fetchLookupItems = async (
     options: { label: string; value: number }[],
   ) => {
-    setUiState((p) => ({ ...p, isLoading: true }));
+    setLoader(true);
     try {
       const items = await getListItems(LIST_NAMES.LOOKUP_CONFIG);
       const mapped: ILookupData[] = items.map((item) => {
@@ -109,7 +106,7 @@ const LookupConfig: React.FC = () => {
     } catch (error) {
       await handleError(error, "Loading lookup items", toast);
     } finally {
-      setUiState((p) => ({ ...p, isLoading: false }));
+      setLoader(false);
     }
   };
 
@@ -127,12 +124,16 @@ const LookupConfig: React.FC = () => {
   }, [data, searchTerm]);
 
   const handleExport = () => {
+    if (filteredData.length === 0) {
+      showToast(toast, "warn", "No Data", "No data available to export");
+      return;
+    }
     exportToExcel(
       filteredData.map(({ section, subSection, types, maxAmount }) => ({
         Sections: section,
-        "Sub-Sections": subSection,
+        "Sub-Sections": subSection || "-",
         Types: types,
-        "Max Amount": maxAmount,
+        "Max Amount": maxAmount || "-",
       })),
       "Lookup_Configuration",
     );
@@ -170,9 +171,7 @@ const LookupConfig: React.FC = () => {
     const sectionErr = validateField(formData.sectionId, [
       required("Section is required"),
     ]);
-    const subSectionErr = validateField(formData.subSection, [
-      required("Sub-Section is required"),
-    ]);
+    const subSectionErr = ""; // Removed regex validation, filtering handled in onChange
     const typesErr = validateField(formData.types, [
       required("Types is required"),
     ]);
@@ -199,18 +198,22 @@ const LookupConfig: React.FC = () => {
 
     if (
       sectionErr ||
-      subSectionErr ||
+      // subSectionErr ||
       typesErr ||
       // || maxAmtErr
       duplicateErr
     ) {
-      const errorMsg = duplicateErr || sectionErr || subSectionErr || typesErr;
+      const errorMsg =
+        duplicateErr ||
+        sectionErr ||
+        // || subSectionErr
+        typesErr;
       //  || maxAmtErr;
       showToast(toast, "warn", "Validation Error", errorMsg);
       return;
     }
 
-    setUiState((p) => ({ ...p, isSaving: true }));
+    setLoader(true);
     try {
       // const selectedSection = sectionOptions.find(
       //   (o) => o.value === Number(formData.sectionId),
@@ -235,14 +238,14 @@ const LookupConfig: React.FC = () => {
     } catch (error) {
       await handleError(error, "Saving item", toast);
     } finally {
-      setUiState((p) => ({ ...p, isSaving: false }));
+      setLoader(false);
     }
   };
 
   const handleDelete = async () => {
     if (!dialog.id) return;
 
-    setUiState((p) => ({ ...p, isSaving: true }));
+    setLoader(true);
     try {
       await deleteListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id);
       showToast(toast, "success", "Deleted", "Item deleted successfully.");
@@ -251,7 +254,7 @@ const LookupConfig: React.FC = () => {
     } catch (error) {
       await handleError(error, "Deleting item", toast);
     } finally {
-      setUiState((p) => ({ ...p, isSaving: false }));
+      setLoader(false);
     }
   };
 
@@ -259,7 +262,7 @@ const LookupConfig: React.FC = () => {
 
   const actionTemplate = (rowData: ILookupData) => {
     return (
-      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
         <IconButton
           variant="edit"
           icon="pi pi-pencil"
@@ -277,16 +280,30 @@ const LookupConfig: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "section", header: "Sections" },
-    { field: "subSection", header: "Sub-Sections" },
-    { field: "types", header: "Types" },
-    { field: "maxAmount", header: "Max Amount" },
+    { field: "section", header: "Sections", style: { width: "25%" } },
+    {
+      field: "subSection",
+      header: "Sub-Sections",
+      body: (rowData: ILookupData) => {
+        return <span>{rowData.subSection || "-"}</span>;
+      },
+      style: { width: "25%" },
+    },
+    { field: "types", header: "Types", style: { width: "25%" } },
+    {
+      field: "maxAmount",
+      header: "Max Amount",
+      body: (rowData: ILookupData) => {
+        return <span>{rowData.maxAmount || "-"}</span>;
+      },
+      style: { width: "15%" },
+    },
     {
       field: "action",
       header: "Action",
       body: actionTemplate,
       sortable: false,
-      style: { width: "120px" },
+      style: { width: "120px", textAlign: "center" },
     },
   ];
 
@@ -298,9 +315,7 @@ const LookupConfig: React.FC = () => {
         type="download"
       />
       <AppToast toastRef={toast} />
-      {uiState.isLoading && (
-        <Loader fullScreen label="Loading Configuration..." />
-      )}
+      {loader && <Loader fullScreen label="Loading Configuration..." />}
 
       <div className={styles.header}>
         <h2>Lookup Configuration</h2>
@@ -331,7 +346,7 @@ const LookupConfig: React.FC = () => {
         data={filteredData}
         columns={columns}
         globalFilter={searchTerm}
-        paginator={true}
+        paginator={filteredData.length > 0}
         rows={10}
       />
 
@@ -343,6 +358,7 @@ const LookupConfig: React.FC = () => {
         confirmLabel={dialog.type === "EDIT" ? "Update" : "Add"}
         onConfirm={handleSave}
         iconFlag={false}
+        disable={loader}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <AppDropdown
@@ -355,19 +371,20 @@ const LookupConfig: React.FC = () => {
               setFormData((p) => ({ ...p, sectionId: String(e.value) }))
             }
             required
-            disabled={uiState.isSaving}
             className={styles.inputField}
           />
           <InputField
             id="subSection"
             label="Sub-Section"
             placeholder="Enter sub-section"
-            required
+            // required
             value={formData.subSection}
             onChange={(e) =>
-              setFormData((p) => ({ ...p, subSection: e.target.value }))
+              setFormData((p) => ({
+                ...p,
+                subSection: e.target.value.replace(/[^a-zA-Z0-9\s\-().,]/g, ""),
+              }))
             }
-            disabled={uiState.isSaving}
             className={styles.inputField}
           />
           <InputField
@@ -377,9 +394,11 @@ const LookupConfig: React.FC = () => {
             required
             value={formData.types}
             onChange={(e) =>
-              setFormData((p) => ({ ...p, types: e.target.value }))
+              setFormData((p) => ({
+                ...p,
+                types: e.target.value.replace(/[^a-zA-Z0-9\s\-().,]/g, ""),
+              }))
             }
-            disabled={uiState.isSaving}
             className={styles.inputField}
           />
           <InputField
@@ -393,8 +412,6 @@ const LookupConfig: React.FC = () => {
                 maxAmount: e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               }))
             }
-            // required
-            disabled={uiState.isSaving}
             className={styles.inputField}
           />
         </div>

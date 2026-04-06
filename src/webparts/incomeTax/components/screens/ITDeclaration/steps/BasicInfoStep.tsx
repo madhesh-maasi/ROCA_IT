@@ -1,6 +1,7 @@
 import * as React from "react";
 import { InputField } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
+import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IBasicInfoStepProps {
   employeeData: {
@@ -48,7 +49,9 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
         </div>
         <div className={styles.formGroup}>
           <label>Email ID</label>
-          <div className={styles.readonlyValue}>{employeeData.email}</div>
+          <div className={styles.readonlyValue} title={employeeData.email}>
+            {employeeData.email}
+          </div>
         </div>
         {/* <div className={styles.formGroup}>
           <label>Mobile Number</label>
@@ -62,7 +65,7 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
             id="basic-info-mobile"
             value={mobile}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onMobileChange(e.target.value.replace(/[^0-9]/g, "").slice(0,10))
+              onMobileChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))
             }
             placeholder="Enter Mobile Number"
             disabled={readOnly}
@@ -76,7 +79,7 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
             id="basic-info-pan"
             value={pan}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onPanChange(e.target.value)
+              onPanChange(panFormatter(e.target.value))
             }
             placeholder="Enter PAN number"
             disabled={readOnly}

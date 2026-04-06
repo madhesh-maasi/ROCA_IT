@@ -19,6 +19,9 @@ import { getSP } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { selectUserDetails } from "../../../../../store/slices";
 import { Loader } from "../../../../../common";
+import moment from "moment";
+import { AppToast, showToast } from "../../../../../common/components";
+import { Toast as PrimeToast } from "primereact/toast";
 
 // ─── Row definition ─────────────────────────────────────────────────────────────
 
@@ -30,6 +33,7 @@ interface ISubmittedRow {
   declarationType: string;
   dateOfSubmission: string;
   status: StatusVariant | string;
+  declarationEndDate: string;
 }
 
 // ─── Columns ────────────────────────────────────────────────────────────────────
@@ -52,6 +56,7 @@ const COLUMNS: IColumnDef[] = [
     body: (row: ISubmittedRow) => (
       <StatusBadge status={row.status as StatusVariant} />
     ),
+    sortable: false,
   },
 ];
 
@@ -64,23 +69,30 @@ const mapRow = (item: any): ISubmittedRow => ({
   regimeType: item.TaxRegime || "-",
   declarationType: item.DeclarationType || "",
   dateOfSubmission: item.SubmittedDate
-    ? new Date(item.SubmittedDate).toLocaleDateString("en-IN")
-    : item.Modified
-      ? new Date(item.Modified).toLocaleDateString("en-IN")
-      : "-",
+    ? moment(item.SubmittedDate).format("DD/MM/YYYY")
+    : "-",
   status: (item.Status || "Draft").toLowerCase(),
+  declarationEndDate: item.DeclarationEndDate || "",
 });
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
 const SubmittedDeclarations: React.FC = () => {
+  const toast = React.useRef<PrimeToast>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const userEmail = useAppSelector(selectUserDetails)?.Email;
 
   const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(() => {
     const queryParams = new URLSearchParams(location.search);
-    const tabParam = queryParams.get("tab");
+    let tabParam = queryParams.get("tab");
+
+    // If not found in hash-search, check main window search (SPFx/SharePoint often move params here)
+    if (!tabParam) {
+      const windowParams = new URLSearchParams(window.location.search);
+      tabParam = windowParams.get("tab");
+    }
+
     if (tabParam === "Planned" || tabParam === "Actual") {
       return tabParam as "Planned" | "Actual";
     }
@@ -105,7 +117,8 @@ const SubmittedDeclarations: React.FC = () => {
       try {
         const sp = getSP();
         const today = new Date().toISOString().split(".")[0] + "Z";
-        const emailFilter = `EmployeeEmail eq '${userEmail}' and FinancialYear eq '${fy}' and IsDelete ne 1 and datetime'${today}' lt DeclarationEndDate`;
+        // const emailFilter = `EmployeeEmail eq '${userEmail}' and FinancialYear eq '${fy}' and IsDelete ne 1 and datetime'${today}' lt DeclarationEndDate`;
+        const emailFilter = `EmployeeEmail eq '${userEmail}' and FinancialYear eq '${fy}' and IsDelete ne 1`;
 
         const [plannedItems, actualItems] = await Promise.all([
           sp.web.lists
@@ -152,6 +165,7 @@ const SubmittedDeclarations: React.FC = () => {
 
   return (
     <>
+      <AppToast toastRef={toast} />
       {loading ? (
         <Loader />
       ) : (
@@ -190,7 +204,19 @@ const SubmittedDeclarations: React.FC = () => {
             columns={COLUMNS}
             globalFilter={search}
             emptyMessage={`No ${activeTab} declarations found for FY ${fy}.`}
-            onRowClick={(row) => handleRowClick(row)}
+            onRowClick={(row: any) => {
+              const today = new Date().toISOString().split(".")[0] + "Z";
+              if (today > row.data.declarationEndDate) {
+                showToast(
+                  toast,
+                  "error",
+                  "Error",
+                  "Closed declarations can't be edited",
+                );
+                return;
+              }
+              handleRowClick(row);
+            }}
           />
 
           {/* Note */}

@@ -14,7 +14,7 @@ interface I80DItem {
 
 interface ISection80DStepProps {
   items: I80DItem[];
-  sectionMaxAmount: number;
+  sectionMaxAmount: number | null;
   showApproverComments?: boolean;
   approverComments: string;
   onAmountChange: (id: number, val: string) => void;
@@ -98,7 +98,7 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
                           e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
                         )
                       }
-                      placeholder="0"
+                      placeholder="Enter here"
                       disabled={readOnly}
                     />
                   </td>
@@ -217,7 +217,7 @@ const Section80DStep: React.FC<ISection80DStepProps> = ({
               }}
               placeholder="Enter here"
               value={approverComments}
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

@@ -35,8 +35,8 @@ export const AppRadioButton: React.FC<IAppRadioButtonProps> = ({
         e.stopPropagation();
         if (!disabled) {
           // If already selected, deselect it
-          if (selectedValue === value) {
-            onChange("");
+          if (selectedValue == value) {
+            onChange(null);
           } else {
             onChange(value);
           }
@@ -48,7 +48,7 @@ export const AppRadioButton: React.FC<IAppRadioButtonProps> = ({
         name={name}
         value={value}
         onChange={() => {}} // We handle the change via the wrapper onClick
-        checked={selectedValue === value}
+        checked={selectedValue == value}
         disabled={disabled}
       />
       <label htmlFor={inputId} className={styles.label}>

@@ -90,11 +90,11 @@
 
 .stepperLine {
   position: absolute;
-  top: 25px;
+  top: 19px;
   left: 60px;
   right: 60px;
   height: 1.5px;
-  background: #e2e8f0;
+  // background: #e2e8f0;
   border-bottom: 1px dashed #cbd5e1;
   z-index: 0;
 }
@@ -330,6 +330,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 24px;
   align-items: end;
+  margin-bottom: 15px;
 }
 
 .sectionHeaderWithLine {

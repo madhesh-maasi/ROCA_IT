@@ -45,10 +45,7 @@ const SectionConfig: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState("");
 
   // Consolidated UI States
-  const [uiState, setUiState] = React.useState({
-    isLoading: true,
-    isSaving: false,
-  });
+  const [loader, setLoader] = React.useState<boolean>(false);
 
   // Consolidated Dialog State
   const [dialog, setDialog] = React.useState<{
@@ -61,7 +58,7 @@ const SectionConfig: React.FC = () => {
   const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const fetchSections = async () => {
-    setUiState((p) => ({ ...p, isLoading: true }));
+    setLoader(true);
     try {
       const items = await getListItems(LIST_NAMES.SECTION_CONFIG);
       const mapped: ISectionData[] = items.map((item) => ({
@@ -73,7 +70,7 @@ const SectionConfig: React.FC = () => {
     } catch (error) {
       await handleError(error, "Loading sections", toast);
     } finally {
-      setUiState((p) => ({ ...p, isLoading: false }));
+      setLoader(false);
     }
   };
 
@@ -90,13 +87,18 @@ const SectionConfig: React.FC = () => {
   }, [data, searchTerm]);
 
   const handleExport = () => {
+    if (filteredData.length === 0) {
+      showToast(toast, "warn", "No Data", "No data available to export");
+      return;
+    }
     exportToExcel(
       filteredData.map(({ name, maxAmount }) => ({
         Sections: name,
-        "Max Amount": maxAmount,
+        "Max Amount": maxAmount || "-",
       })),
       "Section_Configuration",
     );
+
     setShowDownloadPopup(true);
     setTimeout(() => {
       setShowDownloadPopup(false);
@@ -122,7 +124,6 @@ const SectionConfig: React.FC = () => {
   // ─── Form Actions ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    // Collect existing names for uniqueness check (exclude current if editing)
     const existingNames = data
       .filter((item) => item.id !== dialog.id)
       .map((item) => item.name);
@@ -144,7 +145,7 @@ const SectionConfig: React.FC = () => {
       return;
     }
 
-    setUiState((p) => ({ ...p, isSaving: true }));
+    setLoader(true);
     try {
       const payload = {
         Title: formData.name.trim(),
@@ -164,29 +165,48 @@ const SectionConfig: React.FC = () => {
     } catch (error) {
       await handleError(error, "Saving section", toast);
     } finally {
-      setUiState((p) => ({ ...p, isSaving: false }));
+      setLoader(false);
     }
   };
 
   const handleDelete = async () => {
     if (!dialog.id) return;
 
-    setUiState((p) => ({ ...p, isSaving: true }));
+    setLoader(true);
     try {
+      // Find and delete related lookup items first
+      const relatedLookups = await getListItems(
+        LIST_NAMES.LOOKUP_CONFIG,
+        `SectionId eq ${dialog.id}`,
+      );
+
+      for (const lookup of relatedLookups) {
+        if (lookup.Id) {
+          await deleteListItem(LIST_NAMES.LOOKUP_CONFIG, lookup.Id);
+        }
+      }
+
+      // Delete the section itself
       await deleteListItem(LIST_NAMES.SECTION_CONFIG, dialog.id);
-      showToast(toast, "success", "Deleted", "Section deleted successfully.");
+
+      showToast(
+        toast,
+        "success",
+        "Deleted",
+        "Section and related lookup items deleted successfully.",
+      );
       setDialog({ type: null, id: null });
       await init();
     } catch (error) {
       await handleError(error, "Deleting section", toast);
     } finally {
-      setUiState((p) => ({ ...p, isSaving: false }));
+      setLoader(false);
     }
   };
 
   const actionTemplate = (rowData: ISectionData) => {
     return (
-      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
         <IconButton
           variant="edit"
           icon="pi pi-pencil"
@@ -204,14 +224,21 @@ const SectionConfig: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "name", header: "Sections" },
-    { field: "maxAmount", header: "Max Amount" },
+    { field: "name", header: "Sections", style: { width: "60%" } },
+    {
+      field: "maxAmount",
+      header: "Max Amount",
+      body: (rowData: ISectionData) => {
+        return <span>{rowData.maxAmount || "-"}</span>;
+      },
+      style: { width: "25%" },
+    },
     {
       field: "action",
       header: "Action",
       body: actionTemplate,
       sortable: false,
-      style: { width: "120px" },
+      style: { width: "120px", textAlign: "center" },
     },
   ];
 
@@ -223,7 +250,7 @@ const SectionConfig: React.FC = () => {
         onHide={() => setShowDownloadPopup(false)}
         type="download"
       />
-      {uiState.isLoading && <Loader fullScreen label="Loading Sections..." />}
+      {loader && <Loader fullScreen label="Loading..." />}
 
       <div className={styles.header}>
         <h2>Section Configuration</h2>
@@ -260,7 +287,7 @@ const SectionConfig: React.FC = () => {
           data={filteredData}
           columns={columns}
           globalFilter={searchTerm}
-          paginator={true}
+          paginator={filteredData.length > 0}
           rows={10}
         />
       </div>
@@ -273,6 +300,7 @@ const SectionConfig: React.FC = () => {
         confirmLabel={dialog.type === "EDIT" ? "Update" : "Add"}
         onConfirm={handleSave}
         iconFlag={false}
+        disable={loader}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <InputField
@@ -281,10 +309,12 @@ const SectionConfig: React.FC = () => {
             placeholder="Enter section name"
             value={formData.name}
             onChange={(e) =>
-              setFormData((p) => ({ ...p, name: e.target.value }))
+              setFormData((p) => ({
+                ...p,
+                name: e.target.value.replace(/[^a-zA-Z0-9\s-]/g, ""),
+              }))
             }
             required
-            disabled={uiState.isSaving}
             className={styles.inputField}
           />
           <InputField
@@ -298,7 +328,6 @@ const SectionConfig: React.FC = () => {
                 maxAmount: e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               }))
             }
-            disabled={uiState.isSaving}
             className={styles.inputField}
           />
         </div>
@@ -313,7 +342,7 @@ const SectionConfig: React.FC = () => {
           void handleDelete();
         }}
         actionType="Delete"
-        message={`Are you sure you want to delete\n the section?`}
+        message={`Are you sure you want to delete\n the section and its related lookup items?`}
       />
     </div>
   );

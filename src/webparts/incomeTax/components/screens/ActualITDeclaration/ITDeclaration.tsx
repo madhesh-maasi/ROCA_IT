@@ -64,6 +64,7 @@ import {
   sendReworkEmail,
   sendReopenEmail,
 } from "../../../../../common/utils/emailService";
+import moment from "moment";
 
 // ── Mapping section names to icons ───────────────────────────────
 const ICON_MAP: Record<string, any> = {
@@ -97,13 +98,12 @@ const ITDeclaration: React.FC = () => {
 
   const matchedEmployee = React.useMemo(() => {
     if (!employeeMaster.length) return null;
-    const targetEmail = declarationItem?.EmployeeEmail || user?.Email;
+    const targetEmail =
+      declarationItem?.EmployeeEmail.toLowerCase() || user?.Email.toLowerCase();
     if (!targetEmail) return null;
 
     return (
-      employeeMaster.find((e) => e.Email === targetEmail) ||
-      employeeMaster.find((e) => user && e.EmployeeId === user.LoginName) ||
-      null
+      employeeMaster.find((e) => e.Email?.toLowerCase() === targetEmail) || null
     );
   }, [user, employeeMaster, declarationItem]);
 
@@ -111,6 +111,8 @@ const ITDeclaration: React.FC = () => {
 
   // const isAdmin = userRole === "Admin" || userRole === "FinanceApprover";
   const isAdmin = userRole === "FinanceApprover";
+  const employeeDeclarationPath =
+    location.state?.from === "employeeDeclaration";
 
   const status = declarationItem?.Status || "Draft";
   const isFormReadOnly =
@@ -118,28 +120,28 @@ const ITDeclaration: React.FC = () => {
 
   // Form States
   const [pan, setPan] = React.useState("");
-  const [mobile, setMobile] = React.useState(matchedEmployee?.PhoneNo || "");
+  const [mobile, setMobile] = React.useState("");
   const [rentDetails, setRentDetails] = React.useState<any[]>([
-    { month: "April", isMetro: true, city: "", rent: "" },
-    { month: "May", isMetro: true, city: "", rent: "" },
-    { month: "June", isMetro: true, city: "", rent: "" },
-    { month: "July", isMetro: true, city: "", rent: "" },
-    { month: "August", isMetro: true, city: "", rent: "" },
-    { month: "September", isMetro: true, city: "", rent: "" },
-    { month: "October", isMetro: true, city: "", rent: "" },
-    { month: "November", isMetro: true, city: "", rent: "" },
-    { month: "December", isMetro: true, city: "", rent: "" },
-    { month: "January", isMetro: true, city: "", rent: "" },
-    { month: "February", isMetro: true, city: "", rent: "" },
-    { month: "March", isMetro: true, city: "", rent: "" },
+    { month: "April", isMetro: null, city: "", rent: "" },
+    { month: "May", isMetro: null, city: "", rent: "" },
+    { month: "June", isMetro: null, city: "", rent: "" },
+    { month: "July", isMetro: null, city: "", rent: "" },
+    { month: "August", isMetro: null, city: "", rent: "" },
+    { month: "September", isMetro: null, city: "", rent: "" },
+    { month: "October", isMetro: null, city: "", rent: "" },
+    { month: "November", isMetro: null, city: "", rent: "" },
+    { month: "December", isMetro: null, city: "", rent: "" },
+    { month: "January", isMetro: null, city: "", rent: "" },
+    { month: "February", isMetro: null, city: "", rent: "" },
+    { month: "March", isMetro: null, city: "", rent: "" },
   ]);
   const [landlords, setLandlords] = React.useState<any[]>([
     { name: "", pan: "", address: "", attachments: [] },
   ]);
   const [ltaData, setLtaData] = React.useState<any>({
     exemptionAmount: "",
-    journeyStartDate: new Date(),
-    journeyEndDate: new Date(),
+    journeyStartDate: null,
+    journeyEndDate: null,
     journeyStartPlace: "",
     journeyDestination: "",
     modeOfTravel: "",
@@ -167,7 +169,7 @@ const ITDeclaration: React.FC = () => {
     lenderAddress: "",
     lenderPan: "",
     lenderType: "",
-    isJointlyAvailed: "",
+    isJointlyAvailed: null,
     approverComments: "",
     attachments: [],
   });
@@ -188,7 +190,7 @@ const ITDeclaration: React.FC = () => {
   const [declarationAgreement, setDeclarationAgreement] = React.useState({
     agreed: false,
     place: "",
-    date: new Date().toLocaleDateString("en-IN"),
+    date: moment().format("DD-MM-YYYY"),
   });
 
   const [commentsHR, setCommentsHR] = React.useState("");
@@ -205,8 +207,8 @@ const ITDeclaration: React.FC = () => {
     onConfirm?: () => void;
   }>({ visible: false, type: "success" });
 
-  const [maxAmount80C, setMaxAmount80C] = React.useState<number>(150000);
-  const [maxAmount80D, setMaxAmount80D] = React.useState<number>(50000);
+  const [maxAmount80C, setMaxAmount80C] = React.useState<number | null>(null);
+  const [maxAmount80D, setMaxAmount80D] = React.useState<number | null>(null);
   const [modeOfTravelChoices, setModeOfTravelChoices] = React.useState<any[]>(
     [],
   );
@@ -317,11 +319,15 @@ const ITDeclaration: React.FC = () => {
             return;
           }
         } else {
-          // No Planned lookup -> trigger popup
-          setShowRegimePopup(true);
-          setDeclarationItem(item);
-          setIsLoading(false);
-          return;
+          if (regime) {
+            setDeclarationItem(item);
+            setIsLoading(false);
+          } else {
+            setShowRegimePopup(true);
+            setDeclarationItem(item);
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
@@ -380,23 +386,15 @@ const ITDeclaration: React.FC = () => {
           { key: "LTA", label: "LTA", icon: PlaneIcon },
           ...dynamicSteps
             .filter((s) =>
-              [
-                "Section 80C Deductions",
-                "Section 80 Deductions",
-                "Housing Loan Repayment",
-              ].includes(s.key),
+              ["Section 80C Deductions", "Section 80 Deductions"].includes(
+                s.key,
+              ),
             )
             .map((s: any) => {
               return {
                 key: s.key,
                 label: s.key,
-                icon:
-                  s.key === "Section 80C Deductions" ||
-                  s.key === "Section 80 Deductions"
-                    ? ChartBarLineIcon
-                    : s.key === "Housing Loan Repayment"
-                      ? MoneyReceiveCircleIcon
-                      : ChartBarLineIcon,
+                icon: ChartBarLineIcon,
               };
             }),
           // {
@@ -414,6 +412,11 @@ const ITDeclaration: React.FC = () => {
           //   label: "Housing Loan Repayment",
           //   icon: MoneyReceiveCircleIcon,
           // },
+          {
+            //   key: "Housing Loan Repayment",
+            label: "Housing Loan Repayment",
+            icon: MoneyReceiveCircleIcon,
+          },
           {
             key: "Previous Employer Details",
             label: "Previous Employer Details",
@@ -455,7 +458,7 @@ const ITDeclaration: React.FC = () => {
           .filter((item: any) => item.SectionId === section80D?.Id)
           .map((item: any) => ({
             id: item.Id,
-            section: item.SubSection || "80D",
+            section: item.SubSection || "-",
             investmentType: item.Types || item.Title,
             maxAmount: Number(item.MaxAmount) || 0,
             declaredAmount: "",
@@ -486,14 +489,14 @@ const ITDeclaration: React.FC = () => {
     }
 
     setPan(panToSet);
-    setMobile(mobile || mainItem.MobileNumber);
+    setMobile(mainItem?.MobileNumber || matchedEmployee?.PhoneNo || "");
     setActiveStep(mainItem.ActiveStep || "Home");
     setDeclarationAgreement({
       agreed: mainItem.IsAcknowledged,
       place: mainItem.Place || "",
       date: mainItem.SubmittedDate
-        ? new Date(mainItem.SubmittedDate).toLocaleDateString("en-IN")
-        : new Date().toLocaleDateString("en-IN"),
+        ? moment(mainItem.SubmittedDate).format("DD-MM-YYYY")
+        : moment().format("DD-MM-YYYY"),
     });
     if (mainItem.RentDetailsJSON) {
       try {
@@ -515,7 +518,7 @@ const ITDeclaration: React.FC = () => {
         "March",
       ];
       setRentDetails(
-        months.map((m) => ({ month: m, isMetro: false, city: "", rent: "" })),
+        months.map((m) => ({ month: m, isMetro: null, city: "", rent: "" })),
       );
     }
 
@@ -562,8 +565,12 @@ const ITDeclaration: React.FC = () => {
       setLtaData({
         ...ltaData,
         exemptionAmount: claim.ExemptionAmount?.toString() || "",
-        journeyStartDate: new Date(claim.JourneyStartDate) || null,
-        journeyEndDate: new Date(claim.JourneyEndDate) || null,
+        journeyStartDate: claim.JourneyStartDate
+          ? new Date(claim.JourneyStartDate)
+          : null,
+        journeyEndDate: claim.JourneyEndDate
+          ? new Date(claim.JourneyEndDate)
+          : null,
         journeyStartPlace: claim.StartPlace || "",
         journeyDestination: claim.Destination || "",
         modeOfTravel: claim.ModeOfTravel || "",
@@ -594,7 +601,10 @@ const ITDeclaration: React.FC = () => {
         lenderAddress: hl.LenderAddress || "",
         lenderPan: hl.PANofLender || "",
         lenderType: hl.LenderType || "",
-        isJointlyAvailed: hl.IsJointlyAvailedPropertyLoan || false,
+        isJointlyAvailed:
+          typeof hl.IsJointlyAvailedPropertyLoan === "boolean"
+            ? hl.IsJointlyAvailedPropertyLoan
+            : null,
         finalLettableValue: hl.FinalLettableValue?.toString() || "",
         letOutInterestAmount: hl.LetOutInterest?.toString() || "",
         otherDeductionsUs24: hl.OtherDeductions?.toString() || "",
@@ -668,8 +678,7 @@ const ITDeclaration: React.FC = () => {
     }
 
     // Load Approver Comments Map
-    const commentSource =
-      mainItem.ApproverCommentsJson || mainItem.ApproverComment;
+    const commentSource = mainItem.ApproverCommentsJson;
     if (commentSource) {
       try {
         const cMap = JSON.parse(commentSource);
@@ -948,7 +957,7 @@ const ITDeclaration: React.FC = () => {
       // ✅ MUST be first (user gesture)
       if (customWindow.showSaveFilePicker) {
         fileHandle = await customWindow.showSaveFilePicker({
-          suggestedName: `${declarationItem.Title}.zip`,
+          suggestedName: `${declarationItem.Title}_${matchedEmployee?.EmployeeId}.zip`,
           types: [
             {
               description: "ZIP Files",
@@ -968,14 +977,14 @@ const ITDeclaration: React.FC = () => {
       setIsLoading(true);
 
       const fy = declarationItem.FinancialYear;
-      const empCode = matchedEmployee?.EmployeeId || "Unknown";
+      const empCode = matchedEmployee?.EmployeeId || "";
 
       await downloadAttachmentsAsZip(
         declarationItem.Id,
         declarationItem.Title,
         fy,
         empCode,
-        fileHandle, // ✅ pass it here
+        fileHandle,
       );
 
       showToast(
@@ -1021,7 +1030,8 @@ const ITDeclaration: React.FC = () => {
         const idStr = key.replace("80c-", "");
         setItems80C((prev) =>
           prev.map((item) =>
-            item.id === idStr
+            // item.id === idStr
+            item.investmentType === idStr
               ? {
                   ...item,
                   attachments: item.attachments.filter(
@@ -1035,7 +1045,8 @@ const ITDeclaration: React.FC = () => {
         const idStr = key.replace("80d-", "");
         setItems80D((prev) =>
           prev.map((item) =>
-            item.id === idStr
+            // item.id === idStr
+            item.investmentType === idStr
               ? {
                   ...item,
                   attachments: item.attachments.filter(
@@ -1095,12 +1106,26 @@ const ITDeclaration: React.FC = () => {
             .map((r, i) => (r.isMetro !== "" && r.isMetro !== null ? i : -1))
             .filter((idx) => idx !== -1);
 
+          for (const r of rentDetails) {
+            if (
+              (r.city.trim() || r.rent.trim()) &&
+              (r.isMetro === null || r.isMetro === "")
+            ) {
+              _errMsg = `Metro/Non-Metro selection is required for ${r.month}`;
+              break;
+            }
+          }
+          if (_errMsg) break;
+
           if (filledMonthsIdx.length > 0) {
             const minIdx = Math.min(...filledMonthsIdx);
             const maxIdx = Math.max(...filledMonthsIdx);
 
             for (let i = minIdx; i <= maxIdx; i++) {
-              if (rentDetails[i].isMetro === "") {
+              if (
+                rentDetails[i].isMetro === "" ||
+                rentDetails[i].isMetro === null
+              ) {
                 _errMsg =
                   "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
                 break;
@@ -1109,6 +1134,7 @@ const ITDeclaration: React.FC = () => {
                 _errMsg = `City is required for ${rentDetails[i].month}`;
                 break;
               }
+
               if (!rentDetails[i].rent.trim()) {
                 _errMsg = `Rent is required for ${rentDetails[i].month}`;
                 break;
@@ -1135,8 +1161,13 @@ const ITDeclaration: React.FC = () => {
             ) {
               _errMsg = "Invalid Landlord PAN format";
             } else if (
+              isLandlordNameAndAdd &&
+              (!landlords.length || landlords.every((e) => e.isDeleted))
+            ) {
+              _errMsg = "Landlord details are required";
+            } else if (
               activeLls.some(
-                (ll) => !ll.isDeleted && ll.name && !ll.attachments.length,
+                (ll) => !ll.isDeleted && ll.name && !ll.attachments?.length,
               )
             ) {
               _errMsg = "Attachment is mandatory for all active landlords";
@@ -1311,6 +1342,7 @@ const ITDeclaration: React.FC = () => {
         Section80D: comments80D,
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,
+        Summary: commentsSummary,
       });
 
       switch (step) {
@@ -1319,7 +1351,7 @@ const ITDeclaration: React.FC = () => {
             PAN: pan,
             ApproverCommentsJson: commentsJSON,
             MobileNumber: mobile?.toString(),
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
           break;
         }
@@ -1328,7 +1360,7 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             RentDetailsJSON: JSON.stringify(rentDetails),
             ApproverCommentsJson: commentsJSON,
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
 
           // Soft-delete attachments of deleted landlords
@@ -1348,7 +1380,11 @@ const ITDeclaration: React.FC = () => {
           }
 
           const llsToSave = landlords.filter(
-            (ll) => (ll.name && ll.pan && ll.address) || ll.isDeleted,
+            (ll) =>
+              ll.name?.trim() ||
+              ll.pan?.trim() ||
+              ll.address?.trim() ||
+              ll.isDeleted,
           );
           await upsertRelatedListBatch(
             LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
@@ -1362,39 +1398,59 @@ const ITDeclaration: React.FC = () => {
             }),
             "ActualDeclarationId",
           );
+
+          const savedLandlords = await getRelatedListItems(
+            LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
+            mainId,
+            "ActualDeclarationId",
+          );
+          if (savedLandlords.length > 0) {
+            const allDocs = await getITDocuments(mainId);
+            setLandlords(
+              savedLandlords.map((ll) => ({
+                Id: ll.Id,
+                name: ll.Title,
+                pan: ll.PAN,
+                address: ll.Address,
+                attachments: allDocs.filter((d) => d.LandLordId === ll.Id),
+              })),
+            );
+          }
           break;
         }
 
         case "LTA": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_LTA_Actual,
-            mainId,
-            [ltaData],
-            (lta) => ({
-              ExemptionAmount: Number(lta.exemptionAmount || 0),
-              JourneyStartDate: lta.journeyStartDate,
-              JourneyEndDate: lta.journeyEndDate,
-              StartPlace: lta.journeyStartPlace,
-              Destination: lta.journeyDestination,
-              ModeOfTravel: lta.modeOfTravel,
-              ClassOfTravel: lta.classOfTravel,
-              TicketNumbers: lta.ticketNumbers,
-              LastLTAYear: lta.lastClaimedYear,
-              COTravellerJSON: JSON.stringify(coTravellers),
-            }),
-            "ActualDeclarationId",
-          );
+          if (Number(ltaData.exemptionAmount || 0) > 0) {
+            await upsertRelatedListBatch(
+              LIST_NAMES.IT_LTA_Actual,
+              mainId,
+              [ltaData],
+              (lta) => ({
+                ExemptionAmount: Number(lta.exemptionAmount || 0),
+                JourneyStartDate: lta.journeyStartDate,
+                JourneyEndDate: lta.journeyEndDate,
+                StartPlace: lta.journeyStartPlace,
+                Destination: lta.journeyDestination,
+                ModeOfTravel: lta.modeOfTravel,
+                ClassOfTravel: lta.classOfTravel,
+                TicketNumbers: lta.ticketNumbers,
+                LastLTAYear: lta.lastClaimedYear,
+                COTravellerJSON: JSON.stringify(coTravellers),
+              }),
+              "ActualDeclarationId",
+            );
+          }
           break;
         }
 
         case "Section 80C Deductions": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
           const itemsToSave80C = items80C.filter(
             (i) => Number(i.declaredAmount) > 0,
@@ -1416,7 +1472,7 @@ const ITDeclaration: React.FC = () => {
         case "Section 80 Deductions": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
           const itemsToSave80D = items80D.filter(
             (i) => Number(i.declaredAmount) > 0,
@@ -1438,7 +1494,7 @@ const ITDeclaration: React.FC = () => {
         case "Housing Loan Repayment": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
           await upsertRelatedListBatch(
             LIST_NAMES.IT_HOUSING_LOAN_Actual,
@@ -1451,7 +1507,10 @@ const ITDeclaration: React.FC = () => {
               LenderAddress: hl.lenderAddress,
               PANofLender: hl.lenderPan,
               LenderType: hl.lenderType,
-              IsJointlyAvailedPropertyLoan: hl.isJointlyAvailed || false,
+              IsJointlyAvailedPropertyLoan:
+                typeof hl.isJointlyAvailed === "boolean"
+                  ? hl.isJointlyAvailed
+                  : null,
               FinalLettableValue: hl.finalLettableValue,
               LetOutInterest: hl.letOutInterestAmount,
               OtherDeductions: hl.otherDeductionsUs24,
@@ -1464,34 +1523,38 @@ const ITDeclaration: React.FC = () => {
         case "Previous Employer Details": {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
-            ActiveStep: nextStep || activeStep,
+            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
           const pe = previousEmployerData;
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
-            mainId,
-            [pe],
-            (peItem) => ({
-              Title: peItem.employerName,
-              EmployeePAN: peItem.employerPan,
-              TAN: peItem.employerTan,
-              EmploymentFrom: peItem.periodFrom,
-              EmploymentTo: peItem.periodTo,
-              SalaryAfterExemptionUS10: peItem.salaryAfterExemption,
-              PFContribution: peItem.pfContribution,
-              VPF: peItem.vpfContribution,
-              ProfessionalTax: peItem.professionalTax,
-              TDS: peItem.taxDeductedAtSource,
-              Address: peItem.employerAddress,
-            }),
-            "ActualDeclarationId",
-          );
+          if (previousEmployerData.employerName.trim()) {
+            await upsertRelatedListBatch(
+              LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
+              mainId,
+              [pe],
+              (peItem) => ({
+                Title: peItem.employerName,
+                EmployeePAN: peItem.employerPan,
+                TAN: peItem.employerTan,
+                EmploymentFrom: peItem.periodFrom,
+                EmploymentTo: peItem.periodTo,
+                SalaryAfterExemptionUS10: peItem.salaryAfterExemption,
+                PFContribution: peItem.pfContribution,
+                VPF: peItem.vpfContribution,
+                ProfessionalTax: peItem.professionalTax,
+                TDS: peItem.taxDeductedAtSource,
+                Address: peItem.employerAddress,
+              }),
+              "ActualDeclarationId",
+            );
+          }
+
           break;
         }
       }
     } catch (err) {
       console.error("Error saving step", err);
     } finally {
+      // await loadSavedData(declarationItem);
       setIsLoading(false);
     }
   };
@@ -1523,6 +1586,7 @@ const ITDeclaration: React.FC = () => {
       let _res: any = {
         Status: newStatus,
         ApproverCommentsJson: commentsJSON,
+        ActiveStep: "",
       };
 
       if (newStatus == "Rework") {
@@ -1631,13 +1695,9 @@ const ITDeclaration: React.FC = () => {
           <BasicInfoStep
             employeeData={{
               code: matchedEmployee?.EmployeeId || "N/A",
-              name:
-                matchedEmployee?.Title ||
-                matchedEmployee?.Name ||
-                user?.Title ||
-                "User",
+              name: matchedEmployee?.Name || "",
               location: matchedEmployee?.Location || "-",
-              doj: matchedEmployee?.DOJ || "-",
+              doj: moment(matchedEmployee?.DOJ).format("DD/MM/YYYY") || "-",
               email: matchedEmployee?.Email || user?.Email || "",
               mobile: mobile || "-",
             }}
@@ -1654,15 +1714,6 @@ const ITDeclaration: React.FC = () => {
             rentDetails={rentDetails}
             landlords={landlords}
             onRentChange={(idx, field, val) => {
-              // if (field === "isMetro" && (val === "" || val === null)) {
-              //   const newDetails = rentDetails.map((item, i) => {
-              //     if (i >= idx) {
-              //       return { ...item, isMetro: "", city: "", rent: "" };
-              //     }
-              //     return item;
-              //   });
-              //   setRentDetails(newDetails);
-              // }
               if (field == "isMetro") {
                 const newDetails = rentDetails.map((item, i) => {
                   if (i >= idx) {
@@ -1690,7 +1741,11 @@ const ITDeclaration: React.FC = () => {
             }
             onDeleteLandlord={(idx) => {
               const newLls = [...landlords];
-              newLls[idx].isDeleted = true;
+              if (newLls[idx].Id) {
+                newLls[idx].isDeleted = true;
+              } else {
+                newLls.splice(idx, 1);
+              }
               // Also soft-delete all attachments belonging to this landlord
               if (newLls[idx].attachments) {
                 newLls[idx].attachments = newLls[idx].attachments!.map(
@@ -1703,7 +1758,7 @@ const ITDeclaration: React.FC = () => {
               setLandlords(newLls);
             }}
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -1725,8 +1780,8 @@ const ITDeclaration: React.FC = () => {
               if (field === "exemptionAmount" && (val === "" || val === "0")) {
                 setLtaData({
                   exemptionAmount: val,
-                  journeyStartDate: new Date(),
-                  journeyEndDate: new Date(),
+                  journeyStartDate: null,
+                  journeyEndDate: null,
                   journeyStartPlace: "",
                   journeyDestination: "",
                   modeOfTravel: "",
@@ -1747,6 +1802,17 @@ const ITDeclaration: React.FC = () => {
                           : "",
                   })),
                 );
+              } else if (field === "exemptionAmount" && Number(val) > 0) {
+                setLtaData((prev: any) => {
+                  const newState = { ...prev, [field]: val };
+                  if (!prev.journeyStartDate) {
+                    newState.journeyStartDate = new Date();
+                  }
+                  if (!prev.journeyEndDate) {
+                    newState.journeyEndDate = new Date();
+                  }
+                  return newState;
+                });
               } else {
                 setLtaData((prev: any) => ({ ...prev, [field]: val }));
               }
@@ -1757,7 +1823,7 @@ const ITDeclaration: React.FC = () => {
               setCoTravellers(newCo);
             }}
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -1783,7 +1849,7 @@ const ITDeclaration: React.FC = () => {
               }
             }}
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -1801,7 +1867,7 @@ const ITDeclaration: React.FC = () => {
             items={items80D}
             sectionMaxAmount={maxAmount80D}
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -1825,11 +1891,27 @@ const ITDeclaration: React.FC = () => {
         return (
           <HousingLoanStep
             data={housingLoanData}
-            onChange={(field, val) =>
-              setHousingLoanData((prev: any) => ({ ...prev, [field]: val }))
-            }
+            onChange={(field, val) => {
+              if (field === "propertyType") {
+                setHousingLoanData((prev: any) => ({
+                  ...prev,
+                  propertyType: val,
+                  interestAmount: "",
+                  finalLettableValue: "",
+                  letOutInterestAmount: "",
+                  otherDeductionsUs24: "",
+                  lenderName: "",
+                  lenderAddress: "",
+                  lenderPan: "",
+                  lenderType: "",
+                  isJointlyAvailed: null,
+                }));
+              } else {
+                setHousingLoanData((prev: any) => ({ ...prev, [field]: val }));
+              }
+            }}
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -1852,7 +1934,7 @@ const ITDeclaration: React.FC = () => {
               }))
             }
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -1870,7 +1952,7 @@ const ITDeclaration: React.FC = () => {
             employeeInfo={{
               fy: declarationItem?.FinancialYear || "2025 - 2026",
               code: matchedEmployee?.EmployeeId || "N/A",
-              name: user?.Title || "User",
+              name: matchedEmployee?.Name || "",
               pan: pan,
               doj: matchedEmployee?.DOJ || "-",
             }}
@@ -1906,7 +1988,7 @@ const ITDeclaration: React.FC = () => {
             readOnly={readOnly}
             taxRegime={declarationItem?.TaxRegime}
             showApproverComments={
-              (isAdmin && status == "Submitted") ||
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
               status == "Approved" ||
               status == "Rework"
             }
@@ -2135,6 +2217,7 @@ const ITDeclaration: React.FC = () => {
         visible={showRegimePopup}
         onHide={() => {
           setShowRegimePopup(false);
+          handleNavigateBack();
         }}
         onSubmit={handleRegimeSubmit}
         isLoading={isSubmittingRegime}
@@ -2156,7 +2239,8 @@ const ITDeclaration: React.FC = () => {
               activeStep={activeStep}
               onStepClick={async (key) => {
                 const lastsaveIdx = steps.findIndex(
-                  (s) => s.key === declarationItem.ActiveStep,
+                  // (s) => s.key === declarationItem.ActiveStep,
+                  (s) => s.key === activeStep,
                 );
                 const idx = steps.findIndex((s) => s.key === key);
                 if (idx > lastsaveIdx) {
@@ -2220,7 +2304,8 @@ const ITDeclaration: React.FC = () => {
             {/* Workflow Buttons */}
             {isAdmin &&
               status === "Submitted" &&
-              activeStep === "Declaration & Summary" && (
+              activeStep === "Declaration & Summary" &&
+              location.state?.from === "employeeDeclaration" && (
                 <>
                   <ActionButton
                     variant="rework"
@@ -2259,7 +2344,8 @@ const ITDeclaration: React.FC = () => {
             {isAdmin &&
               status === "Approved" &&
               activeStep == "Declaration & Summary" &&
-              !declarationItem?.IsExported && (
+              !declarationItem?.IsExported &&
+              declarationItem?.DeclarationStatus == "Not Submitted" && (
                 <ActionButton
                   variant="cancel"
                   label="Reopen"
@@ -2272,7 +2358,8 @@ const ITDeclaration: React.FC = () => {
               (declarationItem?.DeclarationStatus == "Not Submitted" ||
                 !declarationItem?.DeclarationStatus) &&
               declarationItem?.EmployeeEmail.toLowerCase() ==
-                user?.Email.toLowerCase() && (
+                user?.Email.toLowerCase() &&
+              employeeDeclarationPath && (
                 <ActionButton
                   variant="continue"
                   label="Declaration Form"
@@ -2291,7 +2378,8 @@ const ITDeclaration: React.FC = () => {
               status === "Submitted" &&
               activeStep !== "Declaration & Summary" &&
               declarationItem?.TaxRegime == "Old Regime" &&
-              !isEditMode && (
+              !isEditMode &&
+              employeeDeclarationPath && (
                 <ActionButton
                   variant="continue"
                   label="Edit"
@@ -2305,11 +2393,10 @@ const ITDeclaration: React.FC = () => {
               )}
 
             {/* Next Button for Admin (Reviews) */}
-            {(isAdmin ||
-              status != "Draft" ||
-              status != "Rework" ||
-              isEditMode) &&
-              activeStep != "Declaration & Summary" && (
+            {(status === "Approved" ||
+              status === "Submitted" ||
+              (isAdmin && status == "Rework")) &&
+              activeStep !== "Declaration & Summary" && (
                 <ActionButton
                   variant="continue"
                   label="Next"
@@ -2331,63 +2418,94 @@ const ITDeclaration: React.FC = () => {
                 />
               )}
 
-            {!isFormReadOnly && (
-              <ActionButton
-                variant="save"
-                label={
-                  activeStep === "Declaration & Summary"
-                    ? "Submit"
-                    : "Save & Continue"
-                }
-                onClick={async () => {
-                  const idx = steps.findIndex((s) => s.key === activeStep);
-                  if (idx < steps.length - 1) {
-                    const isInvalid = await validateStep(activeStep);
-                    if (isInvalid) return;
-                    const nextStep = steps[idx + 1].key;
-                    await handleSaveStep(nextStep);
-                    setActiveStep(nextStep);
-                  } else {
-                    const isValid = await validation();
-                    if (isValid) return;
-                    setIsLoading(true);
-                    try {
-                      if (declarationItem) {
-                        await updateListItem(
-                          LIST_NAMES.ACTUAL_DECLARATION,
-                          declarationItem.Id,
-                          {
-                            Status: "Submitted",
-                            IsAcknowledged: declarationAgreement.agreed,
-                            Place: declarationAgreement.place,
-                            SubmittedDate: new Date().toISOString(),
-                            ActiveStep: "",
-                          },
-                        );
-                        setShowPopup({
-                          visible: true,
-                          type: "success",
+            {!isFormReadOnly &&
+              activeStep !== "Declaration & Summary" &&
+              declarationItem.EmployeeEmail.toLowerCase() ==
+                user?.Email.toLowerCase() && (
+                <ActionButton
+                  variant="draft"
+                  className="primaryBtn"
+                  label={"Draft"}
+                  onClick={async () => {
+                    const idx = steps.findIndex((s) => s.key === activeStep);
+                    if (idx < steps.length - 1) {
+                      await handleSaveStep();
+                      if (
+                        userRole == "Admins" ||
+                        userRole == "FinanceApprover"
+                      ) {
+                        navigate("/employeeDeclaration", {
+                          state: { tab: location.state?.tab },
                         });
-
-                        // Wait 3 seconds then navigate back
-                        setTimeout(() => {
-                          setShowPopup((prev) => ({
-                            ...prev,
-                            visible: false,
-                          }));
-                          handleNavigateBack();
-                        }, 3000);
+                      } else {
+                        navigate("/submittedDeclarations", {
+                          state: { tab: location.state?.tab },
+                        });
                       }
-                    } catch (error) {
-                      console.error("Error submitting declaration", error);
-                    } finally {
-                      setIsLoading(false);
                     }
+                  }}
+                />
+              )}
+
+            {!isFormReadOnly &&
+              declarationItem.EmployeeEmail.toLowerCase() ==
+                user?.Email.toLowerCase() && (
+                <ActionButton
+                  variant="save"
+                  label={
+                    activeStep === "Declaration & Summary"
+                      ? "Submit"
+                      : "Save & Continue"
                   }
-                }}
-                loading={isLoading}
-              />
-            )}
+                  onClick={async () => {
+                    const idx = steps.findIndex((s) => s.key === activeStep);
+                    if (idx < steps.length - 1) {
+                      const isInvalid = await validateStep(activeStep);
+                      if (isInvalid) return;
+                      const nextStep = steps[idx + 1].key;
+                      await handleSaveStep(nextStep);
+                      setActiveStep(nextStep);
+                    } else {
+                      const isValid = await validation();
+                      if (isValid) return;
+                      setIsLoading(true);
+                      try {
+                        if (declarationItem) {
+                          await updateListItem(
+                            LIST_NAMES.ACTUAL_DECLARATION,
+                            declarationItem.Id,
+                            {
+                              Status: "Submitted",
+                              IsAcknowledged: declarationAgreement.agreed,
+                              Place: declarationAgreement.place,
+                              SubmittedDate: new Date().toISOString(),
+                              ActiveStep: "",
+                            },
+                          );
+                          setShowPopup({
+                            visible: true,
+                            type: "success",
+                          });
+
+                          // Wait 3 seconds then navigate back
+                          setTimeout(() => {
+                            setShowPopup((prev) => ({
+                              ...prev,
+                              visible: false,
+                            }));
+                            handleNavigateBack();
+                          }, 3000);
+                        }
+                      } catch (error) {
+                        console.error("Error submitting declaration", error);
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }
+                  }}
+                  loading={isLoading}
+                />
+              )}
           </div>
         </div>
       )}

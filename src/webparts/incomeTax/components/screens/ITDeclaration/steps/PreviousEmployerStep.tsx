@@ -4,6 +4,7 @@ import {
   AppCalendar,
 } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
+import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IPreviousEmployerData {
   employerName: string;
@@ -60,7 +61,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
             id="pe-pan"
             value={data.employerPan}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange("employerPan", e.target.value)
+              onChange("employerPan", panFormatter(e.target.value))
             }
             placeholder="Enter PAN number"
             disabled={readOnly}
@@ -192,7 +193,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
               }}
               placeholder="Enter here"
               value={approverComments}
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

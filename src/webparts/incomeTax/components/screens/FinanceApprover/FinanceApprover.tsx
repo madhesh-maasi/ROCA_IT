@@ -124,7 +124,7 @@ const FinanceApprover: React.FC = () => {
       (u) => u.Email?.toLowerCase() === emp.Email?.toLowerCase(),
     );
     if (isDuplicate) {
-      showToast(toast, "error", "Validation", "The user already exists", 4000);
+      showToast(toast, "error", "Validation", "The user already exists");
       return;
     }
 
@@ -142,7 +142,7 @@ const FinanceApprover: React.FC = () => {
         toast,
         "success",
         "Added",
-        "Finance approver successfully added",
+        "The finance approver has been successfully added",
       );
       await init();
     } catch (err) {
@@ -155,8 +155,6 @@ const FinanceApprover: React.FC = () => {
   // ─── Handle Delete User ─────────────────────────────────────────────────
   const handleDeleteUser = async (): Promise<void> => {
     if (!userToDelete) return;
-
-    // Close popup and clear selection immediately
     setShowDeletePopup(false);
     setUserToDelete(null);
     setIsDeleting(true);
@@ -170,7 +168,7 @@ const FinanceApprover: React.FC = () => {
         toast,
         "success",
         "Deleted",
-        "User has been removed successfully.",
+        "Finance approver has been removed successfully.",
       );
     } catch (err) {
       await handleError(err, "Deleting user", toast);
@@ -180,8 +178,8 @@ const FinanceApprover: React.FC = () => {
   };
 
   // ─── Column definitions ───────────────────────────────────────────────────
-  const actionTemplate = (rowData: IAdminUser, index: any) => {
-    return index.rowIndex >= 1 ? (
+  const actionTemplate = (rowData: IAdminUser) => {
+    return (
       <IconButton
         variant="delete"
         icon="pi pi-trash"
@@ -191,7 +189,7 @@ const FinanceApprover: React.FC = () => {
           setShowDeletePopup(true);
         }}
       />
-    ) : null;
+    );
   };
 
   const COLUMNS: IColumnDef[] = [
@@ -269,7 +267,7 @@ const FinanceApprover: React.FC = () => {
           data={filtered}
           columns={COLUMNS}
           globalFilter={search}
-          paginator
+          paginator={filtered.length > 0}
           rows={10}
           emptyMessage={"No Finance Approvers found."}
         />
@@ -285,6 +283,7 @@ const FinanceApprover: React.FC = () => {
           void handleAddUser();
         }}
         closeLabel="Cancel"
+        disable={isAdding}
       >
         <div className={styles.addPopupContent}>
           <AppPeoplePicker

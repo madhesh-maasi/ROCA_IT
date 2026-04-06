@@ -71,7 +71,7 @@ const buildEmailBody = (payload: IEmailPayload): string => {
   } else if (action === "ActualApproved") {
     deepLink = `${siteUrl}/#/declarationForm/${itemId}`;
   } else {
-    deepLink = `${siteUrl}/#/actualItDeclaration?itemId=${itemId}`;
+    deepLink = `${siteUrl}/#/submittedDeclarations?tab=${declarationType}`;
   }
 
   const detailsBlock = `<br /><br /><b>Declaration Details:</b><br /><br />Declaration Type: <b>${declarationType}</b><br /><br />Financial Year: <b>${financialYear}</b><br /><br />Request Number: <b>${reqno || "-"}</b>`;
@@ -87,15 +87,15 @@ const buildEmailBody = (payload: IEmailPayload): string => {
   } else if (action === "Rework") {
     actionBody = `<p>Dear ${employeeName},<br /><br />Please check the remarks column in your income tax declaration and resubmit the data at the earliest.${detailsBlock}<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
   } else if (action == "ActualApproved") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}<br /><br /> Please <a href="${deepLink}">click here</a> to access your declaration form. <br /><br />Take a print out and submit the declaration form only signed.<br /><br /> Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}<br /><br /> Please <a href="${deepLink}">click here</a> to access your declaration form. <br /><br /> Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
   } else if (action === "Export") {
     actionBody = `<p>Dear ${employeeName},<br /><br />Please find the attached Excel file for the <b>${financialYear}</b> Income Tax declarations.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Extension") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration submission date has been extended to <b>${deadline ?? "the deadline"}</b>.${detailsBlock}<br /><br />Please login to the portal and complete your declaration.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration submission date has been extended to <b>${deadline ?? "the deadline"}</b>.${detailsBlock}<br /><br />Please <a href="${deepLink}">login</a> to the portal and complete your declaration.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
   } else if (action === "TaxRegimeUpdate") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Your tax regime has been updated.${detailsBlock}<br /><br />Tax Regime type: <b>${payload.newRegime || "N/A"}</b><br /><br />Please login to the portal and complete your declaration if pending.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Your tax regime has been updated.${detailsBlock}<br /><br />Tax Regime type: <b>${payload.newRegime || "N/A"}</b><br /><br />Please <a href="${deepLink}">login</a> to the portal and complete your declaration if pending.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
   } else if (action === "Reopened") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration has been reopened for editing.${detailsBlock}<br /><br />Please login to the portal to update and resubmit your data.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration has been reopened for editing.${detailsBlock}<br /><br />Please <a href="${deepLink}">login</a> to the portal to update and resubmit your data.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
   }
 
   return `

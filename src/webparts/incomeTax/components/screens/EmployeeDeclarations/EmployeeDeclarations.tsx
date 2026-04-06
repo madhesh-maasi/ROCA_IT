@@ -30,6 +30,7 @@ import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
   curFinanicalYear,
   getFYOptions,
+  globalSearchFilter,
 } from "../../../../../common/utils/functions";
 import { useNavigate, useLocation } from "react-router-dom";
 import { exportToExcel } from "../../../../../common/utils/exportUtils";
@@ -40,6 +41,7 @@ import { Checkbox } from "primereact/checkbox";
 import { updateListItem } from "../../../../../common/utils/pnpService";
 import { sendApprovalEmail } from "../../../../../common/utils/emailService";
 import { selectUserDetails } from "../../../../../store/slices/userSlice";
+import moment from "moment";
 
 interface IEmployeeRow {
   id: number;
@@ -135,7 +137,7 @@ const EmployeeDeclarations: React.FC = () => {
         employeeName: item.EmployeeName || "-",
         employeeEmail: item.EmployeeEmail || "",
         dateOfSubmission: item.SubmittedDate
-          ? new Date(item.SubmittedDate).toLocaleDateString("en-IN")
+          ? moment(item.SubmittedDate).format("DD/MM/YYYY")
           : "-",
         status: (item.Status || "Submitted").toLowerCase() as StatusVariant,
         declarationStatus: item.DeclarationStatus || "Not Submitted",
@@ -315,6 +317,8 @@ const EmployeeDeclarations: React.FC = () => {
             </div>
           );
         },
+        sortable: false,
+        style: { width: "3%" },
       },
       {
         field: "requestId",
@@ -322,16 +326,22 @@ const EmployeeDeclarations: React.FC = () => {
         body: (row: IEmployeeRow) => (
           <span className={styles.reqID}>{row.requestId}</span>
         ),
+        style: { width: "15%" },
       },
-      { field: "taxRegimeType", header: "Tax Regime Type" },
+      {
+        field: "taxRegimeType",
+        header: "Tax Regime Type",
+        style: { width: "11%" },
+      },
       { field: "investmentType", header: "Investment Type" },
-      { field: "employeeId", header: "Employee ID" },
+      { field: "employeeId", header: "Employee ID", style: { width: "10%" } },
       { field: "employeeName", header: "Employee Name" },
       { field: "dateOfSubmission", header: "Date of Submission" },
       {
         field: "status",
         header: "Status",
         body: (row: IEmployeeRow) => <StatusBadge status={row.status} />,
+        style: { width: "10%" },
       },
     ];
 
@@ -373,7 +383,8 @@ const EmployeeDeclarations: React.FC = () => {
   ]);
 
   const handleExport = () => {
-    const dataToExport = refined.map((row) => ({
+    const searchedData = globalSearchFilter(finalData, search);
+    const dataToExport = searchedData.map((row) => ({
       "Request ID": row.requestId,
       "Financial Year": row.financialYear,
       "Tax Regime": row.taxRegimeType,
@@ -392,7 +403,7 @@ const EmployeeDeclarations: React.FC = () => {
         setShowDownloadPopup(false);
       }, 3000);
     } else {
-      showToast(toast, "warn", "No Data", "No records found for export.");
+      showToast(toast, "warn", "No Data", "No data to export.");
     }
   };
 
@@ -414,7 +425,12 @@ const EmployeeDeclarations: React.FC = () => {
             <button
               key={tab}
               className={`${styles.tabBtn} ${activeTab === tab ? styles.active : ""}`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                setSearch("");
+                setSelectedRegime("All");
+                setSelectedStatus("All");
+              }}
             >
               {tab}
             </button>
@@ -474,7 +490,7 @@ const EmployeeDeclarations: React.FC = () => {
         columns={columns}
         dataKey="id"
         globalFilter={search}
-        paginator
+        paginator={finalData.length > 1}
         rows={10}
         emptyMessage="No records found."
         cursor={true}
