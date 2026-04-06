@@ -84,9 +84,14 @@ const AppDataTable: React.FC<IDataTableProps> = ({
         globalFilter={globalFilter}
         globalFilterFields={globalFilterFields}
         className={`${styles.dataTable} ${cursor ? styles.cursor : ""}`}
+        tableStyle={{ width: "100%", tableLayout: "fixed" }}
       >
         {onSelectionChange && (
-          <Column selectionMode="multiple" headerStyle={{ width: "3rem" }} />
+          <Column
+            selectionMode="multiple"
+            headerStyle={{ width: "3rem" }}
+            style={{ width: "3rem" }}
+          />
         )}
         {columns.map(({ field, header, ...colProps }) => (
           <Column

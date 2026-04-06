@@ -79,9 +79,13 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             id="lta-start-date"
             label="Journey Start Date"
             value={ltaData.journeyStartDate}
-            onChange={(e: any) => onLtaChange("journeyStartDate", e.value)}
+            onChange={(e: any) => {
+              onLtaChange("journeyStartDate", e.value);
+              onLtaChange("journeyEndDate", e.value);
+            }}
             placeholder="Select"
             disabled={readOnly}
+            required
           />
         </div>
         <div className={styles.formGroup}>
@@ -92,6 +96,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: any) => onLtaChange("journeyEndDate", e.value)}
             placeholder="Select"
             disabled={readOnly}
+            minDate={
+              ltaData.journeyStartDate
+                ? new Date(ltaData.journeyStartDate)
+                : undefined
+            }
+            required
           />
         </div>
         <div className={styles.formGroup}>
@@ -200,7 +210,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onLtaChange(
                 "lastClaimedYear",
-                e.target.value.replace(/[^0-9]/g, ""),
+                e.target.value.replace(/[^0-9]/g, "").slice(0, 4),
               )
             }
             placeholder="Enter year"
@@ -310,7 +320,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
               }}
               placeholder="Enter here"
               value={approverComments}
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

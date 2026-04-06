@@ -178,7 +178,9 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
 
   const employeesToSearch: IEmployee[] =
     source === "EmployeeMaster"
-      ? employees
+      ? employees.filter((emp: IEmployee) =>
+          emp.EmployeeId?.toString().startsWith("9"),
+        )
       : siteMembers.map((emp: IEmployee) => {
           return {
             ...emp,
@@ -252,11 +254,7 @@ export const AppPeoplePicker: React.FC<IAppPeoplePickerProps> = ({
     onChange(empList);
   };
 
-  const placeholderText = isLoading
-    ? "Loading users…"
-    : source === "EmployeeMaster"
-      ? "Search employee"
-      : "Search site members";
+  const placeholderText = isLoading ? "Loading users…" : "Search";
 
   return (
     <div className={styles.peoplePickerWrapper}>

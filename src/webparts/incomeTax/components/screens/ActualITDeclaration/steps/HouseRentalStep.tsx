@@ -6,10 +6,11 @@ import {
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
 import { Cursor } from "@hugeicons/core-free-icons";
+import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IRentRow {
   month: string;
-  isMetro: boolean;
+  isMetro: boolean | null;
   city: string;
   rent: string;
 }
@@ -54,9 +55,8 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   onUpload,
   onDeleteAttachment,
 }) => {
-  const activeLandlordsWithIdx = landlords
-    .map((ll, idx) => ({ ll, idx }))
-    .filter(({ ll }) => !ll.isDeleted);
+  const activeLandlordsWithIdx = landlords.map((ll, idx) => ({ ll, idx }));
+  // .filter(({ ll }) => !ll.isDeleted);
 
   const handleFilesPicked = async (key: string, files: File[]) => {
     const file = files[0];
@@ -161,16 +161,19 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
           )}
         </div>
 
-        {activeLandlordsWithIdx.map(({ ll, idx }) => {
-          const uploadKey = `landlord-${idx}`;
-
-          return (
-            <div key={idx} className={styles.landlordCard}>
-              <div className={styles.noteBox} style={{ marginTop: 0 }}>
-                Note: Landlord Information is Mandatory if the monthly rental
-                exceeds <strong>Rs 8,333</strong>
-              </div>
-              <div className={styles.landlordGrid}>
+        <div className={styles.landlordCard}>
+          <div className={styles.noteBox} style={{ marginTop: 0 }}>
+            Note: Landlord Information is Mandatory if the monthly rental
+            exceeds <strong>Rs 8,333</strong>
+          </div>
+          {activeLandlordsWithIdx.map(({ ll, idx }) => {
+            const uploadKey = `landlord-${idx}`;
+            return (
+              <div
+                className={styles.landlordGrid}
+                key={idx}
+                style={{ display: ll.isDeleted ? "none" : "" }}
+              >
                 <div className={styles.formGroup}>
                   <label>
                     Landlord's Name <span>*</span>
@@ -193,7 +196,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                     id={`ll-pan-${idx}`}
                     value={ll.pan}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "pan", e.target.value)
+                      onLandlordChange(idx, "pan", panFormatter(e.target.value))
                     }
                     placeholder="Enter PAN"
                     disabled={readOnly}
@@ -307,23 +310,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   )}
                 </div>
               </div>
-
-              {/* ── Inline upload row ── */}
-              {/* <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                  marginTop: "12px",
-                }}
-              >
-                
-                ))}
-              </div> */}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {showApproverComments && onCommentChange && (
@@ -345,7 +334,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
               }}
               placeholder="Enter here"
               value={approverComments}
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

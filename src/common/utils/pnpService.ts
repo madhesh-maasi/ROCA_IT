@@ -239,6 +239,21 @@ export const getGroupByName = async (groupName: string): Promise<any> => {
 };
 
 /**
+ * Fetch all users belonging to a SharePoint group by its name.
+ */
+export const getGroupUsersByName = async (
+  groupName: string,
+): Promise<any[]> => {
+  const sp = getSP();
+  try {
+    return await sp.web.siteGroups.getByName(groupName).users();
+  } catch (err) {
+    await handleError(err, `Fetching users for group ${groupName}`);
+    return [];
+  }
+};
+
+/**
  * Fetch the site members group.
  */
 export const getSiteMembersGroup = async (): Promise<any> => {
@@ -361,6 +376,7 @@ export const uploadFileToLibrary = async (
  */
 export const getLatestFileUrl = async (
   libraryName: string,
+  currentYear: string,
 ): Promise<string | null> => {
   const sp = getSP();
   try {
@@ -369,7 +385,7 @@ export const getLatestFileUrl = async (
       .items.orderBy("ID", false)
       .top(1)
       .select("ID", "FileLeafRef", "FileRef")
-      .filter("IsDelete ne 1")();
+      .filter(`IsDelete ne 1 and FinanceYear eq '${currentYear}'`)();
 
     if (files.length > 0) {
       return files[0].FileRef;
@@ -719,18 +735,12 @@ export const downloadAttachmentsAsZip = async (
 
     const content = await zip.generateAsync({ type: "blob" });
 
-    const zipName = `${declarationTitle}_${fy}_${empCode}.zip`.replace(
-      /\s+/g,
-      "_",
-    );
-
-    // ✅ Use selected location
+    const zipName = `${declarationTitle}_${empCode}.zip`.replace(/\s+/g, "_");
     if (fileHandle) {
       const writable = await fileHandle.createWritable();
       await writable.write(content);
       await writable.close();
     } else {
-      // fallback
       saveAs(content, zipName);
     }
   } catch (err) {
@@ -755,7 +765,7 @@ export const getListItems = async (
     return await sp.web.lists
       .getByTitle(listName)
       .items.filter(filterQuery)
-      .orderBy("ID", false)
+      .orderBy("Modified", false)
       .top(5000)();
   } catch (err) {
     await handleError(err, `Fetching items from ${listName}`);
@@ -999,11 +1009,10 @@ export const getRelatedListItems = async (
 ): Promise<any[]> => {
   const sp = getSP();
   try {
-    return await sp.web.lists
-      .getByTitle(listName)
-      .items.filter(
-        `${lookupColumn} eq ${mainId} and (IsDelete ne 1 or IsDelete eq null)`,
-      )();
+    return await sp.web.lists.getByTitle(listName).items.filter(
+      // `${lookupColumn} eq ${mainId} and (IsDelete ne 1 or IsDelete eq null)`,
+      `${lookupColumn} eq ${mainId} and (IsDelete ne 1)`,
+    )();
   } catch (err) {
     await handleError(err, `Fetching related items from ${listName}`);
     return [];

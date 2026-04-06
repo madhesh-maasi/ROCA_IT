@@ -51,7 +51,35 @@ export const validateField = (value: any, rules: IValidationRule[]): string => {
   return "";
 };
 
+export const panFormatter = (pan: string) => {
+  let value = pan
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 10);
+
+  const formatted =
+    value.slice(0, 5).replace(/[^A-Z]/g, "") + // first 5 letters
+    value.slice(5, 9).replace(/[^0-9]/g, "") + // next 4 digits
+    value.slice(9, 10).replace(/[^A-Z]/g, ""); // last letter
+
+  return formatted;
+};
+
 export const validatePAN = (pan: string) => {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
   return panRegex.test(pan?.toUpperCase());
 };
+
+/**
+ * Ensures the value matches a given regex pattern.
+ */
+export const regexMatch = (
+  regex: RegExp,
+  message: string = "Invalid format",
+): IValidationRule => ({
+  validate: (val) => {
+    if (!val) return true; // Let the required rule handle nulls
+    return regex.test(String(val));
+  },
+  message,
+});

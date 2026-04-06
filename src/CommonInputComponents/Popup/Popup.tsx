@@ -27,6 +27,7 @@ export interface IPopupProps extends Omit<
   onConfirm?: () => void;
   /** Icon flag for the button element. */
   iconFlag?: boolean;
+  disable?: boolean;
 }
 
 /**
@@ -54,6 +55,7 @@ const Popup: React.FC<IPopupProps> = ({
   confirmLabel = "Confirm",
   onConfirm,
   iconFlag = true,
+  disable = false,
   ...rest
 }) => {
   const defaultFooter = (
@@ -72,6 +74,7 @@ const Popup: React.FC<IPopupProps> = ({
           onClick={onConfirm}
           className="p-button-primary"
           iconFlag={iconFlag}
+          disabled={disable}
         />
       )}
     </div>

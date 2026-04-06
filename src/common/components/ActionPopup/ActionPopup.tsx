@@ -55,7 +55,7 @@ const ACTION_CONFIG: Record<
   }
 > = {
   Approve: {
-    icon: "pi pi-check",
+    icon: "",
     iconClass: styles.approve,
     title: "Approve",
     message: "Are you sure you want to\nApprove this IT Declaration?",
@@ -157,7 +157,7 @@ const ActionPopup: React.FC<IActionPopupProps> = ({
       <div className={styles.popupContent}>
         <h3 className={styles.title}>{title || config.title}</h3>
 
-        {!hideIcon && (
+        {!hideIcon && config.icon && (
           <div className={styles.iconContainer}>
             <div className={classNames(styles.iconWrapper, config.iconClass)}>
               {actionType === "Delete" ? (

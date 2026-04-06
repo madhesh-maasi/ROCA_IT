@@ -5,6 +5,8 @@ import {
   AppDropdown,
 } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
+import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
+import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IHousingLoanData {
   propertyType: "None" | "Self Occupied" | "Let Out Property";
@@ -18,7 +20,7 @@ interface IHousingLoanData {
   lenderAddress: string;
   lenderPan: string;
   lenderType: string;
-  isJointlyAvailed: boolean | string;
+  isJointlyAvailed: boolean | string | null;
 }
 
 interface IHousingLoanStepProps {
@@ -94,7 +96,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
           </div>
           <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
             <div className={styles.formGroup}>
-              <label>Interest of Housing Loan</label>
+              <label>Interest of Housing Loan {RequiredSympol()}</label>
               <div
                 style={{ display: "flex", gap: "12px", alignItems: "center" }}
               >
@@ -177,7 +179,13 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
       {data.propertyType !== "None" && (
         <div style={{ marginTop: 10 }}>
           <div className={styles.stepHeader}>Financial Institution</div>
-          <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
+          <div
+            className={styles.stepGrid}
+            style={{
+              marginTop: "16px",
+              gridTemplateColumns: "repeat(4,minmax(272px,1fr))",
+            }}
+          >
             <div className={styles.formGroup}>
               <label>
                 Lender's name{" "}
@@ -223,7 +231,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 id="hl-lender-pan"
                 value={data.lenderPan}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("lenderPan", e.target.value)
+                  onChange("lenderPan", panFormatter(e.target.value))
                 }
                 placeholder="Enter PAN number"
                 disabled={readOnly}
@@ -294,7 +302,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               }}
               placeholder="Enter here"
               value={approverComments}
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

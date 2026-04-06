@@ -26,7 +26,7 @@ export const NAV_CONFIG: INavGroup[] = [
     items: [
       {
         key: "employeeDeclaration",
-        label: "Employee Declaration",
+        label: "Employee Declarations",
         icon: "employeeDeclaration",
         allowedRoles: ["FinanceApprover"],
       },

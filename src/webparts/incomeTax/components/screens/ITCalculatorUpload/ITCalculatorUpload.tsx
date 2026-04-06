@@ -153,18 +153,24 @@ const ITCalculatorUpload: React.FC = () => {
     setIsDragging(false);
   };
 
+  const isValidExcelFile = (file: File) => {
+    const fileName = file.name.toLowerCase();
+    return (
+      fileName.endsWith(".xls") ||
+      fileName.endsWith(".xlsx") ||
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.type === "application/vnd.ms-excel"
+    );
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      if (
-        file.name.endsWith(".xls") ||
-        file.name.endsWith(".xlsx") ||
-        file.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      ) {
+      if (isValidExcelFile(file)) {
         setSelectedFile(file);
       } else {
         showToast(
@@ -179,7 +185,18 @@ const ITCalculatorUpload: React.FC = () => {
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (isValidExcelFile(file)) {
+        setSelectedFile(file);
+      } else {
+        showToast(
+          toast,
+          "warn",
+          "Invalid File",
+          "Please upload an Excel file.",
+        );
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -219,12 +236,14 @@ const ITCalculatorUpload: React.FC = () => {
     if (activeTab === "current") {
       // current is just roughly the max year found.
       if (sorted.length > 0) {
-        const maxYear = sorted[0].FinanceYear;
+        // const maxYear = sorted[0].FinanceYear;
+        const maxYear = curFinanicalYear;
         filtered = sorted.filter((f) => f.FinanceYear === maxYear);
       }
     } else {
       if (sorted.length > 0) {
-        const maxYear = sorted[0].FinanceYear;
+        // const maxYear = sorted[0].FinanceYear;
+        const maxYear = curFinanicalYear;
         filtered = sorted.filter((f) => f.FinanceYear !== maxYear);
       }
     }
@@ -233,8 +252,16 @@ const ITCalculatorUpload: React.FC = () => {
   }, [filesData, searchTerm, activeTab]);
 
   const columns: IColumnDef[] = [
-    { field: "FinanceYear", header: "Financial Year", sortable: true },
-    { field: "FileLeafRef", header: "File Name", sortable: true },
+    {
+      field: "FinanceYear",
+      header: "Financial Year",
+      sortable: activeTab === "current" ? false : true,
+    },
+    {
+      field: "FileLeafRef",
+      header: "File Name",
+      sortable: activeTab === "current" ? false : true,
+    },
     {
       field: "action",
       header: "Action",
@@ -260,6 +287,7 @@ const ITCalculatorUpload: React.FC = () => {
           )}
         </div>
       ),
+      sortable: false,
     },
   ];
 
@@ -286,13 +314,19 @@ const ITCalculatorUpload: React.FC = () => {
         <div className={styles.tabToggle}>
           <button
             className={`${styles.tabBtn} ${activeTab === "current" ? styles.active : ""}`}
-            onClick={() => setActiveTab("current")}
+            onClick={() => {
+              setActiveTab("current");
+              setSearchTerm("");
+            }}
           >
             Current Year
           </button>
           <button
             className={`${styles.tabBtn} ${activeTab === "previous" ? styles.active : ""}`}
-            onClick={() => setActiveTab("previous")}
+            onClick={() => {
+              setActiveTab("previous");
+              setSearchTerm("");
+            }}
           >
             Previous Year
           </button>

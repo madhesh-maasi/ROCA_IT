@@ -6,6 +6,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
+import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IPreviousEmployerData {
   employerName: string;
@@ -77,7 +78,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
             id="pe-pan"
             value={data.employerPan}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange("employerPan", e.target.value)
+              onChange("employerPan", panFormatter(e.target.value))
             }
             placeholder="Enter PAN number"
             disabled={readOnly}
@@ -269,7 +270,6 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
         <div style={{ marginTop: 10 }}>
           <div className={styles.stepHeader}>Approver Comments</div>
           <div className={styles.formGroup}>
-            <label>Approver Comments</label>
             <textarea
               className={styles.commentArea || ""}
               style={{
@@ -284,7 +284,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 backgroundColor: "#fff",
               }}
               placeholder="Enter here"
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               value={approverComments}
               onChange={(e) => onCommentChange(e.target.value)}
             />

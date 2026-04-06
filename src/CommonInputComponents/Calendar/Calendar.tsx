@@ -68,6 +68,8 @@ const AppCalendar: React.FC<ICalendarProps> = ({
           }}
           onChange={(e: any) => onChange?.(e)}
           disabled={disabled}
+          panelStyle={{ position: "fixed" }}
+          appendTo="self"
         />
       </div>
       {hasError && (

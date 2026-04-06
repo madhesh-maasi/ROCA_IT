@@ -6,6 +6,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
+import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IHousingLoanData {
   propertyType: "None" | "Self Occupied" | "Let Out Property";
@@ -267,7 +268,13 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
       {data.propertyType !== "None" && (
         <div style={{ marginTop: 10 }}>
           <div className={styles.stepHeader}>Financial Institution</div>
-          <div className={styles.stepGrid} style={{ marginTop: "16px" }}>
+          <div
+            className={styles.stepGrid}
+            style={{
+              marginTop: "16px",
+              gridTemplateColumns: "repeat(4,minmax(272px,1fr))",
+            }}
+          >
             <div className={styles.formGroup}>
               <label>
                 Lender's name{" "}
@@ -313,7 +320,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 id="hl-lender-pan"
                 value={data.lenderPan}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("lenderPan", e.target.value)
+                  onChange("lenderPan", panFormatter(e.target.value))
                 }
                 placeholder="Enter PAN number"
                 disabled={readOnly}
@@ -383,7 +390,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               }}
               placeholder="Enter here"
               value={approverComments}
-              disabled={status === "Approved"}
+              disabled={status === "Approved" || status == "Rework"}
               onChange={(e) => onCommentChange(e.target.value)}
             />
           </div>

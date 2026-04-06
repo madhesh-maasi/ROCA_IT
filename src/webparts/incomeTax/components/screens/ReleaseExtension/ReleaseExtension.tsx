@@ -28,6 +28,7 @@ import {
 } from "../../../../../common/utils/functions";
 import { sendExtensionEmail } from "../../../../../common/utils/emailService";
 import { selectUserDetails } from "../../../../../store/slices/userSlice";
+import moment from "moment";
 
 interface IReleasedItem {
   Id: number;
@@ -49,19 +50,22 @@ const ReleaseExtension: React.FC = () => {
 
   // UI State
   const [isLoading, setIsLoading] = React.useState(false);
+  const [loadingLabel, setLoadingLabel] = React.useState("Loading Data...");
   const [searchTerm, setSearchTerm] = React.useState("");
 
   // Form State
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
 
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [rawItems, setRawItems] = React.useState<any[]>([]);
   const [releasedList, setReleasedList] = React.useState<IReleasedItem[]>([]);
   const [selectedEmployees, setSelectedEmployees] = React.useState<
     IReleasedItem[]
   >([]);
 
-  const fetchData = async () => {
+  const fetchData = async (label = "Loading Data...") => {
     try {
+      setLoadingLabel(label);
       setIsLoading(true);
       const listName =
         activeIndex === 0
@@ -71,31 +75,7 @@ const ReleaseExtension: React.FC = () => {
         listName,
         `FinancialYear eq '${curFinanicalYear}'`,
       );
-
-      const activeItems = items
-        .filter(
-          (i) =>
-            i.Status == "Draft" ||
-            i.Status == "Rework" ||
-            i.Status == "Released",
-        )
-        .map((item: any) => {
-          const empMaster = employeeMaster.find(
-            (e) => e.EmployeeId === item.EmployeeCode,
-          );
-          return {
-            Id: item.Id,
-            EmployeeCode: item.EmployeeCode || "-",
-            EmployeeName: item.EmployeeName || "-",
-            Email: empMaster?.Email || item.EmployeeEmail || "-",
-            Location: empMaster?.Location || "-",
-            DeclarationType: item.DeclarationType || "-",
-            DeclarationEndDate: item.DeclarationEndDate || "",
-            Status: item.Status || "-",
-            Title: item.Title || "-",
-          };
-        });
-      setReleasedList(activeItems);
+      setRawItems(items);
     } catch (error) {
       showToast(toast, "error", "Error", "Failed to load employee data");
     } finally {
@@ -110,7 +90,32 @@ const ReleaseExtension: React.FC = () => {
   React.useEffect(() => {
     void fetchData();
     setSelectedEmployees([]); // Clear selection on tab change
-  }, [activeIndex, employeeMaster]);
+  }, [activeIndex]);
+
+  React.useEffect(() => {
+    const activeItems = rawItems
+      .filter(
+        (i) =>
+          i.Status == "Draft" || i.Status == "Rework" || i.Status == "Released",
+      )
+      .map((item: any) => {
+        const empMaster = employeeMaster.find(
+          (e) => e.EmployeeId === item.EmployeeCode,
+        );
+        return {
+          Id: item.Id,
+          EmployeeCode: item.EmployeeCode || "-",
+          EmployeeName: item.EmployeeName || "-",
+          Email: empMaster?.Email || item.EmployeeEmail || "-",
+          Location: empMaster?.Location || "-",
+          DeclarationType: item.DeclarationType || "-",
+          DeclarationEndDate: item.DeclarationEndDate || "",
+          Status: item.Status || "-",
+          Title: item.Title || "-",
+        };
+      });
+    setReleasedList(activeItems);
+  }, [rawItems, employeeMaster]);
 
   // Actions
   const handleExtend = async () => {
@@ -133,12 +138,15 @@ const ReleaseExtension: React.FC = () => {
       return;
     }
 
+    setLoadingLabel("Extending Release...");
     setIsLoading(true);
     try {
       const updates = selectedEmployees.map((emp) => ({
         id: emp.Id,
         data: {
-          DeclarationEndDate: selectedDate.toISOString(),
+          DeclarationEndDate: new Date(
+            new Date(selectedDate!).setHours(23, 59, 59, 999),
+          ),
         },
       }));
 
@@ -159,7 +167,7 @@ const ReleaseExtension: React.FC = () => {
             activeIndex === 0 ? "Planned" : "Actual",
             curFinanicalYear,
             user!,
-            selectedDate.toLocaleDateString("en-IN"),
+            moment(selectedDate).format("DD/MM/YYYY"),
             emp.Title,
           );
         }
@@ -169,7 +177,7 @@ const ReleaseExtension: React.FC = () => {
         toast,
         "success",
         "Success",
-        `Successfully extended declaration for ${selectedEmployees.length} employees to ${selectedDate.toLocaleDateString()}.`,
+        `Successfully extended declaration for ${selectedEmployees.length} employees to ${moment(selectedDate).format("DD/MM/YYYY")}.`,
       );
 
       // Reset selection and refresh data
@@ -177,7 +185,6 @@ const ReleaseExtension: React.FC = () => {
       setSelectedDate(null);
       await fetchData();
     } catch (error) {
-      console.error("Error extending declarations", error);
       showToast(toast, "error", "Error", "Failed to extend declarations.");
     } finally {
       setIsLoading(false);
@@ -209,7 +216,7 @@ const ReleaseExtension: React.FC = () => {
   return (
     <div className={styles.screen}>
       <AppToast toastRef={toast} />
-      {isLoading && <Loader fullScreen label="Extending Release..." />}
+      {isLoading && <Loader label={loadingLabel} />}
 
       <div className={styles.titleBlock}>
         <h2>Release Extension</h2>
@@ -221,7 +228,12 @@ const ReleaseExtension: React.FC = () => {
             <button
               key={tab}
               className={`${styles.tabBtn} ${activeIndex === index ? styles.active : ""}`}
-              onClick={() => setActiveIndex(index)}
+              onClick={() => {
+                setActiveIndex(index);
+                setSelectedEmployees([]);
+                setSearchTerm("");
+                setSelectedDate(null);
+              }}
             >
               {tab}
             </button>
@@ -267,9 +279,10 @@ const ReleaseExtension: React.FC = () => {
           data={filteredData}
           globalFilter={searchTerm}
           paginator
-          rows={15}
+          rows={10}
           selection={selectedEmployees}
           onSelectionChange={(e) => setSelectedEmployees(e.value)}
+          dataKey="Id"
         />
       </div>
     </div>

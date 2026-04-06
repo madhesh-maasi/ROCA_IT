@@ -1,5 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { getEmployeeMasterUsers } from "../../common/utils/pnpService";
+import {
+  getEmployeeMasterUsers,
+  getGroupUsersByName,
+} from "../../common/utils/pnpService";
 import { IEmployee } from "../../common/models";
 import { handleError } from "../../common/utils/errorUtils";
 
@@ -32,7 +35,7 @@ export const fetchEmployeeMaster = createAsyncThunk<
       PAN: item.PANNumber ?? "",
       EmployeeId: item.EmployeeId ?? "",
       DOB: item.DateOfBirth ?? "",
-      PhoneNo: item.EmergencyContactNumber ?? "",
+      PhoneNo: item.EmployeeMobile ?? "",
       Email: item.EmployeeEmail ? item.EmployeeEmail : "",
       Department: item.Department ?? "",
       Designation: item.Designation ?? "",
@@ -55,9 +58,7 @@ export const fetchSiteMembers = createAsyncThunk<IEmployee[]>(
   "employee/fetchSiteMembers",
   async (_, { rejectWithValue }) => {
     try {
-      const { getSiteMembersGroupUsers } =
-        await import("../../common/utils/pnpService");
-      const raw = await getSiteMembersGroupUsers();
+      const raw = await getGroupUsersByName("Members");
       const data: IEmployee[] = raw.map((item: any) => ({
         Id: item.Id,
         Title: item.Title ?? "",

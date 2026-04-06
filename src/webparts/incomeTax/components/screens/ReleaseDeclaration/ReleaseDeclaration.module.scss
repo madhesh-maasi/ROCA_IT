@@ -98,6 +98,8 @@
 
   .chipArea {
     min-height: 80px;
+    max-height: 108px;
+    overflow: auto;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 16px;
@@ -145,13 +147,13 @@
   .actionsRow {
     display: flex;
     justify-content: flex-start;
-    margin-top: 8px;
+    // margin-top: 8px;
 
     :global(.p-button) {
       background-color: #307a8a;
       border: none;
       border-radius: 8px;
-      padding: 10px 24px;
+      // padding: 10px 24px;
       gap: 8px;
 
       &:hover {

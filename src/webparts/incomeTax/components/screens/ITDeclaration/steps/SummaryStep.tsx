@@ -62,7 +62,9 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
         </div>
         <div className={styles.formGroup}>
           <label>Employee name</label>
-          <div className={styles.readonlyValue}>{employeeInfo.name}</div>
+          <div className={styles.readonlyValue} title={employeeInfo.name}>
+            {employeeInfo.name}
+          </div>
         </div>
         <div className={styles.formGroup}>
           <label>PAN</label>
@@ -259,22 +261,19 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             <div className={styles.stepHeader} style={{ marginBottom: 0 }}>
               Approver Comments
             </div>
-            <div
-              style={{
-                background:
-                  status === "Approved" || status === "Rework"
-                    ? "#f1f5f9"
-                    : "#f8fafc",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                fontSize: "12px",
-                color: "#64748b",
-              }}
-            >
-              {status === "Approved"
-                ? "Note : Comments are disabled after approval."
-                : "Note : Comment is mandatory when selecting rework."}
-            </div>
+            {status == "Submitted" && (
+              <div
+                style={{
+                  background: "#f1f5f9",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  color: "#64748b",
+                }}
+              >
+                Note : Comment is mandatory when selecting rework.
+              </div>
+            )}
           </div>
           <div className={styles.formGroup}>
             <textarea

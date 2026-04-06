@@ -64,7 +64,7 @@ const TaxRegimeUpdate: React.FC = () => {
 
       const items = await getListItems(
         listName,
-        `Status eq 'Draft' or Status eq 'Rework' or Status eq 'Released' and IsExported ne 1 and FinancialYear eq '${curFinanicalYear}'`,
+        `Status eq 'Draft' or Status eq 'Rework' and IsExported ne 1 and FinancialYear eq '${curFinanicalYear}'`,
       );
       setData(items);
     } catch (err) {
@@ -91,7 +91,6 @@ const TaxRegimeUpdate: React.FC = () => {
     setSelectedRegime("");
   };
 
-
   const handleUpdate = async () => {
     if (!selectedRegime) {
       showToast(
@@ -104,6 +103,17 @@ const TaxRegimeUpdate: React.FC = () => {
     }
 
     if (selectedEmployee) {
+      const currentRegime = selectedEmployee.TaxRegime;
+      if (currentRegime === selectedRegime) {
+        showToast(
+          toast,
+          "error",
+          "Tax Regime Update",
+          "Selected tax regime is already active for this employee.",
+        );
+        return;
+      }
+
       try {
         setIsLoading(true);
         const oldRegime = selectedEmployee.TaxRegime;
@@ -122,7 +132,7 @@ const TaxRegimeUpdate: React.FC = () => {
           Place: "",
           SubmittedDate: null,
           ApproverCommentsJson: "",
-          Status: "Released",
+          Status: "Draft",
           RentDetailsJSON: "",
         });
 
@@ -206,6 +216,7 @@ const TaxRegimeUpdate: React.FC = () => {
     {
       field: "action",
       header: "Action",
+      sortable: false,
       body: (rowData: any) => (
         <button
           className={styles.editBtn}
@@ -268,7 +279,10 @@ const TaxRegimeUpdate: React.FC = () => {
             <button
               key={tab}
               className={`${styles.tabBtn} ${activeIndex === index ? styles.active : ""}`}
-              onClick={() => setActiveIndex(index)}
+              onClick={() => {
+                setActiveIndex(index);
+                setSearchTerm("");
+              }}
             >
               {tab}
             </button>

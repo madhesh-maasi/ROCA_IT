@@ -25,6 +25,7 @@
       display: flex;
       justify-content: space-between;
       text-align: center;
+      border-radius: 4px 4px 0px 0px;
 
       .p-dialog-title {
         // font-size: 19px !important;
@@ -58,7 +59,7 @@
       }
     }
 
-    // ── Content ─────────────────────────────────────────────────────────────
+    // ── Content ─────────────────────────────────x────────────────────────────
     .p-dialog-content {
       background: #ffffff !important;
       padding: 0px 32px 16px !important;
@@ -69,7 +70,8 @@
     .p-dialog-footer {
       background: #fdfdfd;
       border-top: 1px solid #f1f5f9 !important;
-      padding: 16px 28px 20px !important;
+      padding: 16px 28px 10px !important;
+      border-radius: 0px 0px 4px 4px;
     }
 
     // ── Buttons inside dialog footer (PrimeReact) ────────────────────────────
