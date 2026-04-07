@@ -5,6 +5,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import styles from "../ITDeclaration.module.scss";
 import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
+import moment from "moment";
 
 interface ISummaryStepProps {
   employeeInfo: {
@@ -73,11 +74,15 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
         </div>
         <div className={styles.formGroup}>
           <label>PAN</label>
-          <div className={styles.readonlyValue}>{employeeInfo.pan}</div>
+          <div className={styles.readonlyValue}>{employeeInfo.pan || "-"}</div>
         </div>
         <div className={styles.formGroup}>
           <label>Date of Joining</label>
-          <div className={styles.readonlyValue}>{employeeInfo.doj}</div>
+          <div className={styles.readonlyValue}>
+            {employeeInfo.doj
+              ? moment(employeeInfo.doj).format("DD/MM/YYYY")
+              : "-"}
+          </div>
         </div>
       </div>
 

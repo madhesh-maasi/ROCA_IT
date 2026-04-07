@@ -113,7 +113,15 @@ const EmployeeDeclarations: React.FC = () => {
     void (await fetchActualItems());
     setIsProcessing(false);
   };
-
+  useEffect(() => {
+    setIsProcessing(true);
+    if (actualItems.length > 0) {
+      setActiveTab("Actual");
+    } else {
+      setActiveTab("Planned");
+    }
+    setIsProcessing(false);
+  }, [actualItems.length]);
   useEffect(() => {
     void init();
   }, []);

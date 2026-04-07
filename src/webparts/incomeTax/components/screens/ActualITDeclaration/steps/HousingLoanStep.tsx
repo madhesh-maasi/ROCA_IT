@@ -7,6 +7,7 @@ import {
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
 import { panFormatter } from "../../../../../../common/utils/validationUtils";
+import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
 
 interface IHousingLoanData {
   propertyType: "None" | "Self Occupied" | "Let Out Property";
@@ -20,6 +21,7 @@ interface IHousingLoanData {
   lenderType: string;
   isJointlyAvailed: boolean | string;
   attachments?: any[];
+  othersAttachments?: any[];
 }
 
 interface IHousingLoanStepProps {
@@ -32,10 +34,13 @@ interface IHousingLoanStepProps {
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
   onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onOthersUpload?: (key: string, file: File) => Promise<void>;
+  onOthersDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
 }
 
 const UPLOAD_KEY_SELF = "housing-self";
 const UPLOAD_KEY_LETOUT = "housing-letout";
+const UPLOAD_KEY_OTHERS = "housing-others";
 
 const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   data,
@@ -47,6 +52,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   readOnly,
   onUpload,
   onDeleteAttachment,
+  onOthersUpload,
+  onOthersDeleteAttachment,
 }) => {
   const lenderTypeOptions = [
     { label: "Financial Institution", value: "Financial Institution" },
@@ -156,7 +163,19 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
             name="propertyType"
             value="None"
             selectedValue={data.propertyType}
-            onChange={(val) => onChange("propertyType", val)}
+            onChange={async (val) => {
+              onChange("propertyType", val);
+              if (
+                data.attachments &&
+                data.attachments.length > 0 &&
+                onDeleteAttachment
+              ) {
+                for (const att of data.attachments) {
+                  await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id);
+                  await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id);
+                }
+              }
+            }}
             disabled={readOnly}
           />
           <AppRadioButton
@@ -350,8 +369,15 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
         <div style={{ marginTop: 10 }}>
           <div className={styles.stepHeader}>Others</div>
           <div className={styles.formGroup} style={{ marginTop: "16px" }}>
-            <label>Jointly availed Property Loan</label>
-            <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
+            <label>Jointly availed Property Loan {RequiredSympol()}</label>
+            <div
+              style={{
+                display: "flex",
+                gap: "24px",
+                marginTop: "8px",
+                alignItems: "flex-end",
+              }}
+            >
               <AppRadioButton
                 label="Yes"
                 name="isJointlyAvailed"
@@ -368,6 +394,104 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 onChange={(val) => onChange("isJointlyAvailed", val)}
                 disabled={readOnly}
               />
+              {/* Upload PDF for Others section */}
+              <div className={styles.formGroup}>
+                {/* <label>
+              Upload PDF{" "}
+              {data.isJointlyAvailed === true ? (
+                <span style={{ color: "red" }}>*</span>
+              ) : null}
+            </label> */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    marginTop: "6px",
+                  }}
+                >
+                  {!readOnly &&
+                    onOthersUpload &&
+                    (!data.othersAttachments ||
+                      data.othersAttachments.length === 0) && (
+                      <AppFilePicker
+                        buttonLabel="Upload PDF"
+                        accept=".pdf"
+                        onChange={(selectedFiles) => {
+                          const file = selectedFiles[0];
+                          if (file && onOthersUpload)
+                            void onOthersUpload(UPLOAD_KEY_OTHERS, file);
+                        }}
+                      />
+                    )}
+                  {(data.othersAttachments || []).map((att: any) => (
+                    <div
+                      key={att.Id}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer",
+                        padding: "4px 10px",
+                        borderRadius: "20px",
+                        background: "#f1f5f9",
+                        border: "1px solid #e2e8f0",
+                        fontSize: "12px",
+                        color: "#475569",
+                        maxWidth: "260px",
+                      }}
+                    >
+                      <i
+                        className="pi pi-file-pdf"
+                        style={{ color: "#e11d48", fontSize: "12px" }}
+                        onClick={() => {
+                          window.open(
+                            att.FileRef,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                      />
+                      <span
+                        onClick={() => {
+                          window.open(
+                            att.FileRef,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                        style={{
+                          color: "#334155",
+                          textDecoration: "none",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "180px",
+                        }}
+                        title={att.FileLeafRef}
+                      >
+                        {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+                      </span>
+                      {!readOnly && onOthersDeleteAttachment && (
+                        <i
+                          className="pi pi-trash"
+                          style={{
+                            color: "#e11d48",
+                            cursor: "pointer",
+                            fontSize: "11px",
+                            flexShrink: 0,
+                          }}
+                          onClick={() =>
+                            onOthersDeleteAttachment(UPLOAD_KEY_OTHERS, att.Id)
+                          }
+                          title="Remove attachment"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -32,7 +32,7 @@ const IncomeTax: React.FC<IIncomeTaxProps> = (props) => {
     void dispatch(fetchSiteMembers());
   }, [dispatch, props.context]);
 
-  if (isLoading) {
+  if (isLoading || !userDetails) {
     return <Loader label="Loading..." />;
   }
 

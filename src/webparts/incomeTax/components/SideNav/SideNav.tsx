@@ -121,7 +121,10 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
   // ── Collapsed mode: flat list of all child item icons ─────────────────────
   if (collapsed) {
     return (
-      <nav className={`${styles.sideNav} ${styles.sideNavCollapsed}`}>
+      <nav
+        className={`${styles.sideNav} ${styles.sideNavCollapsed}`}
+        id="sideNav"
+      >
         {/* Expand button */}
         <button
           className={`${styles.toggleBtn} rounded`}
@@ -164,7 +167,7 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
 
   // ── Expanded mode: accordion ───────────────────────────────────────────────
   return (
-    <nav className={styles.sideNav}>
+    <nav className={styles.sideNav} id="sideNav">
       {/* Collapse button */}
       <button
         className={`${styles.toggleBtn} rounded`}
