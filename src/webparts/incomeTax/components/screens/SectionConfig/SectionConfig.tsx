@@ -37,6 +37,7 @@ interface ISectionData {
   id: number;
   name: string; // mapped from Title
   maxAmount: string; // mapped from MaxAmount
+  order: string; // mapped from SectionOrder
 }
 
 const SectionConfig: React.FC = () => {
@@ -54,7 +55,11 @@ const SectionConfig: React.FC = () => {
   }>({ type: null, id: null });
 
   // Consolidated Form State
-  const [formData, setFormData] = React.useState({ name: "", maxAmount: "" });
+  const [formData, setFormData] = React.useState({
+    name: "",
+    maxAmount: "",
+    order: "",
+  });
   const [showDownloadPopup, setShowDownloadPopup] = React.useState(false);
 
   const fetchSections = async () => {
@@ -65,6 +70,7 @@ const SectionConfig: React.FC = () => {
         id: item.Id,
         name: item.Title || "",
         maxAmount: item.MaxAmount ? String(item.MaxAmount) : "",
+        order: item.SectionOrder ? String(item.SectionOrder) : "",
       }));
       setData(mapped);
     } catch (error) {
@@ -92,7 +98,8 @@ const SectionConfig: React.FC = () => {
       return;
     }
     exportToExcel(
-      filteredData.map(({ name, maxAmount }) => ({
+      filteredData.map(({ name, maxAmount, order }) => ({
+        Order: order || "-",
         Sections: name,
         "Max Amount": maxAmount || "-",
       })),
@@ -108,12 +115,16 @@ const SectionConfig: React.FC = () => {
   // ─── Dialog Triggers ────────────────────────────────────────────────────────
 
   const openAddPopup = () => {
-    setFormData({ name: "", maxAmount: "" });
+    setFormData({ name: "", maxAmount: "", order: "" });
     setDialog({ type: "ADD", id: null });
   };
 
   const openEditPopup = (row: ISectionData) => {
-    setFormData({ name: row.name, maxAmount: row.maxAmount });
+    setFormData({
+      name: row.name,
+      maxAmount: row.maxAmount,
+      order: row.order,
+    });
     setDialog({ type: "EDIT", id: row.id });
   };
 
@@ -147,9 +158,22 @@ const SectionConfig: React.FC = () => {
 
     setLoader(true);
     try {
+      // Automatic duplicate order reset
+      if (formData.order) {
+        const duplicateItem = data.find(
+          (item) => item.id !== dialog.id && item.order === formData.order,
+        );
+        if (duplicateItem) {
+          await updateListItem(LIST_NAMES.SECTION_CONFIG, duplicateItem.id, {
+            SectionOrder: null,
+          });
+        }
+      }
+
       const payload = {
         Title: formData.name.trim(),
         MaxAmount: formData.maxAmount.trim(),
+        SectionOrder: formData.order ? Number(formData.order) : null,
       };
 
       if (dialog.type === "EDIT" && dialog.id) {
@@ -224,7 +248,7 @@ const SectionConfig: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "name", header: "Sections", style: { width: "60%" } },
+    { field: "name", header: "Sections", style: { width: "50%" } },
     {
       field: "maxAmount",
       header: "Max Amount",
@@ -232,6 +256,14 @@ const SectionConfig: React.FC = () => {
         return <span>{rowData.maxAmount || "-"}</span>;
       },
       style: { width: "25%" },
+    },
+    {
+      field: "order",
+      header: "Order",
+      style: { width: "10%" },
+      body: (rowData: ISectionData) => {
+        return <span>{rowData.order || "-"}</span>;
+      },
     },
     {
       field: "action",
@@ -326,6 +358,19 @@ const SectionConfig: React.FC = () => {
               setFormData((p) => ({
                 ...p,
                 maxAmount: e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
+              }))
+            }
+            className={styles.inputField}
+          />
+          <InputField
+            id="order"
+            label="Order"
+            placeholder="Enter order"
+            value={formData.order}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                order: e.target.value.replace(/[^0-9]/g, ""),
               }))
             }
             className={styles.inputField}

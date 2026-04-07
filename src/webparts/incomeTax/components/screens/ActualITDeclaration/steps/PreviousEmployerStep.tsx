@@ -65,9 +65,19 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
           <InputField
             id="pe-name"
             value={data.employerName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange("employerName", e.target.value)
-            }
+            onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+              onChange("employerName", e.target.value);
+              if (
+                !e.target.value.trim() &&
+                data.attachments &&
+                data.attachments.length > 0 &&
+                onDeleteAttachment
+              ) {
+                for (const att of data.attachments) {
+                  await onDeleteAttachment(UPLOAD_KEY, att.Id);
+                }
+              }
+            }}
             placeholder="Enter name"
             disabled={readOnly}
           />

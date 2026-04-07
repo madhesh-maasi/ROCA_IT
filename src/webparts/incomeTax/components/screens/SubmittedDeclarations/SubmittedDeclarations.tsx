@@ -15,7 +15,12 @@ import {
   curFinanicalYear,
   getFYOptions,
 } from "../../../../../common/utils/functions";
-import { getSP } from "../../../../../common/utils/pnpService";
+import {
+  getMyActualDeclaration,
+  getMyPlannedDeclaration,
+  getSP,
+  updateListItem,
+} from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import { selectUserDetails } from "../../../../../store/slices";
 import { Loader } from "../../../../../common";
@@ -51,6 +56,14 @@ const COLUMNS: IColumnDef[] = [
   { field: "regimeType", header: "Regime Type", sortable: false },
   { field: "dateOfSubmission", header: "Date of Submission", sortable: false },
   {
+    field: "declarationEndDate",
+    header: "Declaration End Date",
+    sortable: false,
+    body: (row: ISubmittedRow) => (
+      <span>{moment(row.declarationEndDate).format("DD/MM/YYYY")}</span>
+    ),
+  },
+  {
     field: "status",
     header: "Status",
     body: (row: ISubmittedRow) => (
@@ -72,7 +85,9 @@ const mapRow = (item: any): ISubmittedRow => ({
     ? moment(item.SubmittedDate).format("DD/MM/YYYY")
     : "-",
   status: (item.Status || "Draft").toLowerCase(),
-  declarationEndDate: item.DeclarationEndDate || "",
+  declarationEndDate: item.DeclarationEndDate
+    ? new Date(item.DeclarationEndDate).toISOString()
+    : "-",
 });
 
 // ─── Component ──────────────────────────────────────────────────────────────────
@@ -133,7 +148,11 @@ const SubmittedDeclarations: React.FC = () => {
             .orderBy("Id", false)
             .top(5000)(),
         ]);
-
+        if (actualItems.length > 0) {
+          setActiveTab("Actual");
+        } else {
+          setActiveTab("Planned");
+        }
         setPlannedRows(plannedItems.map(mapRow));
         setActualRows(actualItems.map(mapRow));
       } catch (err) {
@@ -151,7 +170,7 @@ const SubmittedDeclarations: React.FC = () => {
     (row) => row.financialYear === fy,
   );
 
-  const handleRowClick = (row: any) => {
+  const handleRowClick = async (row: any) => {
     if (activeTab === "Planned") {
       navigate("/itDeclaration", {
         state: { from: "submittedDeclarations", tab: activeTab },

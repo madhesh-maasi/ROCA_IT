@@ -557,6 +557,7 @@ export const uploadITDocument = async (
     landLordId?: number;
     section80CId?: number;
     section80DId?: number;
+    lookupConfigId?: number;
   },
 ): Promise<void> => {
   const sp = getSP();
@@ -598,6 +599,7 @@ export const uploadITDocument = async (
       LandLordId: meta.landLordId ?? null,
       Section80CId: meta.section80CId ?? null,
       Section80DId: meta.section80DId ?? null,
+      LookupConfigId: meta.lookupConfigId ?? null,
     };
 
     await listItem.update(updateData);
@@ -611,10 +613,11 @@ export const uploadITDocument = async (
  * Fetch non-deleted files from the IT_Documents library for a given Actual
  * Declaration, optionally filtered by row-level lookup columns.
  *
- * @param actualDeclarationId - Numeric ID of the IT_Actual_Declarations item.
- * @param filter.landLordId   - Filter to a specific landlord row.
- * @param filter.section80CId - Filter to a specific 80C row.
- * @param filter.section80DId - Filter to a specific 80D row.
+ * @param actualDeclarationId   - Numeric ID of the IT_Actual_Declarations item.
+ * @param filter.landLordId     - Filter to a specific landlord row.
+ * @param filter.section80CId   - Filter to a specific 80C row.
+ * @param filter.section80DId   - Filter to a specific 80D row.
+ * @param filter.lookupConfigId - Filter to a specific dynamic section row.
  */
 export const getITDocuments = async (
   actualDeclarationId: number,
@@ -622,6 +625,7 @@ export const getITDocuments = async (
     landLordId?: number;
     section80CId?: number;
     section80DId?: number;
+    lookupConfigId?: number;
   },
 ): Promise<any[]> => {
   const sp = getSP();
@@ -637,6 +641,9 @@ export const getITDocuments = async (
     if (filter?.section80DId !== undefined) {
       filterStr += ` and Section80DId eq ${filter.section80DId}`;
     }
+    if (filter?.lookupConfigId !== undefined) {
+      filterStr += ` and LookupConfigId eq ${filter.lookupConfigId}`;
+    }
 
     return await sp.web.lists
       .getByTitle(LIST_NAMES.IT_DOCUMENTS)
@@ -649,6 +656,7 @@ export const getITDocuments = async (
         "LandLordId",
         "Section80CId",
         "Section80DId",
+        "LookupConfigId",
       )
       .filter(filterStr)
       .orderBy("Id", false)
@@ -710,7 +718,7 @@ export const downloadAttachmentsAsZip = async (
   declarationTitle: string,
   fy: string,
   empCode: string,
-  fileHandle?: FileSystemFileHandle | null, // ✅ NEW
+  fileHandle?: FileSystemFileHandle | null,
 ): Promise<void> => {
   const sp = getSP();
 
@@ -729,7 +737,12 @@ export const downloadAttachmentsAsZip = async (
           .getFileByServerRelativePath(doc.FileRef)
           .getBlob();
 
-        zip.file(doc.FileLeafRef, fileBlob);
+        const segments = (doc.FileRef as string).split("/").filter(Boolean);
+        const folderName =
+          segments.length >= 2 ? segments[segments.length - 2] : "Documents";
+
+        // Place the file inside its folder inside the ZIP
+        zip.folder(folderName)!.file(doc.FileLeafRef, fileBlob);
       }),
     );
 
@@ -756,6 +769,8 @@ export const downloadAttachmentsAsZip = async (
 export const getListItems = async (
   listName: string,
   extraFilter?: string,
+  orderBy: string = "ID",
+  ascending: boolean = false,
 ): Promise<any[]> => {
   const sp = getSP();
   try {
@@ -765,7 +780,7 @@ export const getListItems = async (
     return await sp.web.lists
       .getByTitle(listName)
       .items.filter(filterQuery)
-      .orderBy("Modified", false)
+      .orderBy(orderBy, ascending)
       .top(5000)();
   } catch (err) {
     await handleError(err, `Fetching items from ${listName}`);

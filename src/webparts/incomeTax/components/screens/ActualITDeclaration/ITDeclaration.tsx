@@ -31,6 +31,7 @@ import {
   downloadAttachmentsAsZip,
   getAllItems,
   updateListItemsBatch,
+  getMyPlannedDeclaration,
   getMyActualDeclaration,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
@@ -48,8 +49,7 @@ import HomeStep from "./steps/HomeStep";
 import BasicInfoStep from "./steps/BasicInfoStep";
 import HouseRentalStep from "./steps/HouseRentalStep";
 import LTAStep from "./steps/LTAStep";
-import Section80CStep from "./steps/Section80CStep";
-import Section80DStep from "./steps/Section80DStep";
+import DynamicSectionStep from "../ITDeclaration/steps/DynamicSectionStep";
 import HousingLoanStep from "./steps/HousingLoanStep";
 import PreviousEmployerStep from "./steps/PreviousEmployerStep";
 import SummaryStep from "./steps/SummaryStep";
@@ -99,7 +99,8 @@ const ITDeclaration: React.FC = () => {
   const matchedEmployee = React.useMemo(() => {
     if (!employeeMaster.length) return null;
     const targetEmail =
-      declarationItem?.EmployeeEmail.toLowerCase() || user?.Email.toLowerCase();
+      declarationItem?.EmployeeEmail?.toLowerCase() ||
+      user?.Email?.toLowerCase();
     if (!targetEmail) return null;
 
     return (
@@ -157,8 +158,15 @@ const ITDeclaration: React.FC = () => {
     { relationship: "Dependent Father", name: "", dob: null, gender: "Male" },
     { relationship: "Dependent Mother", name: "", dob: null, gender: "Female" },
   ]);
-  const [items80C, setItems80C] = React.useState<any[]>([]);
-  const [items80D, setItems80D] = React.useState<any[]>([]);
+  const [dynamicSectionData, setDynamicSectionData] = React.useState<
+    Record<string, any[]>
+  >({});
+  const [dynamicComments, setDynamicComments] = React.useState<
+    Record<string, string>
+  >({});
+  const [sectionMaxAmounts, setSectionMaxAmounts] = React.useState<
+    Record<string, number | null>
+  >({});
   const [housingLoanData, setHousingLoanData] = React.useState<any>({
     propertyType: "None" as "None" | "Self Occupied" | "Let Out Property",
     interestAmount: "",
@@ -172,6 +180,7 @@ const ITDeclaration: React.FC = () => {
     isJointlyAvailed: null,
     approverComments: "",
     attachments: [],
+    othersAttachments: [],
   });
   const [previousEmployerData, setPreviousEmployerData] = React.useState<any>({
     employerName: "",
@@ -195,8 +204,6 @@ const ITDeclaration: React.FC = () => {
 
   const [commentsHR, setCommentsHR] = React.useState("");
   const [commentsLTA, setCommentsLTA] = React.useState("");
-  const [comments80C, setComments80C] = React.useState("");
-  const [comments80D, setComments80D] = React.useState("");
   const [commentsPE, setCommentsPE] = React.useState("");
   const [commentsHousingLoan, setCommentsHousingLoan] = React.useState("");
   const [commentsSummary, setCommentsSummary] = React.useState("");
@@ -207,12 +214,9 @@ const ITDeclaration: React.FC = () => {
     onConfirm?: () => void;
   }>({ visible: false, type: "success" });
 
-  const [maxAmount80C, setMaxAmount80C] = React.useState<number | null>(null);
-  const [maxAmount80D, setMaxAmount80D] = React.useState<number | null>(null);
   const [modeOfTravelChoices, setModeOfTravelChoices] = React.useState<any[]>(
     [],
   );
-
   const selectedItemFromStore = useAppSelector(selectSelectedItem);
 
   // Reset edit mode when step changes
@@ -220,7 +224,6 @@ const ITDeclaration: React.FC = () => {
     setIsEditMode(false);
   }, [activeStep]);
 
-  // Initial Load — clones Planned data into Actual lists on first open (Status=Released)
   React.useEffect(() => {
     const initialize = async () => {
       if (!user?.Email) return;
@@ -350,7 +353,6 @@ const ITDeclaration: React.FC = () => {
       dispatch(setSelectedItem(undefined));
     };
   }, [user, selectedItemFromStore]);
-
   const loadDynamicSteps = async (regime: string) => {
     try {
       const sections = await getListItems(LIST_NAMES.SECTION_CONFIG);
@@ -358,7 +360,9 @@ const ITDeclaration: React.FC = () => {
         key: s.Title,
         label: s.Title,
         icon: ICON_MAP[s.Title] || ChartBarLineIcon,
+        order: s.SectionOrder,
       }));
+      dynamicSteps.sort((a, b) => a.order - b.order);
 
       if (regime === "New Regime") {
         setSteps([
@@ -384,36 +388,9 @@ const ITDeclaration: React.FC = () => {
           },
           { key: "House Rental", label: "House Rental", icon: Building06Icon },
           { key: "LTA", label: "LTA", icon: PlaneIcon },
-          ...dynamicSteps
-            .filter((s) =>
-              ["Section 80C Deductions", "Section 80 Deductions"].includes(
-                s.key,
-              ),
-            )
-            .map((s: any) => {
-              return {
-                key: s.key,
-                label: s.key,
-                icon: ChartBarLineIcon,
-              };
-            }),
-          // {
-          //   key: "Section 80C Deductions",
-          //   label: "Section 80C Deductions",
-          //   icon: ChartBarLineIcon,
-          // },
-          // {
-          //   key: "Section 80 Deductions",
-          //   label: "Section 80 Deductions",
-          //   icon: ChartBarLineIcon,
-          // },
-          // {
-          //   key: "Housing Loan Repayment",
-          //   label: "Housing Loan Repayment",
-          //   icon: MoneyReceiveCircleIcon,
-          // },
+          ...dynamicSteps,
           {
-            //   key: "Housing Loan Repayment",
+            key: "Housing Loan Repayment",
             label: "Housing Loan Repayment",
             icon: MoneyReceiveCircleIcon,
           },
@@ -429,45 +406,36 @@ const ITDeclaration: React.FC = () => {
           },
         ]);
 
-        // Load Lookup Config for 80C and 80D
-        const lookupConfig = await getListItems(LIST_NAMES.LOOKUP_CONFIG);
-        const section80C = sections.find(
-          (s: any) => s.Title === "Section 80C Deductions",
+        // Load Lookup Config for dynamic sections
+        const lookupConfig = await getListItems(
+          LIST_NAMES.LOOKUP_CONFIG,
+          "",
+          "ID",
+          true,
         );
-        const section80D = sections.find(
-          (s: any) => s.Title === "Section 80 Deductions",
-        );
 
-        if (section80C?.MaxAmount)
-          setMaxAmount80C(Number(section80C.MaxAmount));
-        if (section80D?.MaxAmount)
-          setMaxAmount80D(Number(section80D.MaxAmount));
+        const newDynamicData: Record<string, any[]> = {};
+        const newMaxAmounts: Record<string, number | null> = {};
 
-        const cItems = lookupConfig
-          .filter((item: any) => item.SectionId === section80C?.Id)
-          .map((item: any) => ({
-            id: item.Id,
-            investmentType: item.Types || item.Title,
-            maxAmount: Number(item.MaxAmount) || 0,
-            declaredAmount: "",
-            attachments: [],
-          }));
-        setItems80C(cItems);
+        sections.forEach((s: any) => {
+          newMaxAmounts[s.Title] = Number(s.MaxAmount) || null;
+          newDynamicData[s.Title] = lookupConfig
+            .filter((item: any) => item.SectionId === s.Id)
+            .map((item: any) => ({
+              id: item.Id,
+              section: item.SubSection || "-",
+              investmentType: item.Types || item.Title,
+              maxAmount: Number(item.MaxAmount) || 0,
+              declaredAmount: "",
+              attachments: [],
+            }));
+        });
 
-        const dItems = lookupConfig
-          .filter((item: any) => item.SectionId === section80D?.Id)
-          .map((item: any) => ({
-            id: item.Id,
-            section: item.SubSection || "-",
-            investmentType: item.Types || item.Title,
-            maxAmount: Number(item.MaxAmount) || 0,
-            declaredAmount: "",
-            attachments: [],
-          }));
-        setItems80D(dItems);
+        setSectionMaxAmounts(newMaxAmounts);
+        setDynamicSectionData(newDynamicData);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("Error loading dynamic steps", err);
     }
   };
 
@@ -635,46 +603,35 @@ const ITDeclaration: React.FC = () => {
       });
     }
 
-    // Load 80C
-    const saved80C = await getRelatedListItems(
-      LIST_NAMES.IT_80C_SECTION_Actual,
-      mainItem.Id,
-      "ActualDeclarationId",
-    );
-    if (saved80C.length > 0) {
-      setItems80C((prev) =>
-        prev.map((item) => {
-          const match = saved80C.find((s) => s.TypeOfInvestmentId === item.id);
-          return match
-            ? {
-                ...item,
-                declaredAmount: match.Amount?.toString() || "",
-                actual80CId: match.Id,
-              }
-            : item;
-        }),
-      );
-    }
-
-    // Load 80D
-    const saved80D = await getRelatedListItems(
-      LIST_NAMES.IT_80_Actual,
-      mainItem.Id,
-      "ActualDeclarationId",
-    );
-    if (saved80D.length > 0) {
-      setItems80D((prev) =>
-        prev.map((item) => {
-          const match = saved80D.find((s) => s.TypeOfInvestmentId === item.id);
-          return match
-            ? {
-                ...item,
-                declaredAmount: match.Amount?.toString() || "",
-                actual80DId: match.Id,
-              }
-            : item;
-        }),
-      );
+    // Load Dynamic Section Data (80C, 80D, and other dynamic sections)
+    if (mainItem.SectionDetailsJSON) {
+      try {
+        const savedSectionData = JSON.parse(mainItem.SectionDetailsJSON);
+        setDynamicSectionData((prev) => {
+          const merged: Record<string, any[]> = { ...prev };
+          Object.keys(savedSectionData).forEach((sectionKey) => {
+            if (merged[sectionKey]) {
+              merged[sectionKey] = merged[sectionKey].map((item: any) => {
+                const match = savedSectionData[sectionKey].find(
+                  (s: any) => s.id === item.id,
+                );
+                return match
+                  ? { ...item, declaredAmount: match.declaredAmount || "" }
+                  : item;
+              });
+            } else {
+              // Section not yet in prev (LookupConfig load pending) —
+              // initialize attachments: [] so loadAttachments can populate them
+              merged[sectionKey] = savedSectionData[sectionKey].map(
+                (item: any) => ({ ...item, attachments: [] }),
+              );
+            }
+          });
+          return merged;
+        });
+      } catch (e) {
+        console.error("Error parsing SectionDetailsJSON", e);
+      }
     }
 
     // Load Approver Comments Map
@@ -684,22 +641,29 @@ const ITDeclaration: React.FC = () => {
         const cMap = JSON.parse(commentSource);
         setCommentsHR(cMap.HouseRental || "");
         setCommentsLTA(cMap.LTA || "");
-        setComments80C(cMap.Section80C || "");
-        setComments80D(cMap.Section80D || "");
         setCommentsPE(cMap.PreviousEmployer || "");
         setCommentsHousingLoan(cMap.HousingLoan || "");
         setCommentsSummary(cMap.Summary || "");
+        if (cMap.DynamicComments) {
+          setDynamicComments(cMap.DynamicComments);
+        } else {
+          // Backward compatibility: map old keys to dynamic comment keys
+          const legacyDynamic: Record<string, string> = {};
+          if (cMap.Section80C)
+            legacyDynamic["Section 80C Deductions"] = cMap.Section80C;
+          if (cMap.Section80D)
+            legacyDynamic["Section 80 Deductions"] = cMap.Section80D;
+          setDynamicComments(legacyDynamic);
+        }
       } catch (e) {
         console.error("Error parsing Comments JSON", e);
       }
     }
   };
 
-  // ── Load all existing attachments for the current declaration ──────────────
   const loadAttachments = async (mainItem: any) => {
     if (!mainItem?.Id) return;
     const decId: number = mainItem.Id;
-
     try {
       const allDocs = await getITDocuments(decId);
 
@@ -719,25 +683,17 @@ const ITDeclaration: React.FC = () => {
         ),
       }));
 
-      // Distribute to 80C
-      setItems80C((prev: any[]) =>
-        prev.map((item) => ({
-          ...item,
-          attachments: allDocs.filter(
-            (d) => d.Section80CId === item.actual80CId,
-          ),
-        })),
-      );
-
-      // Distribute to 80D
-      setItems80D((prev: any[]) =>
-        prev.map((item) => ({
-          ...item,
-          attachments: allDocs.filter(
-            (d) => d.Section80DId === item.actual80DId,
-          ),
-        })),
-      );
+      // Distribute to Dynamic Sections — match by LookupConfigId stored on each doc
+      setDynamicSectionData((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((sectionTitle) => {
+          next[sectionTitle] = next[sectionTitle].map((item) => ({
+            ...item,
+            attachments: allDocs.filter((d) => d.LookupConfigId === item.id),
+          }));
+        });
+        return next;
+      });
 
       // Distribute to Housing Loan
       setHousingLoanData((prev: any) => ({
@@ -746,6 +702,9 @@ const ITDeclaration: React.FC = () => {
           (d) =>
             (d.FileRef as string)?.includes("/Housing_Loan_Repayment_Self/") ||
             (d.FileRef as string)?.includes("/Housing_Loan_Repayment_LetOut/"),
+        ),
+        othersAttachments: allDocs.filter((d) =>
+          (d.FileRef as string)?.includes("/Housing_Loan_Repayment_Others/"),
         ),
       }));
 
@@ -779,23 +738,16 @@ const ITDeclaration: React.FC = () => {
       return;
     }
 
-    // Determine sectionType and lookup IDs from the key
     let sectionType = "";
-    const meta: {
-      actualDeclarationId: number;
-      landLordId?: number;
-      section80CId?: number;
-      section80DId?: number;
-    } = { actualDeclarationId: decId };
+    const meta: any = { actualDeclarationId: decId };
 
     if (key.startsWith("landlord-")) {
       sectionType = "House Rental";
       const idx = Number(key.replace("landlord-", ""));
       let landlord = landlords[idx];
 
-      if (landlord && !(landlord.Id || landlord.ID)) {
+      if (landlord && !landlord.Id) {
         try {
-          // Sequential Save: Add the landlord to the list first to get an ID
           const newLL = await addListItem(
             LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
             {
@@ -805,13 +757,7 @@ const ITDeclaration: React.FC = () => {
               ActualDeclarationId: decId,
             },
           );
-
-          // PnPjs v3 results usually have Id in .Id or from the returned data
-          const newId =
-            (newLL as any)?.Id ||
-            (newLL as any)?.ID ||
-            (newLL as any)?.data?.Id;
-
+          const newId = (newLL as any)?.Id || (newLL as any)?.ID;
           if (newId) {
             landlord = { ...landlord, Id: newId };
             setLandlords((prev) =>
@@ -828,81 +774,35 @@ const ITDeclaration: React.FC = () => {
           return;
         }
       }
-
-      const finalId = landlord?.Id || landlord?.ID;
-      if (finalId) meta.landLordId = finalId;
-    } else if (key.startsWith("80c-")) {
-      sectionType = "Section 80C Deductions";
-      const typeStr = key.replace("80c-", "");
-      let item = items80C.find((i) => i.investmentType === typeStr);
-
-      if (item && !item.actual80CId) {
-        try {
-          const res = await addListItem(LIST_NAMES.IT_80C_SECTION_Actual, {
-            TypeOfInvestmentId: item.id,
-            Amount: item.declaredAmount || "0",
-            ActualDeclarationId: decId,
-          });
-          const newId =
-            (res as any)?.Id || (res as any)?.ID || (res as any)?.data?.Id;
-          if (newId) {
-            item = { ...item, actual80CId: newId };
-            setItems80C((prev) =>
-              prev.map((i) =>
-                i.id === item.id ? { ...i, actual80CId: newId } : i,
-              ),
-            );
-          }
-        } catch (err) {
-          showToast(toast, "error", "Save Failed", "Could not save 80C item.");
-          return;
-        }
-      }
-      if (item?.actual80CId) meta.section80CId = item.actual80CId;
-    } else if (key.startsWith("80d-")) {
-      sectionType = "Section 80 Deductions";
-      const typeStr = key.replace("80d-", "");
-      let item = items80D.find((i) => i.investmentType === typeStr);
-
-      if (item && !item.actual80DId) {
-        try {
-          const res = await addListItem(LIST_NAMES.IT_80_Actual, {
-            TypeOfInvestmentId: item.id,
-            Amount: item.declaredAmount || "0",
-            ActualDeclarationId: decId,
-          });
-          const newId =
-            (res as any)?.Id || (res as any)?.ID || (res as any)?.data?.Id;
-          if (newId) {
-            item = { ...item, actual80DId: newId };
-            setItems80D((prev) =>
-              prev.map((i) =>
-                i.id === item.id ? { ...i, actual80DId: newId } : i,
-              ),
-            );
-          }
-        } catch (err) {
-          showToast(toast, "error", "Save Failed", "Could not save 80D item.");
-          return;
-        }
-      }
-      if (item?.actual80DId) meta.section80DId = item.actual80DId;
+      meta.landLordId = landlord?.Id;
     } else if (key === "lta") {
       sectionType = "LTA";
+      meta.ReferenceId = "lta";
     } else if (key === "housing-self") {
       sectionType = "Housing_Loan_Repayment_Self";
+      meta.ReferenceId = "housing-self";
     } else if (key === "housing-letout") {
       sectionType = "Housing_Loan_Repayment_LetOut";
+      meta.ReferenceId = "housing-letout";
+    } else if (key === "housing-others") {
+      sectionType = "Housing_Loan_Repayment_Others";
+      meta.ReferenceId = "housing-others";
     } else if (key === "prev-employer") {
       sectionType = "Previous_Employer_Details";
+      meta.ReferenceId = "prev-employer";
+    } else {
+      // Dynamic sections — key format: "{sectionTitle}-{item.id}"
+      sectionType = activeStep.replace(/\s+/g, "_");
+      const lookupConfigId = Number(key.split("-").pop());
+      if (!isNaN(lookupConfigId)) {
+        meta.lookupConfigId = lookupConfigId;
+      }
     }
 
     try {
       setIsLoading(true);
       await uploadITDocument(fy, empCode, sectionType, file, meta);
       showToast(toast, "success", "Uploaded", "File uploaded successfully.");
-
-      // Update local section state with the new attachment after reload
       await loadAttachments(declarationItem);
     } catch (err) {
       showToast(toast, "error", "Upload Failed", "Could not upload file.");
@@ -916,38 +816,6 @@ const ITDeclaration: React.FC = () => {
   };
 
   const customWindow = window as CustomWindow;
-  // const handleDownloadAll = async () => {
-  //   if (!declarationItem) return;
-  //   try {
-  //     setIsLoading(true);
-  //     const fy = declarationItem.FinancialYear;
-  //     const empCode = matchedEmployee?.EmployeeId || "Unknown";
-  //     await downloadAttachmentsAsZip(
-  //       declarationItem.Id,
-  //       declarationItem.Title,
-  //       fy,
-  //       empCode,
-  //     );
-  //     showToast(
-  //       toast,
-  //       "success",
-  //       "Download Started",
-  //       "Your attachments are being zipped and downloaded.",
-  //     );
-  //   } catch (err) {
-  //     showToast(
-  //       toast,
-  //       "error",
-  //       "Download Failed",
-  //       "Could not download attachments.",
-  //     );
-  //     console.error(err);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // ── Soft-delete an attachment (IsDelete = true) ───────────────────────────
   const handleDownloadAll = async () => {
     if (!declarationItem) return;
 
@@ -1011,7 +879,6 @@ const ITDeclaration: React.FC = () => {
       await updateListItem(LIST_NAMES.IT_DOCUMENTS, fileId, { IsDelete: true });
       showToast(toast, "success", "Removed", "Attachment removed.");
 
-      // Update local section state
       if (key.startsWith("landlord-")) {
         const idx = Number(key.replace("landlord-", ""));
         setLandlords((prev) =>
@@ -1019,58 +886,55 @@ const ITDeclaration: React.FC = () => {
             i === idx
               ? {
                   ...ll,
-                  attachments: ll.attachments.filter(
+                  attachments: (ll.attachments || []).filter(
                     (f: any) => f.Id !== fileId,
                   ),
                 }
               : ll,
           ),
         );
-      } else if (key.startsWith("80c-")) {
-        const idStr = key.replace("80c-", "");
-        setItems80C((prev) =>
-          prev.map((item) =>
-            // item.id === idStr
-            item.investmentType === idStr
-              ? {
-                  ...item,
-                  attachments: item.attachments.filter(
-                    (f: any) => f.Id !== fileId,
-                  ),
-                }
-              : item,
-          ),
-        );
-      } else if (key.startsWith("80d-")) {
-        const idStr = key.replace("80d-", "");
-        setItems80D((prev) =>
-          prev.map((item) =>
-            // item.id === idStr
-            item.investmentType === idStr
-              ? {
-                  ...item,
-                  attachments: item.attachments.filter(
-                    (f: any) => f.Id !== fileId,
-                  ),
-                }
-              : item,
-          ),
-        );
       } else if (key === "lta") {
         setLtaData((prev: any) => ({
           ...prev,
-          attachments: prev.attachments.filter((f: any) => f.Id !== fileId),
+          attachments: (prev.attachments || []).filter(
+            (f: any) => f.Id !== fileId,
+          ),
         }));
       } else if (key === "housing-self" || key === "housing-letout") {
         setHousingLoanData((prev: any) => ({
           ...prev,
-          attachments: prev.attachments.filter((f: any) => f.Id !== fileId),
+          attachments: (prev.attachments || []).filter(
+            (f: any) => f.Id !== fileId,
+          ),
+        }));
+      } else if (key === "housing-others") {
+        setHousingLoanData((prev: any) => ({
+          ...prev,
+          othersAttachments: prev.othersAttachments.filter(
+            (f: any) => f.Id !== fileId,
+          ),
         }));
       } else if (key === "prev-employer") {
         setPreviousEmployerData((prev: any) => ({
           ...prev,
-          attachments: prev.attachments.filter((f: any) => f.Id !== fileId),
+          attachments: (prev.attachments || []).filter(
+            (f: any) => f.Id !== fileId,
+          ),
         }));
+      } else {
+        // Dynamic sections — key is the section title (= activeStep)
+        setDynamicSectionData((prev) => {
+          const next = { ...prev };
+          if (next[key]) {
+            next[key] = next[key].map((item) => ({
+              ...item,
+              attachments: (item.attachments || []).filter(
+                (f: any) => (f.Id || f.ID) !== fileId,
+              ),
+            }));
+          }
+          return next;
+        });
       }
     } catch (err) {
       showToast(toast, "error", "Error", "Could not remove attachment.");
@@ -1204,40 +1068,20 @@ const ITDeclaration: React.FC = () => {
             _errMsg = "Journey destination is required";
           } else if (!ltaData.modeOfTravel) {
             _errMsg = "Mode of travel is required";
-          } else if (!ltaData.classOfTravel.trim()) {
+          } else if (
+            !ltaData.classOfTravel.trim() &&
+            ltaData.modeOfTravel !== "Others"
+          ) {
             _errMsg = "Class of travel is required";
-          } else if (!ltaData.ticketNumbers.trim()) {
+          } else if (
+            !ltaData.ticketNumbers.trim() &&
+            ltaData.modeOfTravel !== "Others"
+          ) {
             _errMsg = "Ticket number is required";
           } else if (!ltaData.lastClaimedYear) {
             _errMsg = "Last claimed year is required";
           } else if (!ltaData.attachments || ltaData.attachments.length === 0) {
             _errMsg = "Attachment is mandatory for LTA exemption";
-          }
-        }
-        break;
-
-      case "Section 80C Deductions":
-        if (declarationItem.TaxRegime === "Old Regime") {
-          for (const item of items80C) {
-            if (Number(item.declaredAmount) > 0) {
-              if (!item.attachments || item.attachments.length === 0) {
-                _errMsg = `Attachment is mandatory for ${item.investmentType}`;
-                break;
-              }
-            }
-          }
-        }
-        break;
-
-      case "Section 80 Deductions":
-        if (declarationItem.TaxRegime === "Old Regime") {
-          for (const item of items80D) {
-            if (Number(item.declaredAmount) > 0) {
-              if (!item.attachments || item.attachments.length === 0) {
-                _errMsg = `Attachment is mandatory for ${item.investmentType}`;
-                break;
-              }
-            }
           }
         }
         break;
@@ -1249,8 +1093,6 @@ const ITDeclaration: React.FC = () => {
             ((housingLoanData.propertyType === "Let Out Property" &&
               !housingLoanData.finalLettableValue) ||
               !housingLoanData.letOutInterestAmount) &&
-            // ||
-            // !housingLoanData.otherDeductionsUs24)
             (!housingLoanData.interestAmount ||
               !housingLoanData.lenderName ||
               !housingLoanData.lenderAddress ||
@@ -1262,9 +1104,6 @@ const ITDeclaration: React.FC = () => {
               } else if (!housingLoanData.letOutInterestAmount) {
                 _errMsg = "Let out interest amount is required";
               }
-              // else if (!housingLoanData.otherDeductionsUs24) {
-              //   _errMsg = "Other deductions u/s 24 is required";
-              // }
             } else if (!housingLoanData.interestAmount) {
               _errMsg = "Interest amount is required";
             } else if (!housingLoanData.lenderName) {
@@ -1289,6 +1128,25 @@ const ITDeclaration: React.FC = () => {
           ) {
             _errMsg = `Attachment is mandatory for ${housingLoanData.propertyType} Housing Loan`;
           }
+          if (
+            !_errMsg &&
+            housingLoanData.propertyType !== "None" &&
+            (housingLoanData.isJointlyAvailed === null ||
+              housingLoanData.isJointlyAvailed === "")
+          ) {
+            _errMsg = "Jointly availed Property Loan selection is required";
+          }
+
+          if (
+            !_errMsg &&
+            housingLoanData.propertyType !== "None" &&
+            housingLoanData.isJointlyAvailed === true &&
+            (!housingLoanData.othersAttachments ||
+              housingLoanData.othersAttachments.length === 0)
+          ) {
+            _errMsg =
+              "Upload PDF is mandatory when Jointly availed Property Loan is Yes";
+          }
         }
         break;
 
@@ -1306,6 +1164,21 @@ const ITDeclaration: React.FC = () => {
           _errMsg = "Declaration agreement is not agreed";
         } else if (!declarationAgreement.place.trim()) {
           _errMsg = "Place is required";
+        }
+        break;
+
+      default:
+        // Dynamic Sections validation
+        if (declarationItem.TaxRegime === "Old Regime") {
+          const items = dynamicSectionData[stepName] || [];
+          for (const item of items) {
+            if (Number(item.declaredAmount) > 0) {
+              if (!item.attachments || item.attachments.length === 0) {
+                _errMsg = `Attachment is mandatory for ${item.investmentType}`;
+                break;
+              }
+            }
+          }
         }
         break;
     }
@@ -1328,9 +1201,7 @@ const ITDeclaration: React.FC = () => {
   };
 
   const handleSaveStep = async (nextStep?: string) => {
-    const step = activeStep;
     if (!declarationItem) return;
-
     try {
       setIsLoading(true);
       const mainId = declarationItem.Id;
@@ -1338,171 +1209,81 @@ const ITDeclaration: React.FC = () => {
       const commentsJSON = JSON.stringify({
         HouseRental: commentsHR,
         LTA: commentsLTA,
-        Section80C: comments80C,
-        Section80D: comments80D,
+        DynamicComments: dynamicComments || {},
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,
         Summary: commentsSummary,
       });
 
-      switch (step) {
-        case "Basic Information": {
+      // Common updates for the main record
+      const mainUpdate: any = {
+        ActiveStep: status === "Draft" ? nextStep || activeStep : activeStep,
+        ApproverCommentsJson: commentsJSON,
+      };
+
+      // Only allow updating SectionDetailsJSON if item is Draft or Submitted
+      // Strip attachments — they are loaded fresh from IT_Documents on each load
+      if (status === "Draft" || status === "Submitted") {
+        const sectionDataToSave: Record<string, any[]> = {};
+        Object.keys(dynamicSectionData).forEach((sectionKey) => {
+          sectionDataToSave[sectionKey] = dynamicSectionData[sectionKey].map(
+            ({ attachments: _a, ...rest }) => rest,
+          );
+        });
+        mainUpdate.SectionDetailsJSON = JSON.stringify(sectionDataToSave);
+      }
+
+      switch (activeStep) {
+        case "Basic Information":
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
+            ...mainUpdate,
             PAN: pan,
-            ApproverCommentsJson: commentsJSON,
-            MobileNumber: mobile?.toString(),
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
+            MobileNumber: mobile,
           });
           break;
-        }
 
-        case "House Rental": {
+        case "House Rental":
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
+            ...mainUpdate,
             RentDetailsJSON: JSON.stringify(rentDetails),
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
-
-          // Soft-delete attachments of deleted landlords
-          const attachmentsToSoftDelete = landlords
-            .flatMap((ll) => ll.attachments || [])
-            .filter((att: any) => att.isDeleted)
-            .map((att: any) => ({
-              id: att.Id as number,
-              data: { IsDelete: true },
-            }));
-
-          if (attachmentsToSoftDelete.length > 0) {
-            await updateListItemsBatch(
-              LIST_NAMES.IT_DOCUMENTS,
-              attachmentsToSoftDelete,
-            );
-          }
-
-          const llsToSave = landlords.filter(
-            (ll) =>
-              ll.name?.trim() ||
-              ll.pan?.trim() ||
-              ll.address?.trim() ||
-              ll.isDeleted,
-          );
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
-            mainId,
-            llsToSave,
-            (ll) => ({
-              Title: ll.name,
-              PAN: ll.pan,
-              Address: ll.address,
-              IsDelete: ll.isDeleted || false,
-            }),
-            "ActualDeclarationId",
-          );
-
-          const savedLandlords = await getRelatedListItems(
-            LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
-            mainId,
-            "ActualDeclarationId",
-          );
-          if (savedLandlords.length > 0) {
-            const allDocs = await getITDocuments(mainId);
-            setLandlords(
-              savedLandlords.map((ll) => ({
-                Id: ll.Id,
-                name: ll.Title,
-                pan: ll.PAN,
-                address: ll.Address,
-                attachments: allDocs.filter((d) => d.LandLordId === ll.Id),
-              })),
-            );
-          }
           break;
-        }
 
-        case "LTA": {
+        case "LTA":
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
+            ...mainUpdate,
           });
-          if (Number(ltaData.exemptionAmount || 0) > 0) {
-            await upsertRelatedListBatch(
-              LIST_NAMES.IT_LTA_Actual,
-              mainId,
-              [ltaData],
-              (lta) => ({
-                ExemptionAmount: Number(lta.exemptionAmount || 0),
-                JourneyStartDate: lta.journeyStartDate,
-                JourneyEndDate: lta.journeyEndDate,
-                StartPlace: lta.journeyStartPlace,
-                Destination: lta.journeyDestination,
-                ModeOfTravel: lta.modeOfTravel,
-                ClassOfTravel: lta.classOfTravel,
-                TicketNumbers: lta.ticketNumbers,
-                LastLTAYear: lta.lastClaimedYear,
-                COTravellerJSON: JSON.stringify(coTravellers),
-              }),
-              "ActualDeclarationId",
-            );
-          }
-          break;
-        }
-
-        case "Section 80C Deductions": {
-          await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
-          });
-          const itemsToSave80C = items80C.filter(
-            (i) => Number(i.declaredAmount) > 0,
-          );
           await upsertRelatedListBatch(
-            LIST_NAMES.IT_80C_SECTION_Actual,
+            LIST_NAMES.IT_LTA_Actual,
             mainId,
-            itemsToSave80C,
-            (i) => ({
-              Title: i.title,
-              Amount: Number(i.declaredAmount || 0),
-              TypeOfInvestmentId: i.id,
+            [ltaData],
+            (lta: any) => ({
+              ExemptionAmount: Number(lta.exemptionAmount || 0),
+              JourneyStartDate: lta.journeyStartDate,
+              JourneyEndDate: lta.journeyEndDate,
+              StartPlace: lta.journeyStartPlace,
+              Destination: lta.journeyDestination,
+              ModeOfTravel: lta.modeOfTravel,
+              ClassOfTravel: lta.classOfTravel,
+              TicketNumbers: lta.ticketNumbers,
+              LastLTAYear: lta.lastClaimedYear,
+              COTravellerJSON: JSON.stringify(coTravellers),
             }),
             "ActualDeclarationId",
           );
           break;
-        }
 
-        case "Section 80 Deductions": {
+        case "Housing Loan Repayment":
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
-          });
-          const itemsToSave80D = items80D.filter(
-            (i) => Number(i.declaredAmount) > 0,
-          );
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_80_Actual,
-            mainId,
-            itemsToSave80D,
-            (i) => ({
-              Title: i.title,
-              Amount: Number(i.declaredAmount || 0),
-              TypeOfInvestmentId: i.id,
-            }),
-            "ActualDeclarationId",
-          );
-          break;
-        }
-
-        case "Housing Loan Repayment": {
-          await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
+            ...mainUpdate,
           });
           await upsertRelatedListBatch(
             LIST_NAMES.IT_HOUSING_LOAN_Actual,
             mainId,
             [housingLoanData],
-            (hl) => ({
+            (hl: any) => ({
               PropertyType: hl.propertyType,
-              Interest: hl.interestAmount,
+              Interest: Number(hl.interestAmount || 0),
               LenderName: hl.lenderName,
               LenderAddress: hl.lenderAddress,
               PANofLender: hl.lenderPan,
@@ -1511,52 +1292,67 @@ const ITDeclaration: React.FC = () => {
                 typeof hl.isJointlyAvailed === "boolean"
                   ? hl.isJointlyAvailed
                   : null,
-              FinalLettableValue: hl.finalLettableValue,
-              LetOutInterest: hl.letOutInterestAmount,
-              OtherDeductions: hl.otherDeductionsUs24,
+              FinalLettableValue: Number(hl.finalLettableValue || 0),
+              LetOutInterest: Number(hl.letOutInterestAmount || 0),
+              OtherDeductions: Number(hl.otherDeductionsUs24 || 0),
             }),
             "ActualDeclarationId",
           );
           break;
-        }
 
-        case "Previous Employer Details": {
+        case "Previous Employer Details":
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
+            ...mainUpdate,
           });
-          const pe = previousEmployerData;
           if (previousEmployerData.employerName.trim()) {
             await upsertRelatedListBatch(
               LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
               mainId,
-              [pe],
-              (peItem) => ({
-                Title: peItem.employerName,
-                EmployeePAN: peItem.employerPan,
-                TAN: peItem.employerTan,
-                EmploymentFrom: peItem.periodFrom,
-                EmploymentTo: peItem.periodTo,
-                SalaryAfterExemptionUS10: peItem.salaryAfterExemption,
-                PFContribution: peItem.pfContribution,
-                VPF: peItem.vpfContribution,
-                ProfessionalTax: peItem.professionalTax,
-                TDS: peItem.taxDeductedAtSource,
-                Address: peItem.employerAddress,
+              [previousEmployerData],
+              (pe: any) => ({
+                Title: pe.employerName,
+                EmployeePAN: pe.employerPan,
+                TAN: pe.employerTan,
+                EmploymentFrom: pe.periodFrom,
+                EmploymentTo: pe.periodTo,
+                SalaryAfterExemptionUS10: Number(pe.salaryAfterExemption || 0),
+                PFContribution: Number(pe.pfContribution || 0),
+                VPF: Number(pe.vpfContribution || 0),
+                ProfessionalTax: Number(pe.professionalTax || 0),
+                TDS: Number(pe.taxDeductedAtSource || 0),
+                Address: pe.employerAddress,
               }),
               "ActualDeclarationId",
             );
           }
-
           break;
-        }
+
+        case "Declaration & Summary":
+          await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
+            ...mainUpdate,
+            IsAcknowledged: declarationAgreement.agreed,
+            Place: declarationAgreement.place,
+          });
+          break;
+
+        default:
+          await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
+            ...mainUpdate,
+          });
+          break;
       }
     } catch (err) {
       console.error("Error saving step", err);
     } finally {
-      // await loadSavedData(declarationItem);
       setIsLoading(false);
     }
+  };
+
+  const handleNavigateBack = () => {
+    const returnUrl = location.state?.from
+      ? "/" + location.state.from
+      : "/submittedDeclarations";
+    navigate(returnUrl, { state: { tab: location.state?.tab } });
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
@@ -1566,8 +1362,7 @@ const ITDeclaration: React.FC = () => {
       const commentsJSON = JSON.stringify({
         HouseRental: commentsHR,
         LTA: commentsLTA,
-        Section80C: comments80C,
-        Section80D: comments80D,
+        DynamicComments: dynamicComments || {},
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,
         Summary: commentsSummary,
@@ -1596,6 +1391,13 @@ const ITDeclaration: React.FC = () => {
           Place: null,
           SubmittedDate: null,
         };
+      } else if (newStatus === "Submitted") {
+        _res = {
+          ..._res,
+          IsAcknowledged: declarationAgreement.agreed,
+          Place: declarationAgreement.place,
+          SubmittedDate: new Date().toISOString(),
+        };
       }
 
       await updateListItem(
@@ -1603,6 +1405,14 @@ const ITDeclaration: React.FC = () => {
         declarationItem.Id,
         _res,
       );
+
+      // Reload
+      const sp = getSP();
+      const refreshed = await sp.web.lists
+        .getByTitle(LIST_NAMES.ACTUAL_DECLARATION)
+        .items.getById(declarationItem.Id)
+        .select("*")();
+      setDeclarationItem(refreshed);
 
       // Send email notification
       const empEmail =
@@ -1652,30 +1462,19 @@ const ITDeclaration: React.FC = () => {
         );
       }
 
-      setShowPopup({
-        visible: true,
-        type: "success",
-        description: `${newStatus} successfully.`,
-      });
+      showToast(toast, "success", "Success", `Status updated to ${newStatus}`);
 
-      // Wait 3 seconds then navigate back
       setTimeout(() => {
-        setShowPopup((prev) => ({ ...prev, visible: false }));
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        handleNavigateBack();
-      }, 3000);
-    } catch (error) {
-      console.error("Error updating status:", error);
+        if (newStatus === "Submitted") {
+          handleNavigateBack();
+        }
+      }, 2000);
+    } catch (err) {
+      console.error("Error updating status", err);
+      showToast(toast, "error", "Error", "Could not update status.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleNavigateBack = () => {
-    const returnUrl = location.state?.from
-      ? "/" + location.state.from
-      : "/submittedDeclarations";
-    navigate(returnUrl, { state: { tab: location.state?.tab } });
   };
 
   const renderCurrentStep = () => {
@@ -1686,7 +1485,7 @@ const ITDeclaration: React.FC = () => {
         return (
           <HomeStep
             declarationType={declarationItem?.DeclarationType || "Actual"}
-            financialYear={declarationItem?.FinancialYear || "-"}
+            financialYear={declarationItem?.FinancialYear || curFinanicalYear}
             taxRegime={declarationItem?.TaxRegime || "-"}
           />
         );
@@ -1697,7 +1496,9 @@ const ITDeclaration: React.FC = () => {
               code: matchedEmployee?.EmployeeId || "N/A",
               name: matchedEmployee?.Name || "",
               location: matchedEmployee?.Location || "-",
-              doj: moment(matchedEmployee?.DOJ).format("DD/MM/YYYY") || "-",
+              doj: matchedEmployee?.DOJ
+                ? moment(matchedEmployee.DOJ).format("DD/MM/YYYY")
+                : "-",
               email: matchedEmployee?.Email || user?.Email || "",
               mobile: mobile || "-",
             }}
@@ -1746,15 +1547,6 @@ const ITDeclaration: React.FC = () => {
               } else {
                 newLls.splice(idx, 1);
               }
-              // Also soft-delete all attachments belonging to this landlord
-              if (newLls[idx].attachments) {
-                newLls[idx].attachments = newLls[idx].attachments!.map(
-                  (att: any) => ({
-                    ...att,
-                    isDeleted: true,
-                  }),
-                );
-              }
               setLandlords(newLls);
             }}
             showApproverComments={
@@ -1778,7 +1570,8 @@ const ITDeclaration: React.FC = () => {
             coTravellers={coTravellers}
             onLtaChange={(field, val) => {
               if (field === "exemptionAmount" && (val === "" || val === "0")) {
-                setLtaData({
+                setLtaData((prev: any) => ({
+                  ...prev,
                   exemptionAmount: val,
                   journeyStartDate: null,
                   journeyEndDate: null,
@@ -1788,7 +1581,11 @@ const ITDeclaration: React.FC = () => {
                   classOfTravel: "",
                   ticketNumbers: "",
                   lastClaimedYear: "",
-                });
+                  attachments: (prev.attachments || []).map((att: any) => ({
+                    ...att,
+                    isDeleted: true,
+                  })),
+                }));
                 setCoTravellers((prev: any) =>
                   prev.map((ct: any) => ({
                     ...ct,
@@ -1835,58 +1632,6 @@ const ITDeclaration: React.FC = () => {
             onDeleteAttachment={handleDeleteAttachment}
           />
         );
-      case "Section 80C Deductions":
-        return (
-          <Section80CStep
-            items={items80C}
-            sectionMaxAmount={maxAmount80C}
-            onAmountChange={(id, val) => {
-              const newItems = [...items80C];
-              const idx = newItems.findIndex((i) => i.id === id);
-              if (idx > -1) {
-                newItems[idx].declaredAmount = val;
-                setItems80C(newItems);
-              }
-            }}
-            showApproverComments={
-              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
-              status == "Approved" ||
-              status == "Rework"
-            }
-            approverComments={comments80C}
-            onCommentChange={setComments80C}
-            status={status}
-            readOnly={readOnly}
-            onUpload={handleUpload}
-            onDeleteAttachment={handleDeleteAttachment}
-          />
-        );
-      case "Section 80 Deductions":
-        return (
-          <Section80DStep
-            items={items80D}
-            sectionMaxAmount={maxAmount80D}
-            showApproverComments={
-              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
-              status == "Approved" ||
-              status == "Rework"
-            }
-            approverComments={comments80D}
-            onAmountChange={(id, val) => {
-              const newItems = [...items80D];
-              const idx = newItems.findIndex((i) => i.id === id);
-              if (idx > -1) {
-                newItems[idx].declaredAmount = val;
-                setItems80D(newItems);
-              }
-            }}
-            onCommentChange={setComments80D}
-            status={status}
-            readOnly={readOnly}
-            onUpload={handleUpload}
-            onDeleteAttachment={handleDeleteAttachment}
-          />
-        );
       case "Housing Loan Repayment":
         return (
           <HousingLoanStep
@@ -1921,6 +1666,8 @@ const ITDeclaration: React.FC = () => {
             readOnly={readOnly}
             onUpload={handleUpload}
             onDeleteAttachment={handleDeleteAttachment}
+            onOthersUpload={handleUpload}
+            onOthersDeleteAttachment={handleDeleteAttachment}
           />
         );
       case "Previous Employer Details":
@@ -1947,10 +1694,20 @@ const ITDeclaration: React.FC = () => {
           />
         );
       case "Declaration & Summary":
+        // Calculate dynamic totals
+        const dynamicTotals: Record<string, string> = {};
+        Object.keys(dynamicSectionData).forEach((section) => {
+          const total = dynamicSectionData[section].reduce(
+            (acc: number, curr: any) => acc + Number(curr.declaredAmount || 0),
+            0,
+          );
+          dynamicTotals[section] = total.toLocaleString();
+        });
+
         return (
           <SummaryStep
             employeeInfo={{
-              fy: declarationItem?.FinancialYear || "2025 - 2026",
+              fy: declarationItem?.FinancialYear || curFinanicalYear,
               code: matchedEmployee?.EmployeeId || "N/A",
               name: matchedEmployee?.Name || "",
               pan: pan,
@@ -1958,32 +1715,38 @@ const ITDeclaration: React.FC = () => {
             }}
             totals={{
               lta: ltaData.exemptionAmount || "0",
-              section80C: items80C
+              houseRental: rentDetails
                 .reduce(
-                  (acc, curr) => acc + Number(curr.declaredAmount || 0),
+                  (acc: number, curr: any) => acc + Number(curr.rent || 0),
                   0,
                 )
-                .toLocaleString(),
-              houseRental: rentDetails
-                .reduce((acc, curr) => acc + Number(curr.rent || 0), 0)
                 .toLocaleString(),
               housingLoan: (
                 Number(housingLoanData.interestAmount || 0) +
                 Number(housingLoanData.letOutInterestAmount || 0)
               ).toLocaleString(),
-              section80D: items80D
+              section80C: (dynamicSectionData["Section 80C Deductions"] || [])
                 .reduce(
-                  (acc, curr) => acc + Number(curr.declaredAmount || 0),
+                  (acc: number, curr: any) =>
+                    acc + Number(curr.declaredAmount || 0),
                   0,
                 )
                 .toLocaleString(),
+              section80D: (dynamicSectionData["Section 80 Deductions"] || [])
+                .reduce(
+                  (acc: number, curr: any) =>
+                    acc + Number(curr.declaredAmount || 0),
+                  0,
+                )
+                .toLocaleString(),
+              ...dynamicTotals,
             }}
             declaration={declarationAgreement}
             onDeclarationChange={(field: "agreed" | "place", val: any) =>
               setDeclarationAgreement((prev) => ({ ...prev, [field]: val }))
             }
-            onSaveAsDraft={() => console.log("Saving draft...")}
-            onSubmit={() => console.log("Submitting...")}
+            onSaveAsDraft={() => handleSaveStep()}
+            onSubmit={() => handleStatusUpdate("Submitted")}
             onDownloadAttachments={isAdmin ? handleDownloadAll : undefined}
             readOnly={readOnly}
             taxRegime={declarationItem?.TaxRegime}
@@ -1998,14 +1761,35 @@ const ITDeclaration: React.FC = () => {
           />
         );
       default:
+        // Dynamic Section Step
         return (
-          <div className={styles.stepContent}>
-            <h3>{activeStep}</h3>
-            <p>
-              Form fields for {activeStep} will be dynamically loaded from
-              lookup configuration.
-            </p>
-          </div>
+          <DynamicSectionStep
+            title={activeStep}
+            sectionMaxAmount={sectionMaxAmounts[activeStep] || 0}
+            items={dynamicSectionData[activeStep] || []}
+            onAmountChange={(id: number, val: string) => {
+              setDynamicSectionData((prev) => {
+                const next = { ...prev };
+                next[activeStep] = next[activeStep].map((item) =>
+                  item.id === id ? { ...item, declaredAmount: val } : item,
+                );
+                return next;
+              });
+            }}
+            showApproverComments={
+              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
+              status == "Approved" ||
+              status == "Rework"
+            }
+            approverComments={dynamicComments[activeStep] || ""}
+            onCommentChange={(val) =>
+              setDynamicComments((prev) => ({ ...prev, [activeStep]: val }))
+            }
+            status={status}
+            readOnly={readOnly}
+            onUpload={handleUpload}
+            onDeleteAttachment={handleDeleteAttachment}
+          />
         );
     }
   };
@@ -2022,14 +1806,14 @@ const ITDeclaration: React.FC = () => {
       .items.getById(plannedId)
       .select("*")();
 
-    // 2. Update Actual main item: clone key fields + set TaxRegime + Status=Draft
-    await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, actualId, {
+    // 2. Clone basic fields
+    const mainUpdate: any = {
       TaxRegime: regime,
       PAN: plannedItem.PAN || "",
       RentDetailsJSON: plannedItem.RentDetailsJSON || null,
       Status: "Draft",
       MobileNumber: plannedItem.MobileNumber,
-    });
+    };
 
     // Helper: fetch Planned sub-list
     const fetchPlannedSub = (listName: string) =>
@@ -2040,13 +1824,11 @@ const ITDeclaration: React.FC = () => {
         )();
 
     // 3a. Clone Landlords
-    const landlords: any[] = await fetchPlannedSub(
-      LIST_NAMES.IT_LANDLORD_DETAILS,
-    );
-    if (landlords.length > 0) {
+    const plands: any[] = await fetchPlannedSub(LIST_NAMES.IT_LANDLORD_DETAILS);
+    if (plands.length > 0) {
       await addListItemsBatch(
         LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
-        landlords.map((l) => ({
+        plands.map((l) => ({
           Title: l.Title,
           PAN: l.PAN,
           Address: l.Address,
@@ -2056,11 +1838,11 @@ const ITDeclaration: React.FC = () => {
     }
 
     // 3b. Clone LTA
-    const ltaItems: any[] = await fetchPlannedSub(LIST_NAMES.IT_LTA);
-    if (ltaItems.length > 0) {
+    const pltaItems: any[] = await fetchPlannedSub(LIST_NAMES.IT_LTA);
+    if (pltaItems.length > 0) {
       await addListItemsBatch(
         LIST_NAMES.IT_LTA_Actual,
-        ltaItems.map((l) => ({
+        pltaItems.map((l) => ({
           ExemptionAmount: l.ExemptionAmount,
           JourneyStartDate: l.JourneyStartDate,
           JourneyEndDate: l.JourneyEndDate,
@@ -2076,42 +1858,51 @@ const ITDeclaration: React.FC = () => {
       );
     }
 
-    // 3c. Clone Section 80C
-    const items80C: any[] = await fetchPlannedSub(LIST_NAMES.IT_80C_SECTION);
-    if (items80C.length > 0) {
-      await addListItemsBatch(
-        LIST_NAMES.IT_80C_SECTION_Actual,
-        items80C.map((i) => ({
-          Title: i.Title,
-          Amount: i.Amount,
-          TypeOfInvestmentId: i.TypeOfInvestmentId,
-          ActualDeclarationId: actualId,
-        })),
-      );
+    // 3c. Build SectionDetailsJSON from Planned lists
+    const sectionDetails: Record<string, any[]> = {};
+
+    // 80C
+    const p80c: any[] = await fetchPlannedSub(LIST_NAMES.IT_80C_SECTION);
+    if (p80c.length > 0) {
+      sectionDetails["Section 80C Deductions"] = p80c.map((i) => ({
+        id: i.TypeOfInvestmentId,
+        investmentType: i.Title,
+        declaredAmount: i.Amount?.toString() || "",
+        attachments: [],
+      }));
     }
 
-    // 3d. Clone Section 80D
-    const items80D: any[] = await fetchPlannedSub(LIST_NAMES.IT_80);
-    if (items80D.length > 0) {
-      await addListItemsBatch(
-        LIST_NAMES.IT_80_Actual,
-        items80D.map((i) => ({
-          Title: i.Title,
-          Amount: i.Amount,
-          TypeOfInvestmentId: i.TypeOfInvestmentId,
-          ActualDeclarationId: actualId,
-        })),
-      );
+    // 80D
+    const p80d: any[] = await fetchPlannedSub(LIST_NAMES.IT_80);
+    if (p80d.length > 0) {
+      sectionDetails["Section 80 Deductions"] = p80d.map((i) => ({
+        id: i.TypeOfInvestmentId,
+        investmentType: i.Title,
+        declaredAmount: i.Amount?.toString() || "",
+        attachments: [],
+      }));
     }
 
-    // 3e. Clone Housing Loan
-    const housingLoans: any[] = await fetchPlannedSub(
+    // If Planned already has SectionDetailsJSON, parse and merge it
+    if (plannedItem.SectionDetailsJSON) {
+      try {
+        const plannedDynamic = JSON.parse(plannedItem.SectionDetailsJSON);
+        Object.keys(plannedDynamic).forEach((sec) => {
+          sectionDetails[sec] = plannedDynamic[sec];
+        });
+      } catch (e) {}
+    }
+
+    mainUpdate.SectionDetailsJSON = JSON.stringify(sectionDetails);
+
+    // 3d. Clone Housing Loan
+    const phousingLoans: any[] = await fetchPlannedSub(
       LIST_NAMES.IT_HOUSING_LOAN,
     );
-    if (housingLoans.length > 0) {
+    if (phousingLoans.length > 0) {
       await addListItemsBatch(
         LIST_NAMES.IT_HOUSING_LOAN_Actual,
-        housingLoans.map((hl) => ({
+        phousingLoans.map((hl) => ({
           PropertyType: hl.PropertyType,
           Interest: hl.Interest,
           LenderName: hl.LenderName,
@@ -2127,14 +1918,14 @@ const ITDeclaration: React.FC = () => {
       );
     }
 
-    // 3f. Clone Previous Employer
-    const prevEmployers: any[] = await fetchPlannedSub(
+    // 3e. Clone Previous Employer
+    const pprevEmployers: any[] = await fetchPlannedSub(
       LIST_NAMES.IT_PREVIOUS_EMPLOYER,
     );
-    if (prevEmployers.length > 0) {
+    if (pprevEmployers.length > 0) {
       await addListItemsBatch(
         LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
-        prevEmployers.map((pe) => ({
+        pprevEmployers.map((pe) => ({
           Title: pe.Title,
           EmployeePAN: pe.EmployeePAN,
           TAN: pe.TAN,
@@ -2150,6 +1941,9 @@ const ITDeclaration: React.FC = () => {
         })),
       );
     }
+
+    // 4. Update the main item with everything
+    await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, actualId, mainUpdate);
   };
 
   const handleRegimeSubmit = async (regime: string) => {
@@ -2238,16 +2032,14 @@ const ITDeclaration: React.FC = () => {
               steps={steps}
               activeStep={activeStep}
               onStepClick={async (key) => {
-                const lastsaveIdx = steps.findIndex(
-                  // (s) => s.key === declarationItem.ActiveStep,
-                  (s) => s.key === activeStep,
-                );
-                const idx = steps.findIndex((s) => s.key === key);
-                if (idx > lastsaveIdx) {
-                  const isInvalid = await validateStep(activeStep);
-                  if (isInvalid) return;
-                  await handleSaveStep(key);
-                }
+                // const lastsaveIdx = steps.findIndex(
+                //   // (s) => s.key === declarationItem.ActiveStep,
+                //   (s) => s.key === activeStep,
+                // );
+                // const idx = steps.findIndex((s) => s.key === key);
+                // if (idx > lastsaveIdx) {
+                //   await handleSaveStep(key);
+                // }
                 setActiveStep(key);
                 setIsEditMode(false);
               }}
@@ -2403,8 +2195,6 @@ const ITDeclaration: React.FC = () => {
                   onClick={async () => {
                     const idx = steps.findIndex((s) => s.key === activeStep);
                     if (idx < steps.length - 1) {
-                      const isInvalid = await validateStep(activeStep);
-                      if (isInvalid) return;
                       const nextStep = steps[idx + 1].key;
                       await handleSaveStep(nextStep);
                       setActiveStep(nextStep);
@@ -2430,18 +2220,19 @@ const ITDeclaration: React.FC = () => {
                     const idx = steps.findIndex((s) => s.key === activeStep);
                     if (idx < steps.length - 1) {
                       await handleSaveStep();
-                      if (
-                        userRole == "Admins" ||
-                        userRole == "FinanceApprover"
-                      ) {
-                        navigate("/employeeDeclaration", {
-                          state: { tab: location.state?.tab },
-                        });
-                      } else {
-                        navigate("/submittedDeclarations", {
-                          state: { tab: location.state?.tab },
-                        });
-                      }
+                      // if (
+                      //   userRole == "Admins" ||
+                      //   userRole == "FinanceApprover"
+                      // ) {
+                      //   navigate("/employeeDeclaration", {
+                      //     state: { tab: location.state?.tab },
+                      //   });
+                      // } else {
+
+                      navigate("/submittedDeclarations", {
+                        state: { tab: location.state?.tab },
+                      });
+                      // }
                     }
                   }}
                 />
@@ -2466,41 +2257,9 @@ const ITDeclaration: React.FC = () => {
                       await handleSaveStep(nextStep);
                       setActiveStep(nextStep);
                     } else {
-                      const isValid = await validation();
-                      if (isValid) return;
-                      setIsLoading(true);
-                      try {
-                        if (declarationItem) {
-                          await updateListItem(
-                            LIST_NAMES.ACTUAL_DECLARATION,
-                            declarationItem.Id,
-                            {
-                              Status: "Submitted",
-                              IsAcknowledged: declarationAgreement.agreed,
-                              Place: declarationAgreement.place,
-                              SubmittedDate: new Date().toISOString(),
-                              ActiveStep: "",
-                            },
-                          );
-                          setShowPopup({
-                            visible: true,
-                            type: "success",
-                          });
-
-                          // Wait 3 seconds then navigate back
-                          setTimeout(() => {
-                            setShowPopup((prev) => ({
-                              ...prev,
-                              visible: false,
-                            }));
-                            handleNavigateBack();
-                          }, 3000);
-                        }
-                      } catch (error) {
-                        console.error("Error submitting declaration", error);
-                      } finally {
-                        setIsLoading(false);
-                      }
+                      const isInvalid = await validation();
+                      if (isInvalid) return;
+                      await handleStatusUpdate("Submitted");
                     }
                   }}
                   loading={isLoading}

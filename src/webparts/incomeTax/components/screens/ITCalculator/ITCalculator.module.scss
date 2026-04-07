@@ -17,6 +17,20 @@
   margin: 0 0 10px 0;
 }
 
+.excelImageWrapper {
+  display: flex;
+  margin: 16px 0 0px 0px;
+  img {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+.excelImage {
+  width: 80px;
+  height: 80px;
+}
+
 .downloadBtn {
   background: #4b55c9; /* exact match to the indigo button from image */
   color: #ffffff;

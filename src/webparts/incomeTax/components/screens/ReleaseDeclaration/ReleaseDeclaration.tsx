@@ -123,6 +123,9 @@ const ReleaseDeclaration: React.FC = () => {
             status: (item.Status || "Draft").toLowerCase(),
             location: emp?.Location || "-",
             financialYear: item.FinancialYear || "N/A",
+            declarationEndDate: item.DeclarationEndDate
+              ? moment(item.DeclarationEndDate).format("DD/MM/YYYY")
+              : "-",
           };
         });
       if (actual.length > 0) {
@@ -697,6 +700,7 @@ const ReleaseDeclaration: React.FC = () => {
     { field: "location", header: "Location", sortable: true },
     { field: "declarationType", header: "Declaration Type", sortable: true },
     { field: "financialYear", header: "Financial Year", sortable: true },
+    { field: "declarationEndDate", header: "Declaration End Date", sortable: true },
     { field: "releasedDate", header: "Released date", sortable: true },
     {
       field: "status",

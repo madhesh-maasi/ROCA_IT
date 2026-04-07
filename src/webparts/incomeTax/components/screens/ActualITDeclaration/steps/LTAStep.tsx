@@ -61,12 +61,16 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   onUpload,
   onDeleteAttachment,
 }) => {
-  const ltaAttachments = ltaData.attachments || [];
+  const ltaAttachments = (ltaData.attachments || []).filter(
+    (a: any) => !a.isDeleted,
+  );
 
   const handleFilesPicked = async (files: File[]) => {
     const file = files[0];
     if (!file) return;
-    if (onUpload) await onUpload(UPLOAD_KEY, file);
+    if (onUpload) {
+      await onUpload(UPLOAD_KEY, file);
+    }
   };
 
   return (
@@ -80,12 +84,19 @@ const LTAStep: React.FC<ILTAStepProps> = ({
           <InputField
             id="lta-exemption"
             value={ltaData.exemptionAmount}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
               onLtaChange(
                 "exemptionAmount",
                 e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
-              )
-            }
+              );
+              if (!e.target.value.replace(/[^0-9]/g, "").slice(0, 7)) {
+                ltaAttachments[0]?.Id &&
+                  (await onDeleteAttachment?.(
+                    UPLOAD_KEY,
+                    ltaAttachments[0]?.Id,
+                  ));
+              }
+            }}
             placeholder="Enter amount"
             disabled={readOnly}
           />
@@ -111,7 +122,11 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             onChange={(e: any) => onLtaChange("journeyEndDate", e.value)}
             placeholder="Select"
             disabled={readOnly}
-            minDate={ltaData.journeyStartDate ? new Date(ltaData.journeyStartDate) : undefined}
+            minDate={
+              ltaData.journeyStartDate
+                ? new Date(ltaData.journeyStartDate)
+                : undefined
+            }
           />
         </div>
         <div className={styles.formGroup}>
@@ -165,7 +180,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         <div className={styles.formGroup}>
           <label>
             Class of Travel{" "}
-            {Number(ltaData.exemptionAmount) > 0 ? (
+            {ltaData.modeOfTravel !== "Others" &&
+            Number(ltaData.exemptionAmount) > 0 ? (
               <span style={{ color: "red" }}>*</span>
             ) : null}
           </label>
@@ -177,7 +193,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter class of travel"
             disabled={readOnly}
-            required={Number(ltaData.exemptionAmount) > 0}
+            required={
+              ltaData.modeOfTravel !== "Others" &&
+              Number(ltaData.exemptionAmount) > 0
+            }
           />
           {/* <AppDropdown
             id="lta-class"
@@ -192,7 +211,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         <div className={styles.formGroup}>
           <label>
             Ticket Numbers{" "}
-            {Number(ltaData.exemptionAmount) > 0 ? (
+            {ltaData.modeOfTravel !== "Others" &&
+            Number(ltaData.exemptionAmount) > 0 ? (
               <span style={{ color: "red" }}>*</span>
             ) : null}
           </label>
@@ -204,7 +224,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter numbers"
             disabled={readOnly}
-            required={Number(ltaData.exemptionAmount) > 0}
+            required={
+              ltaData.modeOfTravel !== "Others" &&
+              Number(ltaData.exemptionAmount) > 0
+            }
           />
         </div>
         <div className={styles.formGroup}>

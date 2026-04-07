@@ -49,9 +49,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   status,
   readOnly,
 }) => {
-  const checkPanNeed = () => {
-    return rentDetails.some((row) => Number(row.rent) > 8333);
-  };
+  const activeCount = landlords?.filter((l) => !l.isDeleted).length;
   return (
     <div>
       <div className={styles.stepHeader}>House Rental Information</div>
@@ -145,146 +143,73 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
             </div>
           )}
         </div>
-        {/* <div className={styles.landlordCard}>
-          <div className={styles.noteBox} style={{ marginTop: 0 }}>
-            Note: Landlord Information is Mandatory if the monthly rental
-            exceeds <strong>Rs 8,333</strong>
-          </div>
-          {landlords
-            .filter((ll) => !ll.isDeleted)
-            .map((ll, idx) => (
-              // <div key={idx} className={styles.landlordCard}>
-              <div className={styles.landlordGrid}>
-                <div className={styles.formGroup}>
-                  <label>
-                    Landlord's Name <span>*</span>
-                  </label>
-                  <InputField
-                    id={`ll-name-${idx}`}
-                    value={ll.name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "name", e.target.value)
-                    }
-                    placeholder="Enter Name"
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>
-                    PAN of Landlord {checkPanNeed() ? <span>*</span> : ""}
-                  </label>
-                  <InputField
-                    id={`ll-pan-${idx}`}
-                    value={ll.pan}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "pan", e.target.value)
-                    }
-                    placeholder="Enter PAN"
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>
-                    Tenant's Address <span>*</span>
-                  </label>
-                  <InputField
-                    id={`ll-addr-${idx}`}
-                    value={ll.address}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "address", e.target.value)
-                    }
-                    placeholder="Enter Address"
-                    disabled={readOnly}
-                  />
-                </div>
-                {!readOnly && (
-                  <div style={{ paddingBottom: "10px" }}>
-                    <i
-                      className="pi pi-trash"
-                      style={{
-                        color: "#e11d48",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                      }}
-                      onClick={() => onDeleteLandlord(idx)}
-                    />
-                  </div>
-                )}
-              </div>
-              //  </div>
-            ))}
-        </div> */}
         <div className={styles.landlordCard}>
           <div className={styles.noteBox} style={{ marginTop: 0 }}>
             Note: Landlord Information is Mandatory if the monthly rental
             exceeds <strong>Rs 8,333</strong>
           </div>
 
-          {landlords
-            // .filter((ll) => !ll.isDeleted)
-            .map((ll, idx) => (
-              <div
-                key={idx}
-                className={styles.landlordGrid}
-                style={{ display: ll.isDeleted ? "none" : "" }}
-              >
-                <div className={styles.formGroup}>
-                  <label>
-                    Landlord's Name <span>*</span>
-                  </label>
-                  <InputField
-                    id={`ll-name-${idx}`}
-                    value={ll.name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "name", e.target.value)
-                    }
-                    placeholder="Enter Name"
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>
-                    PAN of Landlord {checkPanNeed() ? <span>*</span> : ""}
-                  </label>
-                  <InputField
-                    id={`ll-pan-${idx}`}
-                    value={ll.pan}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "pan", panFormatter(e.target.value))
-                    }
-                    placeholder="Enter PAN"
-                    disabled={readOnly}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>
-                    Tenant's Address <span>*</span>
-                  </label>
-                  <InputField
-                    id={`ll-addr-${idx}`}
-                    value={ll.address}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "address", e.target.value)
-                    }
-                    placeholder="Enter Address"
-                    disabled={readOnly}
-                  />
-                </div>
-                {!readOnly && (
-                  <div style={{ paddingBottom: "10px" }}>
-                    <i
-                      className="pi pi-trash"
-                      style={{
-                        color: "#e11d48",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                      }}
-                      onClick={() => onDeleteLandlord(idx)}
-                    />
-                  </div>
-                )}
+          {landlords.map((ll, idx) => (
+            <div
+              key={idx}
+              className={styles.landlordGrid}
+              style={{ display: ll.isDeleted ? "none" : "" }}
+            >
+              <div className={styles.formGroup}>
+                <label>
+                  Landlord's Name <span>*</span>
+                </label>
+                <InputField
+                  id={`ll-name-${idx}`}
+                  value={ll.name}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onLandlordChange(idx, "name", e.target.value)
+                  }
+                  placeholder="Enter Name"
+                  disabled={readOnly}
+                />
               </div>
-            ))}
+              <div className={styles.formGroup}>
+                <label>PAN of Landlord</label>
+                <InputField
+                  id={`ll-pan-${idx}`}
+                  value={ll.pan}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onLandlordChange(idx, "pan", panFormatter(e.target.value))
+                  }
+                  placeholder="Enter PAN"
+                  disabled={readOnly}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>
+                  Tenant's Address <span>*</span>
+                </label>
+                <InputField
+                  id={`ll-addr-${idx}`}
+                  value={ll.address}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onLandlordChange(idx, "address", e.target.value)
+                  }
+                  placeholder="Enter Address"
+                  disabled={readOnly}
+                />
+              </div>
+              {!readOnly && activeCount > 1 && (
+                <div style={{ paddingBottom: "10px" }}>
+                  <i
+                    className="pi pi-trash"
+                    style={{
+                      color: "#e11d48",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                    }}
+                    onClick={() => onDeleteLandlord(idx)}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
