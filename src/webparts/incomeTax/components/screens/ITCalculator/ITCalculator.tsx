@@ -60,20 +60,19 @@ const ITCalculator: React.FC = () => {
 
         <div className={styles.calculatorCard}>
           <h3 className={styles.reportTitle}>Income Tax Computation</h3>
+
           <div style={{ display: "flex", gap: "8px" }}>
-            {/* {canUpload && (
-              <AppFilePicker
-                buttonLabel="Upload Documents"
-                multiple={false} // Requirement: Change file, not upload again (single file update intended)
-                accept=".xls, .xlsx" // Requirement: Allow only Excel files
-                onChange={handleUploadFiles}
-              />
-            )} */}
             <ActionButton
               variant="download"
               className="primaryBtn"
               label="Download"
               onClick={handleDownload}
+            />
+          </div>
+          <div className={styles.excelImageWrapper}>
+            <img
+              src={`${require("../../../../../common/Asset/Images/xls.png")}`}
+              alt=""
             />
           </div>
         </div>

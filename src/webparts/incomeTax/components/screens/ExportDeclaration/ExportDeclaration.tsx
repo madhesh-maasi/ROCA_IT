@@ -183,14 +183,18 @@ const ExportDeclaration: React.FC = () => {
           .map((item) => item?.User?.EMail)
           .filter((email) => !!email);
         const base64Data = generateExcelBase64(excelData, fileName);
-        if (base64Data && _FinanceApporvers?.length > 0) {
+        if (base64Data && userDetails?.Email) {
           await sendExportEmail(
-            _FinanceApporvers,
-            // "Finance Team",
+            userDetails.Email,
+            declarationType as "Planned" | "Actual",
             userDetails?.Title || "",
             `${fileName}.xlsx`,
             base64Data,
             selectedYear,
+            _FinanceApporvers.filter(
+              (email) =>
+                email.toLowerCase() !== userDetails.Email.toLowerCase(),
+            ),
           );
         }
         setShowDownloadPopup(true);

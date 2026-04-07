@@ -5,7 +5,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
-import { Cursor } from "@hugeicons/core-free-icons";
+
 import { panFormatter } from "../../../../../../common/utils/validationUtils";
 
 interface IRentRow {
@@ -57,14 +57,12 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
 }) => {
   const activeLandlordsWithIdx = landlords.map((ll, idx) => ({ ll, idx }));
   // .filter(({ ll }) => !ll.isDeleted);
+  const activeCount = landlords?.filter((l) => !l.isDeleted).length;
 
   const handleFilesPicked = async (key: string, files: File[]) => {
     const file = files[0];
     if (!file) return;
     if (onUpload) await onUpload(key, file);
-  };
-  const checkPanNeed = () => {
-    return rentDetails.some((row) => Number(row.rent) > 8333);
   };
   return (
     <div>
@@ -189,9 +187,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>
-                    PAN of Landlord {checkPanNeed() ? <span>*</span> : ""}
-                  </label>
+                  <label>PAN of Landlord</label>
                   <InputField
                     id={`ll-pan-${idx}`}
                     value={ll.pan}
@@ -295,7 +291,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                       </div>
                     ))}
                   </div>
-                  {!readOnly && (
+                  {!readOnly && activeCount > 1 && (
                     <div style={{ paddingTop: "5px" }}>
                       <i
                         className="pi pi-trash"

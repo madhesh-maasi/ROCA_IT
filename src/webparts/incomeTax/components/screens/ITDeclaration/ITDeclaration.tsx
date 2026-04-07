@@ -44,8 +44,7 @@ import HomeStep from "./steps/HomeStep";
 import BasicInfoStep from "./steps/BasicInfoStep";
 import HouseRentalStep from "./steps/HouseRentalStep";
 import LTAStep from "./steps/LTAStep";
-import Section80CStep from "./steps/Section80CStep";
-import Section80DStep from "./steps/Section80DStep";
+import DynamicSectionStep from "./steps/DynamicSectionStep";
 import HousingLoanStep from "./steps/HousingLoanStep";
 import PreviousEmployerStep from "./steps/PreviousEmployerStep";
 import SummaryStep from "./steps/SummaryStep";
@@ -151,8 +150,9 @@ const ITDeclaration: React.FC = () => {
     { relationship: "Dependent Father", name: "", dob: null, gender: "Male" },
     { relationship: "Dependent Mother", name: "", dob: null, gender: "Female" },
   ]);
-  const [items80C, setItems80C] = React.useState<any[]>([]);
-  const [items80D, setItems80D] = React.useState<any[]>([]);
+  const [dynamicSectionData, setDynamicSectionData] = React.useState<
+    Record<string, any[]>
+  >({});
   const [housingLoanData, setHousingLoanData] = React.useState({
     propertyType: "None" as "None" | "Self Occupied" | "Let Out Property",
     interestAmount: "",
@@ -187,8 +187,11 @@ const ITDeclaration: React.FC = () => {
 
   const [commentsHR, setCommentsHR] = React.useState("");
   const [commentsLTA, setCommentsLTA] = React.useState("");
-  const [comments80C, setComments80C] = React.useState("");
-  const [comments80D, setComments80D] = React.useState("");
+  //   const [comments80C, setComments80C] = React.useState("");
+  //   const [comments80D, setComments80D] = React.useState("");
+  const [dynamicComments, setDynamicComments] = React.useState<
+    Record<string, string>
+  >({});
   const [commentsPE, setCommentsPE] = React.useState("");
   const [commentsHousingLoan, setCommentsHousingLoan] = React.useState("");
   const [commentsSummary, setCommentsSummary] = React.useState("");
@@ -199,8 +202,9 @@ const ITDeclaration: React.FC = () => {
     onConfirm?: () => void;
   }>({ visible: false, type: "success" });
 
-  const [maxAmount80C, setMaxAmount80C] = React.useState<number | null>(null);
-  const [maxAmount80D, setMaxAmount80D] = React.useState<number | null>(null);
+  const [sectionMaxAmounts, setSectionMaxAmounts] = React.useState<
+    Record<string, number | null>
+  >({});
   const [modeOfTravelChoices, setModeOfTravelChoices] = React.useState<any[]>(
     [],
   );
@@ -266,7 +270,9 @@ const ITDeclaration: React.FC = () => {
         key: s.Title,
         label: s.Title,
         icon: ICON_MAP[s.Title] || ChartBarLineIcon,
+        order: s.SectionOrder,
       }));
+      dynamicSteps.sort((a: any, b: any) => a.order - b.order);
 
       if (regime === "New Regime") {
         setSteps([
@@ -292,19 +298,19 @@ const ITDeclaration: React.FC = () => {
           },
           { key: "House Rental", label: "House Rental", icon: Building06Icon },
           { key: "LTA", label: "LTA", icon: PlaneIcon },
-          ...dynamicSteps
-            .filter((s) =>
-              ["Section 80C Deductions", "Section 80 Deductions"].includes(
-                s.key,
-              ),
-            )
-            .map((s: any) => {
-              return {
-                key: s.key,
-                label: s.key,
-                icon: ChartBarLineIcon,
-              };
-            }),
+          ...dynamicSteps,
+          // .filter((s) =>
+          //   ["Section 80C Deductions", "Section 80 Deductions"].includes(
+          //     s.key,
+          //   ),
+          // )
+          // .map((s: any) => {
+          //   return {
+          //     key: s.key,
+          //     label: s.key,
+          //     icon: ChartBarLineIcon,
+          //   };
+          // })
           // {
           //   key: "Section 80C Deductions",
           //   label: "Section 80C Deductions",
@@ -337,40 +343,32 @@ const ITDeclaration: React.FC = () => {
           },
         ]);
 
-        // Load Lookup Config for 80C and 80D
-        const lookupConfig = await getListItems(LIST_NAMES.LOOKUP_CONFIG);
-        const section80C = sections.find(
-          (s: any) => s.Title === "Section 80C Deductions",
+        // Load Lookup Config for dynamic sections
+        const lookupConfig = await getListItems(
+          LIST_NAMES.LOOKUP_CONFIG,
+          "",
+          "ID",
+          true,
         );
-        const section80D = sections.find(
-          (s: any) => s.Title === "Section 80 Deductions",
-        );
 
-        if (section80C?.MaxAmount)
-          setMaxAmount80C(Number(section80C.MaxAmount));
-        if (section80D?.MaxAmount)
-          setMaxAmount80D(Number(section80D.MaxAmount));
+        const newDynamicData: Record<string, any[]> = {};
+        const newMaxAmounts: Record<string, number | null> = {};
 
-        const cItems = lookupConfig
-          .filter((item: any) => item.SectionId === section80C?.Id)
-          .map((item: any) => ({
-            id: item.Id,
-            investmentType: item.Types || item.Title,
-            maxAmount: Number(item.MaxAmount) || 0,
-            declaredAmount: "",
-          }));
-        setItems80C(cItems);
+        sections.forEach((s: any) => {
+          newMaxAmounts[s.Title] = Number(s.MaxAmount) || null;
+          newDynamicData[s.Title] = lookupConfig
+            .filter((item: any) => item.SectionId === s.Id)
+            .map((item: any) => ({
+              id: item.Id,
+              section: item.SubSection || "-",
+              investmentType: item.Types || item.Title,
+              maxAmount: Number(item.MaxAmount) || 0,
+              declaredAmount: "",
+            }));
+        });
 
-        const dItems = lookupConfig
-          .filter((item: any) => item.SectionId === section80D?.Id)
-          .map((item: any) => ({
-            id: item.Id,
-            section: item.SubSection || "-",
-            investmentType: item.Types || item.Title,
-            maxAmount: Number(item.MaxAmount) || 0,
-            declaredAmount: "",
-          }));
-        setItems80D(dItems);
+        setSectionMaxAmounts(newMaxAmounts);
+        setDynamicSectionData(newDynamicData);
       }
     } catch (e) {
       console.error(e);
@@ -534,33 +532,31 @@ const ITDeclaration: React.FC = () => {
       });
     }
 
-    // Load 80C
-    const saved80C = await getRelatedListItems(
-      LIST_NAMES.IT_80C_SECTION,
-      mainItem.Id,
-    );
-    if (saved80C.length > 0) {
-      setItems80C((prev) =>
-        prev.map((item) => {
-          const match = saved80C.find((s) => s.TypeOfInvestmentId === item.id);
-          return match
-            ? { ...item, declaredAmount: match.Amount?.toString() || "" }
-            : item;
-        }),
-      );
-    }
-
-    // Load 80D
-    const saved80D = await getRelatedListItems(LIST_NAMES.IT_80, mainItem.Id);
-    if (saved80D.length > 0) {
-      setItems80D((prev) =>
-        prev.map((item) => {
-          const match = saved80D.find((s) => s.TypeOfInvestmentId === item.id);
-          return match
-            ? { ...item, declaredAmount: match.Amount?.toString() || "" }
-            : item;
-        }),
-      );
+    // Load Dynamic Sections from JSON
+    if (mainItem.SectionDetailsJSON) {
+      try {
+        const savedDynamicData = JSON.parse(mainItem.SectionDetailsJSON);
+        setDynamicSectionData((prev) => {
+          const merged = { ...prev };
+          Object.keys(savedDynamicData).forEach((sectionTitle) => {
+            if (merged[sectionTitle]) {
+              merged[sectionTitle] = merged[sectionTitle].map((item: any) => {
+                const savedItem = savedDynamicData[sectionTitle].find(
+                  (si: any) => si.id === item.id,
+                );
+                return savedItem
+                  ? { ...item, declaredAmount: savedItem.declaredAmount }
+                  : item;
+              });
+            } else {
+              merged[sectionTitle] = savedDynamicData[sectionTitle];
+            }
+          });
+          return merged;
+        });
+      } catch (e) {
+        console.error("Error parsing Dynamic Sections JSON", e);
+      }
     }
 
     // Load Approver Comments Map
@@ -570,8 +566,9 @@ const ITDeclaration: React.FC = () => {
         const cMap = JSON.parse(commentSource);
         setCommentsHR(cMap.HouseRental || "");
         setCommentsLTA(cMap.LTA || "");
-        setComments80C(cMap.Section80C || "");
-        setComments80D(cMap.Section80D || "");
+        // setComments80C(cMap.Section80C || "");
+        // setComments80D(cMap.Section80D || "");
+        setDynamicComments(cMap.DynamicComments || {});
         setCommentsPE(cMap.PreviousEmployer || "");
         setCommentsHousingLoan(cMap.HousingLoan || "");
         setCommentsSummary(cMap.Summary || "");
@@ -705,6 +702,8 @@ const ITDeclaration: React.FC = () => {
             !ltaData.modeOfTravel ||
             !ltaData.classOfTravel ||
             !ltaData.ticketNumbers ||
+            (!ltaData.classOfTravel && ltaData.modeOfTravel !== "Others") ||
+            (!ltaData.ticketNumbers && ltaData.modeOfTravel !== "Others") ||
             !ltaData.lastClaimedYear)
         ) {
           if (!ltaData.journeyStartDate) {
@@ -765,6 +764,11 @@ const ITDeclaration: React.FC = () => {
             _errMsg = "Invalid Lender PAN format";
           } else if (!housingLoanData.lenderType) {
             _errMsg = "Lender type is required";
+          } else if (
+            housingLoanData.isJointlyAvailed === null ||
+            housingLoanData.isJointlyAvailed === ""
+          ) {
+            _errMsg = "Jointly availed Property Loan selection is required";
           }
         }
         break;
@@ -814,12 +818,21 @@ const ITDeclaration: React.FC = () => {
       const commentsJSON = JSON.stringify({
         HouseRental: commentsHR,
         LTA: commentsLTA,
-        Section80C: comments80C,
-        Section80D: comments80D,
+        DynamicComments: dynamicComments,
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,
         Summary: commentsSummary,
       });
+
+      if (status == "Rework") {
+        await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
+          Status: "Draft",
+          ActiveStep: "",
+          IsAcknowledged: false,
+          Place: null,
+          SubmittedDate: null,
+        });
+      }
 
       switch (step) {
         case "Basic Information": {
@@ -895,45 +908,24 @@ const ITDeclaration: React.FC = () => {
           break;
         }
 
-        case "Section 80C Deductions": {
-          await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
-          });
-          const itemsToSave80C = items80C.filter(
-            (i) => Number(i.declaredAmount) > 0,
-          );
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_80C_SECTION,
-            mainId,
-            itemsToSave80C,
-            (i) => ({
-              Title: i.title,
-              Amount: Number(i.declaredAmount || 0),
-              TypeOfInvestmentId: i.id,
-            }),
-          );
-          break;
-        }
+        default: {
+          if (dynamicSectionData[step]) {
+            const updatePayload: any = {
+              ApproverCommentsJson: commentsJSON,
+              ActiveStep: status === "Draft" ? nextStep || activeStep : "",
+            };
 
-        case "Section 80 Deductions": {
-          await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
-            ApproverCommentsJson: commentsJSON,
-            ActiveStep: status == "Draft" ? nextStep || activeStep : "",
-          });
-          const itemsToSave80D = items80D.filter(
-            (i) => Number(i.declaredAmount) > 0,
-          );
-          await upsertRelatedListBatch(
-            LIST_NAMES.IT_80,
-            mainId,
-            itemsToSave80D,
-            (i) => ({
-              Title: i.title,
-              Amount: Number(i.declaredAmount || 0),
-              TypeOfInvestmentId: i.id,
-            }),
-          );
+            if (status === "Draft") {
+              updatePayload.SectionDetailsJSON =
+                JSON.stringify(dynamicSectionData);
+            }
+
+            await updateListItem(
+              LIST_NAMES.PLANNED_DECLARATION,
+              mainId,
+              updatePayload,
+            );
+          }
           break;
         }
 
@@ -1012,8 +1004,9 @@ const ITDeclaration: React.FC = () => {
       const commentsJSON = JSON.stringify({
         HouseRental: commentsHR,
         LTA: commentsLTA,
-        Section80C: comments80C,
-        Section80D: comments80D,
+        // Section80C: comments80C,
+        // Section80D: comments80D,
+        DynamicComments: dynamicComments,
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,
         Summary: commentsSummary,
@@ -1124,6 +1117,9 @@ const ITDeclaration: React.FC = () => {
   const renderCurrentStep = () => {
     const readOnly =
       isFormReadOnly || (isAdmin && status === "Submitted" && !isEditMode);
+
+    //  let dynamicSec:string = dynamicSectionData?.[activeStep]
+
     switch (activeStep) {
       case "Home":
         return (
@@ -1263,54 +1259,7 @@ const ITDeclaration: React.FC = () => {
             readOnly={readOnly}
           />
         );
-      case "Section 80C Deductions":
-        return (
-          <Section80CStep
-            items={items80C}
-            sectionMaxAmount={maxAmount80C}
-            onAmountChange={(id, val) => {
-              const newItems = [...items80C];
-              const idx = newItems.findIndex((i) => i.id === id);
-              if (idx > -1) {
-                newItems[idx].declaredAmount = val;
-                setItems80C(newItems);
-              }
-            }}
-            showApproverComments={
-              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
-              status == "Approved" ||
-              status == "Rework"
-            }
-            approverComments={comments80C}
-            onCommentChange={setComments80C}
-            status={status}
-            readOnly={readOnly}
-          />
-        );
-      case "Section 80 Deductions":
-        return (
-          <Section80DStep
-            items={items80D}
-            sectionMaxAmount={maxAmount80D}
-            showApproverComments={
-              (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
-              status == "Approved" ||
-              status == "Rework"
-            }
-            approverComments={comments80D}
-            onAmountChange={(id, val) => {
-              const newItems = [...items80D];
-              const idx = newItems.findIndex((i) => i.id === id);
-              if (idx > -1) {
-                newItems[idx].declaredAmount = val;
-                setItems80D(newItems);
-              }
-            }}
-            onCommentChange={setComments80D}
-            status={status}
-            readOnly={readOnly}
-          />
-        );
+
       case "Housing Loan Repayment":
         return (
           <HousingLoanStep
@@ -1364,10 +1313,20 @@ const ITDeclaration: React.FC = () => {
           />
         );
       case "Declaration & Summary":
+        // Calculate dynamic totals for configuration-based sections
+        const dynamicTotals: Record<string, string> = {};
+        Object.keys(dynamicSectionData).forEach((section) => {
+          const total = dynamicSectionData[section].reduce(
+            (acc: number, curr: any) => acc + Number(curr.declaredAmount || 0),
+            0,
+          );
+          dynamicTotals[section] = total.toLocaleString();
+        });
+
         return (
           <SummaryStep
             employeeInfo={{
-              fy: declarationItem?.FinancialYear || "2025 - 2026",
+              fy: declarationItem?.FinancialYear || curFinanicalYear,
               code: matchedEmployee?.EmployeeId || "N/A",
               name: matchedEmployee?.Name || "",
               pan: pan,
@@ -1375,25 +1334,31 @@ const ITDeclaration: React.FC = () => {
             }}
             totals={{
               lta: ltaData.exemptionAmount || "0",
-              section80C: items80C
+              houseRental: rentDetails
                 .reduce(
-                  (acc, curr) => acc + Number(curr.declaredAmount || 0),
+                  (acc: number, curr: any) => acc + Number(curr.rent || 0),
                   0,
                 )
-                .toLocaleString(),
-              houseRental: rentDetails
-                .reduce((acc, curr) => acc + Number(curr.rent || 0), 0)
                 .toLocaleString(),
               housingLoan: (
                 Number(housingLoanData.interestAmount || 0) +
                 Number(housingLoanData.letOutInterestAmount || 0)
               ).toLocaleString(),
-              section80D: items80D
+              section80C: (dynamicSectionData["Section 80C Deductions"] || [])
                 .reduce(
-                  (acc, curr) => acc + Number(curr.declaredAmount || 0),
+                  (acc: number, curr: any) =>
+                    acc + Number(curr.declaredAmount || 0),
                   0,
                 )
                 .toLocaleString(),
+              section80D: (dynamicSectionData["Section 80 Deductions"] || [])
+                .reduce(
+                  (acc: number, curr: any) =>
+                    acc + Number(curr.declaredAmount || 0),
+                  0,
+                )
+                .toLocaleString(),
+              ...dynamicTotals,
             }}
             declaration={declarationAgreement}
             onDeclarationChange={(field: "agreed" | "place", val: any) =>
@@ -1414,17 +1379,40 @@ const ITDeclaration: React.FC = () => {
           />
         );
       default:
-        return (
-          <div
-          // className={styles.stepContent}
-          >
-            <h3>{activeStep}</h3>
-            <p>
-              Form fields for {activeStep} will be dynamically loaded from
-              lookup configuration.
-            </p>
-          </div>
-        );
+        if (dynamicSectionData[activeStep]) {
+          return (
+            <DynamicSectionStep
+              title={activeStep}
+              items={dynamicSectionData[activeStep] || []}
+              sectionMaxAmount={sectionMaxAmounts[activeStep]}
+              onAmountChange={(id: number, val: string) => {
+                setDynamicSectionData((prev) => ({
+                  ...prev,
+                  [activeStep]: (prev[activeStep] || []).map((item: any) =>
+                    item.id === id ? { ...item, declaredAmount: val } : item,
+                  ),
+                }));
+              }}
+              showApproverComments={
+                (isAdmin &&
+                  status === "Submitted" &&
+                  employeeDeclarationPath) ||
+                status === "Approved" ||
+                status === "Rework"
+              }
+              approverComments={dynamicComments[activeStep] || ""}
+              onCommentChange={(val: string) => {
+                setDynamicComments((prev) => ({
+                  ...prev,
+                  [activeStep]: val,
+                }));
+              }}
+              status={status}
+              readOnly={readOnly}
+            />
+          );
+        }
+        return null;
     }
   };
 
@@ -1475,16 +1463,14 @@ const ITDeclaration: React.FC = () => {
               steps={steps}
               activeStep={activeStep}
               onStepClick={async (key) => {
-                const lastsaveIdx = steps.findIndex(
-                  // (s) => s.key === declarationItem.ActiveStep,
-                  (s) => s.key === activeStep,
-                );
-                const idx = steps.findIndex((s) => s.key === key);
-                if (idx > lastsaveIdx) {
-                  const isInvalid = await validateStep(activeStep);
-                  if (isInvalid) return;
-                  await handleSaveStep(key);
-                }
+                // const lastsaveIdx = steps.findIndex(
+                //   // (s) => s.key === declarationItem.ActiveStep,
+                //   (s) => s.key === activeStep,
+                // );
+                // const idx = steps.findIndex((s) => s.key === key);
+                // if (idx > lastsaveIdx) {
+                //   await handleSaveStep(key);
+                // }
                 setActiveStep(key);
                 setIsEditMode(false);
               }}
@@ -1658,19 +1644,19 @@ const ITDeclaration: React.FC = () => {
                   className="primaryBtn"
                   label={"Draft"}
                   onClick={async () => {
-                    const idx = steps.findIndex((s) => s.key === activeStep);
-                    if (idx < steps.length - 1) {
-                      await handleSaveStep();
-                      if (userRole == "Admins") {
-                        navigate("/employeeDeclaration", {
-                          state: { tab: location.state?.tab },
-                        });
-                      } else {
-                        navigate("/submittedDeclarations", {
-                          state: { tab: location.state?.tab },
-                        });
-                      }
+                    // const idx = steps.findIndex((s) => s.key === activeStep);
+                    // if (idx < steps.length - 1) {
+                    await handleSaveStep();
+                    if (isAdmin && employeeDeclarationPath) {
+                      navigate("/employeeDeclaration", {
+                        state: { tab: location.state?.tab },
+                      });
+                    } else {
+                      navigate("/submittedDeclarations", {
+                        state: { tab: location.state?.tab },
+                      });
                     }
+                    // }
                   }}
                 />
               )}
