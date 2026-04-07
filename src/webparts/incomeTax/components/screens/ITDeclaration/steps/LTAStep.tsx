@@ -155,7 +155,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         <div className={styles.formGroup}>
           <label>
             Class of Travel{" "}
-            {Number(ltaData.exemptionAmount) > 0 ? (
+            {ltaData.modeOfTravel !== "Others" && Number(ltaData.exemptionAmount) > 0 ? (
               <span style={{ color: "red" }}>*</span>
             ) : null}
           </label>
@@ -167,7 +167,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter class of travel"
             disabled={readOnly}
-            required={Number(ltaData.exemptionAmount) > 0}
+            required={
+              ltaData.modeOfTravel != "Others" &&
+              Number(ltaData.exemptionAmount) > 0
+            }
           />
           {/* <AppDropdown
             id="lta-class"
@@ -182,7 +185,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         <div className={styles.formGroup}>
           <label>
             Ticket Numbers{" "}
-            {Number(ltaData.exemptionAmount) > 0 ? (
+            {ltaData.modeOfTravel !== "Others" && Number(ltaData.exemptionAmount) > 0 ? (
               <span style={{ color: "red" }}>*</span>
             ) : null}
           </label>
@@ -194,7 +197,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             }
             placeholder="Enter numbers"
             disabled={readOnly}
-            required={Number(ltaData.exemptionAmount) > 0}
+            required={
+              ltaData.modeOfTravel != "Others" &&
+              Number(ltaData.exemptionAmount) > 0
+            }
           />
         </div>
         <div className={styles.formGroup}>

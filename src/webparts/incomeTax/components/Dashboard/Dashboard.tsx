@@ -22,6 +22,7 @@ import { fetchIncomeTaxItems } from "../../../../store/slices/incomeTaxSlice";
 import { selectUserDetails } from "../../../../store/slices/userSlice";
 import { getListItems } from "../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../common/constants/appConstants";
+import { ProtectedRoute } from "../../../../common/components";
 import styles from "./Dashboard.module.scss";
 import { curFinanicalYear } from "../../../../common/utils/functions";
 
@@ -43,8 +44,12 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
     if (path === "itDeclaration" || path === "actualItDeclaration") {
       return location.state?.from || "submittedDeclarations";
     }
-    return path || "submittedDeclarations";
-  }, [location]);
+    const defaultScreen =
+      role === "FinanceApprover"
+        ? "employeeDeclaration"
+        : "submittedDeclarations";
+    return path || defaultScreen;
+  }, [location, role]);
 
   const user = useAppSelector(selectUserDetails);
 
@@ -72,33 +77,150 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
   const renderDashboardContent = (): React.ReactElement => {
     return (
       <Routes>
+        {/* Root redirect — no access check needed */}
         <Route
           path="/"
-          element={<Navigate to="/submittedDeclarations" replace />}
+          element={
+            <Navigate
+              to={
+                role === "FinanceApprover"
+                  ? "/employeeDeclaration"
+                  : "/submittedDeclarations"
+              }
+              replace
+            />
+          }
         />
+
+        {/* Open to all roles (no allowedRoles in NAV_CONFIG) */}
         <Route
           path="/submittedDeclarations"
-          element={<SubmittedDeclarations />}
+          element={
+            <ProtectedRoute role={role}>
+              <SubmittedDeclarations />
+            </ProtectedRoute>
+          }
         />
-        <Route path="/employeeDeclaration" element={<EmployeeDeclarations />} />
-        <Route path="/itCalculator" element={<ITCalculator />} />
-        <Route path="/financeApprover" element={<FinanceApprover />} />
-        <Route path="/sectionConfig" element={<SectionConfig />} />
-        <Route path="/lookupConfig" element={<LookupConfig />} />
-        <Route path="/releaseDeclaration" element={<ReleaseDeclaration />} />
-        <Route path="/extendSubmission" element={<ReleaseExtension />} />
-        <Route path="/exportDeclaration" element={<ExportDeclaration />} />
-        <Route path="/taxRegimeUpdate" element={<TaxRegimeUpdate />} />
-        <Route path="/itCalculatorUpload" element={<ITCalculatorUpload />} />
-        <Route path="/itDeclaration" element={<ITDeclaration />} />
-        <Route path="/actualItDeclaration" element={<ActualITDeclaration />} />
+        <Route
+          path="/itCalculator"
+          element={
+            <ProtectedRoute role={role}>
+              <ITCalculator />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/itDeclaration"
+          element={
+            <ProtectedRoute role={role}>
+              <ITDeclaration />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/actualItDeclaration"
+          element={
+            <ProtectedRoute role={role}>
+              <ActualITDeclaration />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/declarationForm/:id"
-          element={<DeclarationFormScreen />}
+          element={
+            <ProtectedRoute role={role}>
+              <DeclarationFormScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Administration routes — role-gated via NAV_CONFIG allowedRoles */}
+        <Route
+          path="/employeeDeclaration"
+          element={
+            <ProtectedRoute role={role}>
+              <EmployeeDeclarations />
+            </ProtectedRoute>
+          }
         />
         <Route
+          path="/financeApprover"
+          element={
+            <ProtectedRoute role={role}>
+              <FinanceApprover />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sectionConfig"
+          element={
+            <ProtectedRoute role={role}>
+              <SectionConfig />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lookupConfig"
+          element={
+            <ProtectedRoute role={role}>
+              <LookupConfig />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/releaseDeclaration"
+          element={
+            <ProtectedRoute role={role}>
+              <ReleaseDeclaration />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/extendSubmission"
+          element={
+            <ProtectedRoute role={role}>
+              <ReleaseExtension />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exportDeclaration"
+          element={
+            <ProtectedRoute role={role}>
+              <ExportDeclaration />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/taxRegimeUpdate"
+          element={
+            <ProtectedRoute role={role}>
+              <TaxRegimeUpdate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/itCalculatorUpload"
+          element={
+            <ProtectedRoute role={role}>
+              <ITCalculatorUpload />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch-all: redirect to default screen */}
+        <Route
           path="*"
-          element={<Navigate to="/submittedDeclarations" replace />}
+          element={
+            <Navigate
+              to={
+                role === "FinanceApprover"
+                  ? "/employeeDeclaration"
+                  : "/submittedDeclarations"
+              }
+              replace
+            />
+          }
         />
       </Routes>
     );
@@ -109,13 +231,12 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
       <AppHeader />
       <div className={styles.body}>
         <SideNav role={role} activeKey={activeScreen} />
-        <main className={styles.content}>{renderDashboardContent()}</main>
+        <main className={styles.content} id="mainContent">
+          {renderDashboardContent()}
+        </main>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
-function getCurrentFinancialYear() {
-  throw new Error("Function not implemented.");
-}

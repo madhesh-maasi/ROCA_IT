@@ -261,7 +261,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
         <div style={{ marginTop: 10 }}>
           <div className={styles.stepHeader}>Others</div>
           <div className={styles.formGroup} style={{ marginTop: "16px" }}>
-            <label>Jointly availed Property Loan</label>
+            <label>Jointly availed Property Loan {RequiredSympol()}</label>
             <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
               <AppRadioButton
                 label="Yes"

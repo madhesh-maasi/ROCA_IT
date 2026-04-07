@@ -6,3 +6,7 @@ export { AppToast, showToast } from "./Toast";
 export type { IToastProps, ToastSeverity } from "./Toast";
 export { ActionPopup } from "./ActionPopup";
 export type { IActionPopupProps, PopupActionType } from "./ActionPopup";
+export { AccessDenied } from "./AccessDenied";
+export type { IAccessDeniedProps } from "./AccessDenied";
+export { ProtectedRoute } from "./ProtectedRoute";
+export type { IProtectedRouteProps } from "./ProtectedRoute";
