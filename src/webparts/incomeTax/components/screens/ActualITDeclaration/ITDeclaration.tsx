@@ -121,7 +121,9 @@ const ITDeclaration: React.FC = () => {
 
   // Form States
   const [pan, setPan] = React.useState("");
-  const [mobile, setMobile] = React.useState("");
+  const [mobile, setMobile] = React.useState(
+    declarationItem?.MobileNo || matchedEmployee?.PhoneNo || "",
+  );
   const [rentDetails, setRentDetails] = React.useState<any[]>([
     { month: "April", isMetro: null, city: "", rent: "" },
     { month: "May", isMetro: null, city: "", rent: "" },
@@ -199,7 +201,7 @@ const ITDeclaration: React.FC = () => {
   const [declarationAgreement, setDeclarationAgreement] = React.useState({
     agreed: false,
     place: "",
-    date: moment().format("DD-MM-YYYY"),
+    date: moment().format("DD/MM/YYYY"),
   });
 
   const [commentsHR, setCommentsHR] = React.useState("");
@@ -338,7 +340,7 @@ const ITDeclaration: React.FC = () => {
 
       if (regime) {
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        await loadDynamicSteps(regime);
+        await loadDynamicSteps(regime, item);
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadSavedData(item);
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -353,19 +355,24 @@ const ITDeclaration: React.FC = () => {
       dispatch(setSelectedItem(undefined));
     };
   }, [user, selectedItemFromStore]);
-  const loadDynamicSteps = async (regime: string) => {
+  const loadDynamicSteps = async (
+    regime: string,
+    mainItem?: any,
+  ): Promise<{ steps: any[]; sectionData: Record<string, any[]> }> => {
+    let computedSteps: any[] = [];
+    let computedSectionData: Record<string, any[]> = {};
+
     try {
-      const sections = await getListItems(LIST_NAMES.SECTION_CONFIG);
-      const dynamicSteps = sections.map((s: any) => ({
-        key: s.Title,
-        label: s.Title,
-        icon: ICON_MAP[s.Title] || ChartBarLineIcon,
-        order: s.SectionOrder,
-      }));
-      dynamicSteps.sort((a, b) => a.order - b.order);
+      const sectionsRaw = await getListItems(
+        LIST_NAMES.SECTION_CONFIG,
+        "SectionOrder ne null",
+      );
+      const sections = [...sectionsRaw].sort(
+        (a: any, b: any) => (a.SectionOrder || 0) - (b.SectionOrder || 0),
+      );
 
       if (regime === "New Regime") {
-        setSteps([
+        computedSteps = [
           { key: "Home", label: "Home", icon: Home01Icon },
           {
             key: "Basic Information",
@@ -377,18 +384,27 @@ const ITDeclaration: React.FC = () => {
             label: "Declaration & Summary",
             icon: CheckmarkBadge01Icon,
           },
-        ]);
+        ];
       } else {
-        setSteps([
+        const defaultOldRegimeSteps = [
           { key: "Home", label: "Home", icon: Home01Icon },
           {
             key: "Basic Information",
             label: "Basic Information",
             icon: UserAccountIcon,
           },
-          { key: "House Rental", label: "House Rental", icon: Building06Icon },
+          {
+            key: "House Rental",
+            label: "House Rental",
+            icon: Building06Icon,
+          },
           { key: "LTA", label: "LTA", icon: PlaneIcon },
-          ...dynamicSteps,
+          ...sections.map((s: any) => ({
+            key: s.Title,
+            label: s.Title,
+            icon: ICON_MAP[s.Title] || ChartBarLineIcon,
+            order: s.SectionOrder,
+          })),
           {
             key: "Housing Loan Repayment",
             label: "Housing Loan Repayment",
@@ -404,9 +420,48 @@ const ITDeclaration: React.FC = () => {
             label: "Declaration & Summary",
             icon: CheckmarkBadge01Icon,
           },
-        ]);
+        ];
 
-        // Load Lookup Config for dynamic sections
+        const newMaxAmounts: Record<string, number | null> = {};
+        sections.forEach((s: any) => {
+          newMaxAmounts[s.Title] = Number(s.MaxAmount) || null;
+        });
+        setSectionMaxAmounts(newMaxAmounts);
+
+        // If saved SectionDetailsJSON exists, restore section data and steps from it
+        if (mainItem?.SectionDetailsJSON) {
+          try {
+            const savedData = JSON.parse(mainItem.SectionDetailsJSON);
+
+            // Restore steps from stored keys if available, else use defaults
+            if (savedData.__steps && Array.isArray(savedData.__steps)) {
+              computedSteps = (savedData.__steps as string[]).map(
+                (key: string) => ({
+                  key,
+                  label: key,
+                  icon: ICON_MAP[key] || ChartBarLineIcon,
+                }),
+              );
+            } else {
+              computedSteps = defaultOldRegimeSteps;
+            }
+
+            // Restore section data from JSON (reset attachments for fresh load)
+            sections.forEach((s: any) => {
+              computedSectionData[s.Title] = (savedData[s.Title] || []).map(
+                (item: any) => ({ ...item, attachments: [] }),
+              );
+            });
+
+            setSteps(computedSteps);
+            setDynamicSectionData(computedSectionData);
+            return { steps: computedSteps, sectionData: computedSectionData };
+          } catch (e) {
+            // Fall through to LookupConfig fetch
+          }
+        }
+
+        // No saved JSON — load initial section data from LookupConfig
         const lookupConfig = await getListItems(
           LIST_NAMES.LOOKUP_CONFIG,
           "",
@@ -414,12 +469,8 @@ const ITDeclaration: React.FC = () => {
           true,
         );
 
-        const newDynamicData: Record<string, any[]> = {};
-        const newMaxAmounts: Record<string, number | null> = {};
-
         sections.forEach((s: any) => {
-          newMaxAmounts[s.Title] = Number(s.MaxAmount) || null;
-          newDynamicData[s.Title] = lookupConfig
+          computedSectionData[s.Title] = lookupConfig
             .filter((item: any) => item.SectionId === s.Id)
             .map((item: any) => ({
               id: item.Id,
@@ -431,12 +482,16 @@ const ITDeclaration: React.FC = () => {
             }));
         });
 
-        setSectionMaxAmounts(newMaxAmounts);
-        setDynamicSectionData(newDynamicData);
+        computedSteps = defaultOldRegimeSteps;
       }
+
+      setSteps(computedSteps);
+      setDynamicSectionData(computedSectionData);
     } catch (err) {
       console.error("Error loading dynamic steps", err);
     }
+
+    return { steps: computedSteps, sectionData: computedSectionData };
   };
 
   const loadSavedData = async (mainItem: any) => {
@@ -463,8 +518,8 @@ const ITDeclaration: React.FC = () => {
       agreed: mainItem.IsAcknowledged,
       place: mainItem.Place || "",
       date: mainItem.SubmittedDate
-        ? moment(mainItem.SubmittedDate).format("DD-MM-YYYY")
-        : moment().format("DD-MM-YYYY"),
+        ? moment(mainItem.SubmittedDate).format("DD/MM/YYYY")
+        : moment().format("DD/MM/YYYY"),
     });
     if (mainItem.RentDetailsJSON) {
       try {
@@ -570,9 +625,13 @@ const ITDeclaration: React.FC = () => {
         lenderPan: hl.PANofLender || "",
         lenderType: hl.LenderType || "",
         isJointlyAvailed:
-          typeof hl.IsJointlyAvailedPropertyLoan === "boolean"
-            ? hl.IsJointlyAvailedPropertyLoan
-            : null,
+          hl.IsJointlyAvailedPropertyLoan === "Yes" ||
+          hl.IsJointlyAvailedPropertyLoan === true
+            ? true
+            : hl.IsJointlyAvailedPropertyLoan === "No" ||
+                hl.IsJointlyAvailedPropertyLoan === false
+              ? false
+              : null,
         finalLettableValue: hl.FinalLettableValue?.toString() || "",
         letOutInterestAmount: hl.LetOutInterest?.toString() || "",
         otherDeductionsUs24: hl.OtherDeductions?.toString() || "",
@@ -609,24 +668,26 @@ const ITDeclaration: React.FC = () => {
         const savedSectionData = JSON.parse(mainItem.SectionDetailsJSON);
         setDynamicSectionData((prev) => {
           const merged: Record<string, any[]> = { ...prev };
-          Object.keys(savedSectionData).forEach((sectionKey) => {
-            if (merged[sectionKey]) {
-              merged[sectionKey] = merged[sectionKey].map((item: any) => {
-                const match = savedSectionData[sectionKey].find(
-                  (s: any) => s.id === item.id,
+          Object.keys(savedSectionData)
+            .filter((k) => k !== "__steps") // __steps stores step order, not section data
+            .forEach((sectionKey) => {
+              if (merged[sectionKey]) {
+                merged[sectionKey] = merged[sectionKey].map((item: any) => {
+                  const match = savedSectionData[sectionKey].find(
+                    (s: any) => s.id === item.id,
+                  );
+                  return match
+                    ? { ...item, declaredAmount: match.declaredAmount || "" }
+                    : item;
+                });
+              } else {
+                // Section not yet in prev (LookupConfig load pending) —
+                // initialize attachments: [] so loadAttachments can populate them
+                merged[sectionKey] = savedSectionData[sectionKey].map(
+                  (item: any) => ({ ...item, attachments: [] }),
                 );
-                return match
-                  ? { ...item, declaredAmount: match.declaredAmount || "" }
-                  : item;
-              });
-            } else {
-              // Section not yet in prev (LookupConfig load pending) —
-              // initialize attachments: [] so loadAttachments can populate them
-              merged[sectionKey] = savedSectionData[sectionKey].map(
-                (item: any) => ({ ...item, attachments: [] }),
-              );
-            }
-          });
+              }
+            });
           return merged;
         });
       } catch (e) {
@@ -1049,8 +1110,8 @@ const ITDeclaration: React.FC = () => {
             !ltaData.journeyStartPlace ||
             !ltaData.journeyDestination ||
             !ltaData.modeOfTravel ||
-            !ltaData.classOfTravel ||
-            !ltaData.ticketNumbers ||
+            (!ltaData.classOfTravel && ltaData.modeOfTravel !== "Others") ||
+            (!ltaData.ticketNumbers && ltaData.modeOfTravel !== "Others") ||
             !ltaData.lastClaimedYear ||
             !ltaData.attachments ||
             ltaData.attachments.length === 0)
@@ -1221,17 +1282,18 @@ const ITDeclaration: React.FC = () => {
         ApproverCommentsJson: commentsJSON,
       };
 
-      // Only allow updating SectionDetailsJSON if item is Draft or Submitted
-      // Strip attachments — they are loaded fresh from IT_Documents on each load
-      if (status === "Draft" || status === "Submitted") {
-        const sectionDataToSave: Record<string, any[]> = {};
-        Object.keys(dynamicSectionData).forEach((sectionKey) => {
-          sectionDataToSave[sectionKey] = dynamicSectionData[sectionKey].map(
-            ({ attachments: _a, ...rest }) => rest,
-          );
-        });
-        mainUpdate.SectionDetailsJSON = JSON.stringify(sectionDataToSave);
-      }
+      // if (status === "Draft") {
+      //   const sectionDataToSave: Record<string, any[]> = {};
+      //   Object.keys(dynamicSectionData).forEach((sectionKey) => {
+      //     sectionDataToSave[sectionKey] = dynamicSectionData[sectionKey].map(
+      //       ({ attachments: _a, ...rest }) => rest,
+      //     );
+      //   });
+      //   mainUpdate.SectionDetailsJSON = JSON.stringify({
+      //     ...sectionDataToSave,
+      //     __steps: steps.map((s) => s.key),
+      //   });
+      // }
 
       switch (activeStep) {
         case "Basic Information":
@@ -1247,6 +1309,33 @@ const ITDeclaration: React.FC = () => {
             ...mainUpdate,
             RentDetailsJSON: JSON.stringify(rentDetails),
           });
+          // Save landlord changes and delete removed landlords + their attachments
+          if (landlords.some((ll) => ll.name?.trim())) {
+            await upsertRelatedListBatch(
+              LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
+              mainId,
+              landlords.filter((ll) => ll.name?.trim()),
+              (ll) => ({
+                Title: ll.name,
+                PAN: ll.pan,
+                Address: ll.address,
+                IsDelete: ll.isDeleted || false,
+              }),
+              "ActualDeclarationId",
+            );
+          }
+          // Delete attachments for landlords that were removed
+          for (const ll of landlords.filter((l) => l.isDeleted && l.Id)) {
+            const deletedAttachments: any[] = ll.attachments || [];
+            for (const att of deletedAttachments) {
+              const attId = att.Id || att.ID;
+              if (attId) {
+                await updateListItem(LIST_NAMES.IT_DOCUMENTS, attId, {
+                  IsDelete: true,
+                });
+              }
+            }
+          }
           break;
 
         case "LTA":
@@ -1356,6 +1445,7 @@ const ITDeclaration: React.FC = () => {
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
+    setShowPopup((prev) => ({ ...prev, visible: false }));
     if (!declarationItem) return;
     try {
       setIsLoading(true);
@@ -1464,11 +1554,7 @@ const ITDeclaration: React.FC = () => {
 
       showToast(toast, "success", "Success", `Status updated to ${newStatus}`);
 
-      setTimeout(() => {
-        if (newStatus === "Submitted") {
-          handleNavigateBack();
-        }
-      }, 2000);
+      handleNavigateBack();
     } catch (err) {
       console.error("Error updating status", err);
       showToast(toast, "error", "Error", "Could not update status.");
@@ -1599,17 +1685,6 @@ const ITDeclaration: React.FC = () => {
                           : "",
                   })),
                 );
-              } else if (field === "exemptionAmount" && Number(val) > 0) {
-                setLtaData((prev: any) => {
-                  const newState = { ...prev, [field]: val };
-                  if (!prev.journeyStartDate) {
-                    newState.journeyStartDate = new Date();
-                  }
-                  if (!prev.journeyEndDate) {
-                    newState.journeyEndDate = new Date();
-                  }
-                  return newState;
-                });
               } else {
                 setLtaData((prev: any) => ({ ...prev, [field]: val }));
               }
@@ -1693,12 +1768,13 @@ const ITDeclaration: React.FC = () => {
             onDeleteAttachment={handleDeleteAttachment}
           />
         );
-      case "Declaration & Summary":
-        // Calculate dynamic totals
+      case "Declaration & Summary": {
+        // Calculate dynamic totals from in-memory state
         const dynamicTotals: Record<string, string> = {};
         Object.keys(dynamicSectionData).forEach((section) => {
           const total = dynamicSectionData[section].reduce(
-            (acc: number, curr: any) => acc + Number(curr.declaredAmount || 0),
+            (acc: number, curr: any) =>
+              acc + Number(curr.declaredAmount || 0),
             0,
           );
           dynamicTotals[section] = total.toLocaleString();
@@ -1725,22 +1801,8 @@ const ITDeclaration: React.FC = () => {
                 Number(housingLoanData.interestAmount || 0) +
                 Number(housingLoanData.letOutInterestAmount || 0)
               ).toLocaleString(),
-              section80C: (dynamicSectionData["Section 80C Deductions"] || [])
-                .reduce(
-                  (acc: number, curr: any) =>
-                    acc + Number(curr.declaredAmount || 0),
-                  0,
-                )
-                .toLocaleString(),
-              section80D: (dynamicSectionData["Section 80 Deductions"] || [])
-                .reduce(
-                  (acc: number, curr: any) =>
-                    acc + Number(curr.declaredAmount || 0),
-                  0,
-                )
-                .toLocaleString(),
-              ...dynamicTotals,
             }}
+            dynamicSections={dynamicTotals}
             declaration={declarationAgreement}
             onDeclarationChange={(field: "agreed" | "place", val: any) =>
               setDeclarationAgreement((prev) => ({ ...prev, [field]: val }))
@@ -1758,8 +1820,10 @@ const ITDeclaration: React.FC = () => {
             approverComments={commentsSummary}
             onCommentChange={setCommentsSummary}
             status={status}
+            employeeDeclarationPath={employeeDeclarationPath}
           />
         );
+      }
       default:
         // Dynamic Section Step
         return (
@@ -1813,6 +1877,7 @@ const ITDeclaration: React.FC = () => {
       RentDetailsJSON: plannedItem.RentDetailsJSON || null,
       Status: "Draft",
       MobileNumber: plannedItem.MobileNumber,
+      SectionDetailsJSON: plannedItem.SectionDetailsJSON || null,
     };
 
     // Helper: fetch Planned sub-list
@@ -1861,28 +1926,6 @@ const ITDeclaration: React.FC = () => {
     // 3c. Build SectionDetailsJSON from Planned lists
     const sectionDetails: Record<string, any[]> = {};
 
-    // 80C
-    const p80c: any[] = await fetchPlannedSub(LIST_NAMES.IT_80C_SECTION);
-    if (p80c.length > 0) {
-      sectionDetails["Section 80C Deductions"] = p80c.map((i) => ({
-        id: i.TypeOfInvestmentId,
-        investmentType: i.Title,
-        declaredAmount: i.Amount?.toString() || "",
-        attachments: [],
-      }));
-    }
-
-    // 80D
-    const p80d: any[] = await fetchPlannedSub(LIST_NAMES.IT_80);
-    if (p80d.length > 0) {
-      sectionDetails["Section 80 Deductions"] = p80d.map((i) => ({
-        id: i.TypeOfInvestmentId,
-        investmentType: i.Title,
-        declaredAmount: i.Amount?.toString() || "",
-        attachments: [],
-      }));
-    }
-
     // If Planned already has SectionDetailsJSON, parse and merge it
     if (plannedItem.SectionDetailsJSON) {
       try {
@@ -1909,7 +1952,14 @@ const ITDeclaration: React.FC = () => {
           LenderAddress: hl.LenderAddress,
           PANofLender: hl.PANofLender,
           LenderType: hl.LenderType,
-          IsJointlyAvailedPropertyLoan: hl.IsJointlyAvailedPropertyLoan,
+          IsJointlyAvailedPropertyLoan:
+            hl.IsJointlyAvailedPropertyLoan === "Yes" ||
+            hl.IsJointlyAvailedPropertyLoan === true
+              ? true
+              : hl.IsJointlyAvailedPropertyLoan === "No" ||
+                  hl.IsJointlyAvailedPropertyLoan === false
+                ? false
+                : null,
           FinalLettableValue: hl.FinalLettableValue,
           LetOutInterest: hl.LetOutInterest,
           OtherDeductions: hl.OtherDeductions,
@@ -1955,6 +2005,7 @@ const ITDeclaration: React.FC = () => {
       const plannedId = (declarationItem as any).PlannedDeclarationId;
 
       if (plannedId) {
+        // Clone copies SectionDetailsJSON (incl. __steps) from Planned
         await handleClonePlannedData(actualId, plannedId, regime);
       } else {
         await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, actualId, {
@@ -1974,7 +2025,30 @@ const ITDeclaration: React.FC = () => {
 
       const item = { ...refreshed, TaxRegime: regime };
       setDeclarationItem(item);
-      await loadDynamicSteps(regime);
+
+      // Pass item so loadDynamicSteps can restore steps/sections from stored JSON
+      const result = await loadDynamicSteps(regime, item);
+
+      // When there is no planned clone, persist initial section data and step order
+      if (
+        !plannedId &&
+        regime !== "New Regime" &&
+        Object.keys(result.sectionData).length > 0
+      ) {
+        const sectionDataToSave: Record<string, any[]> = {};
+        Object.keys(result.sectionData).forEach((sectionKey) => {
+          sectionDataToSave[sectionKey] = result.sectionData[sectionKey].map(
+            ({ attachments: _a, ...rest }) => rest,
+          );
+        });
+        await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, actualId, {
+          SectionDetailsJSON: JSON.stringify({
+            ...sectionDataToSave,
+            __steps: result.steps.map((s) => s.key),
+          }),
+        });
+      }
+
       await loadSavedData(item);
       await loadAttachments(item);
     } catch (error) {
@@ -2151,7 +2225,7 @@ const ITDeclaration: React.FC = () => {
                 !declarationItem?.DeclarationStatus) &&
               declarationItem?.EmployeeEmail.toLowerCase() ==
                 user?.Email.toLowerCase() &&
-              employeeDeclarationPath && (
+              !employeeDeclarationPath && (
                 <ActionButton
                   variant="continue"
                   label="Declaration Form"
@@ -2169,7 +2243,6 @@ const ITDeclaration: React.FC = () => {
             {isAdmin &&
               status === "Submitted" &&
               activeStep !== "Declaration & Summary" &&
-              declarationItem?.TaxRegime == "Old Regime" &&
               !isEditMode &&
               employeeDeclarationPath && (
                 <ActionButton

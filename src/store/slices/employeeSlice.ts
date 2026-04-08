@@ -40,9 +40,7 @@ export const fetchEmployeeMaster = createAsyncThunk<
       Department: item.Department ?? "",
       Designation: item.Designation ?? "",
       Location: item.Location.Title ?? "",
-      DOJ: item.DateOfJoining
-        ? new Date(item.DateOfJoining).toLocaleDateString("en-IN")
-        : "",
+      DOJ: item.DateOfJoining ? item.DateOfJoining : "",
     }));
 
     return data;

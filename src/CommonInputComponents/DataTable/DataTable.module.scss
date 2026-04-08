@@ -17,6 +17,10 @@
       .p-datatable-wrapper {
         overflow: auto !important;
       }
+      .p-selection-column .p-checkbox {
+        position: relative;
+        top: 3px;
+      }
 
       // ── header cells ────────────────────────────────────────────────────────
       .p-datatable-thead > tr > th {

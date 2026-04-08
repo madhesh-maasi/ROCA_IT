@@ -43,6 +43,7 @@ const SearchInput: React.FC<ISearchInputProps> = ({
         }
         placeholder={placeholder}
         className={styles.searchInput}
+        autoComplete="off"
       />
     </div>
   );

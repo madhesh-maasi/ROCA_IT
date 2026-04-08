@@ -259,12 +259,7 @@ const LookupConfig: React.FC = () => {
 
   // ─── Import Confirm Handler ──────────────────────────────────────────────────
 
-  const REQUIRED_IMPORT_COLS = [
-    "sections",
-    "sub-sections",
-    "types",
-    "max amount",
-  ];
+  const REQUIRED_IMPORT_COLS = ["sections", "types"];
 
   const handleConfirmImport = async () => {
     if (!importFile) {

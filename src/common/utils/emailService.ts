@@ -1,6 +1,7 @@
 import { MSGraphClientV3 } from "@microsoft/sp-http";
 import { getContext, ICurrentUser } from "./pnpService";
 import { User } from "@hugeicons/core-free-icons";
+import moment from "moment";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -78,25 +79,25 @@ const buildEmailBody = (payload: IEmailPayload): string => {
   const detailsBlock = `<br /><br /><b>Declaration Details:</b><br /><br />Declaration Type: <b>${declarationType}</b><br /><br />Financial Year: <b>${financialYear}</b><br /><br />Request Number: <b>${reqno || "-"}</b>`;
 
   if (action === "Released") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Income Tax Investment Workflow is active now for updating your investments.${detailsBlock}<br /><br />You have to update the investments on or before <b>${deadline ?? "the deadline"}</b>.<br /><br />Please note that once submitted you cannot alter.<br /><br />Please <a href="${deepLink}">click here</a> to access the portal.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Income Tax Investment Workflow is active now for updating your investments.${detailsBlock}<br /><br />You have to update the investments on or before <b>${deadline}</b>.<br /><br />Please note that once submitted you cannot alter.<br /><br />Please <a href="${deepLink}">click here</a> to access the portal.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Approved") {
     const linkText =
       declarationType === "Actual"
         ? `<br /><br />Please <a href="${deepLink}">click here</a> to access your submitted declaration form.`
         : "";
-    actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}${linkText}<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}${linkText}<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Rework") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Please check the remarks column in your income tax declaration and resubmit the data at the earliest.${detailsBlock}<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Please check the remarks column in your income tax declaration and resubmit the data at the earliest.${detailsBlock}<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action == "ActualApproved") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}<br /><br /> Please <a href="${deepLink}">click here</a> to access your declaration form. <br /><br /> Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}<br /><br /> Please <a href="${deepLink}">click here</a> to access your declaration form. <br /><br /> Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Export") {
     actionBody = `<p>Dear ${employeeName},<br /><br />Please find the attached Excel file for the <b>${financialYear}</b> Income Tax declarations.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Extension") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration submission date has been extended to <b>${deadline ?? "the deadline"}</b>.${detailsBlock}<br /><br />Please <a href="${deepLink}">login</a> to the portal and complete your declaration.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration submission date has been extended to <b>${deadline}</b>.${detailsBlock}<br /><br />Please <a href="${deepLink}">Click here</a> to the portal and complete your declaration.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "TaxRegimeUpdate") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Your tax regime has been updated.${detailsBlock}<br /><br />Tax Regime type: <b>${payload.newRegime || "N/A"}</b><br /><br />Please <a href="${deepLink}">login</a> to the portal and complete your declaration if pending.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Your tax regime has been updated.${detailsBlock}<br /><br />Tax Regime type: <b>${payload.newRegime || "N/A"}</b><br /><br />Please <a href="${deepLink}">Click here</a> to the portal and complete your declaration if pending.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Reopened") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration has been reopened for editing.${detailsBlock}<br /><br />Please <a href="${deepLink}">login</a> to the portal to update and resubmit your data.<br /><br />Thanks and regards,<br />${user?.Title || "ROCA IT Portal"}</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Your income tax declaration has been reopened for editing.${detailsBlock}<br /><br />Please <a href="${deepLink}">Click here</a> to the portal to update and resubmit your data.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   }
 
   return `
@@ -123,9 +124,9 @@ const getSubject = (
 ): string => {
   const subjects: Record<EmailActionType, string> = {
     Released: `INCOME TAX Investment Proofs for the FY ${financialYear} (${declarationType})`,
-    Approved: `INCOME TAX Declaration Request (${declarationType}) :Req No ${reqno} - Approved`,
-    Rework: `INCOME TAX Declaration Request (${declarationType}) for your rework :Req No ${reqno}`,
-    ActualApproved: `INCOME TAX Declaration Request (${declarationType}) :Req No ${reqno} - Approved`,
+    Approved: `INCOME TAX Declaration Request (${declarationType}) :Req No #${reqno} - Approved`,
+    Rework: `INCOME TAX Declaration Request (${declarationType}) for your rework :Req No #${reqno}`,
+    ActualApproved: `INCOME TAX Declaration Request (${declarationType}) :Req No #${reqno} - Approved`,
     Export: `Declarations Exported - ${financialYear} (${declarationType})`,
     Extension: `INCOME TAX Declaration - Submission Date Extended (${declarationType})`,
     TaxRegimeUpdate: `INCOME TAX Declaration - Tax Regime Updated (${declarationType})`,

@@ -35,7 +35,7 @@ const ITCalculator: React.FC = () => {
       );
 
       if (!fileUrl) {
-        showToast(toast, "error", "No Data", "No data to export.");
+        showToast(toast, "warn", "No Data", "No data available for download");
         return;
       }
       window.open(fileUrl, "_blank");

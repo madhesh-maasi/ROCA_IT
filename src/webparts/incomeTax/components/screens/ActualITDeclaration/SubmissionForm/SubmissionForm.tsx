@@ -21,11 +21,10 @@ export interface IEmployeeInfo {
 export interface IDeclarationSummary {
   lta: string | number;
   houseRental: string | number;
-  section80C: string | number;
-  section80D: string | number;
+  previousEmployerIncome: string | number;
   housingLoanSelfOccupied: string | number;
   housingLoanLetOut: string | number;
-  previousEmployerIncome: string | number;
+  dynamicSections?: Record<string, string | number>;
 }
 
 interface ISubmissionFormProps {
@@ -140,18 +139,15 @@ const SubmissionForm: React.FC<ISubmissionFormProps> = ({
                 </td>
               </tr>
 
-              <tr>
-                <td className={styles.labelColumn}>Section 80 C Deductions</td>
-                <td className={styles.valueColumn}>
-                  {declarationSummary.section80C || "-"}
-                </td>
-              </tr>
-              <tr>
-                <td className={styles.labelColumn}>Section 80 Deductions</td>
-                <td className={styles.valueColumn}>
-                  {declarationSummary.section80D || "-"}
-                </td>
-              </tr>
+              {declarationSummary.dynamicSections &&
+                Object.entries(declarationSummary.dynamicSections).map(
+                  ([sectionName, amount]) => (
+                    <tr key={sectionName}>
+                      <td className={styles.labelColumn}>{sectionName}</td>
+                      <td className={styles.valueColumn}>{amount || "-"}</td>
+                    </tr>
+                  ),
+                )}
               <tr>
                 <td className={styles.labelColumn}>
                   Housing Loan Interest Repayment - Self Occupied

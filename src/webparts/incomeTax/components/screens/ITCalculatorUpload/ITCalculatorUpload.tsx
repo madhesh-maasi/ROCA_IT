@@ -273,6 +273,7 @@ const ITCalculatorUpload: React.FC = () => {
             title="Download"
             onClick={() => {
               window.open(rowData.FileRef, "_blank");
+              showToast(toast, "success", "Downloaded", "IT Computation file downloaded successfully.");
             }}
           />
           {rowData.FinanceYear == curFinanicalYear && (
@@ -358,7 +359,7 @@ const ITCalculatorUpload: React.FC = () => {
           columns={columns}
           data={filteredData}
           globalFilter={searchTerm}
-          paginator={activeTab == "previous"}
+          paginator={activeTab == "previous" && filteredData.length > 0}
           rows={10}
         />
       </div>

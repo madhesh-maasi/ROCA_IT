@@ -234,7 +234,7 @@ const SubmittedDeclarations: React.FC = () => {
                 );
                 return;
               }
-              handleRowClick(row);
+              void handleRowClick(row);
             }}
           />
 
