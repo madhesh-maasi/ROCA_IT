@@ -23,6 +23,7 @@ import { selectUserDetails } from "../../../../store/slices/userSlice";
 import { getListItems } from "../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../common/constants/appConstants";
 import { ProtectedRoute } from "../../../../common/components";
+import { useRouteAccess } from "../../../../common/hooks/useRouteAccess";
 import styles from "./Dashboard.module.scss";
 import { curFinanicalYear } from "../../../../common/utils/functions";
 
@@ -52,6 +53,7 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
   }, [location, role]);
 
   const user = useAppSelector(selectUserDetails);
+  const { hasAccess } = useRouteAccess(role);
 
   React.useEffect(() => {
     if (!user) return;
@@ -230,7 +232,7 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
     <div className={styles.dashboard}>
       <AppHeader />
       <div className={styles.body}>
-        <SideNav role={role} activeKey={activeScreen} />
+        {hasAccess && <SideNav role={role} activeKey={activeScreen} />}
         <main className={styles.content} id="mainContent">
           {renderDashboardContent()}
         </main>

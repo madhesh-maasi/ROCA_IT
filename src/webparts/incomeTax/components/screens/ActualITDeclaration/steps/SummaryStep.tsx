@@ -17,11 +17,10 @@ interface ISummaryStepProps {
   };
   totals: {
     lta: string;
-    section80C: string;
     houseRental: string;
     housingLoan: string;
-    section80D: string;
   };
+  dynamicSections: Record<string, string>;
   declaration: {
     agreed: boolean;
     place: string;
@@ -37,11 +36,13 @@ interface ISummaryStepProps {
   approverComments?: string;
   onCommentChange?: (val: string) => void;
   status?: string;
+  employeeDeclarationPath?: boolean;
 }
 
 const SummaryStep: React.FC<ISummaryStepProps> = ({
   employeeInfo,
   totals,
+  dynamicSections,
   declaration,
   onDeclarationChange,
   onSaveAsDraft,
@@ -53,6 +54,7 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
   approverComments,
   onCommentChange,
   status,
+  employeeDeclarationPath,
 }) => {
   return (
     <div>
@@ -103,7 +105,10 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             >
               House Rental
             </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+            <div
+              className={styles.readonlyValue}
+              style={{ width: "250px", color: "#000" }}
+            >
               {totals.houseRental || "-"}
             </div>
           </div>
@@ -121,47 +126,38 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             >
               LTA
             </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+            <div
+              className={styles.readonlyValue}
+              style={{ width: "250px", color: "#000" }}
+            >
               {totals.lta || "-"}
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "24px",
-              marginBottom: 10,
-            }}
-          >
-            <label
-              style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
+          {Object.entries(dynamicSections).map(([sectionName, total]) => (
+            <div
+              key={sectionName}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "24px",
+                marginBottom: 10,
+              }}
             >
-              Section 80C Deductions
-            </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.section80C}
+              <label
+                style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
+              >
+                {sectionName}
+              </label>
+              <div
+                className={styles.readonlyValue}
+                style={{ width: "250px", color: "#000" }}
+              >
+                {total || "-"}
+              </div>
             </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "24px",
-              marginBottom: 10,
-            }}
-          >
-            <label
-              style={{ fontWeight: 700, width: "23%", textAlign: "right" }}
-            >
-              Section 80 Deduction
-            </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.section80D}
-            </div>
-          </div>
+          ))}
           <div
             style={{
               display: "flex",
@@ -176,7 +172,10 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             >
               Housing Loan Repayment
             </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+            <div
+              className={styles.readonlyValue}
+              style={{ width: "250px", color: "#000" }}
+            >
               {totals.housingLoan || "-"}
             </div>
           </div>
@@ -249,13 +248,16 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
           justifyContent: "flex-end",
         }}
       >
-        {taxRegime === "Old Regime" && onDownloadAttachments && (
-          <ActionButton
-            variant="download"
-            label="Download All Attachments"
-            onClick={onDownloadAttachments}
-          />
-        )}
+        {taxRegime === "Old Regime" &&
+          onDownloadAttachments &&
+          (status === "Submitted" || status === "Approved") &&
+          employeeDeclarationPath && (
+            <ActionButton
+              variant="download"
+              label="Download All Attachments"
+              onClick={onDownloadAttachments}
+            />
+          )}
       </div>
 
       {showApproverComments && onCommentChange && (

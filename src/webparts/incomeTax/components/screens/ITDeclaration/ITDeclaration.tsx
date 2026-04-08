@@ -112,8 +112,7 @@ const ITDeclaration: React.FC = () => {
   // Form States
   const [pan, setPan] = React.useState("");
   const [mobile, setMobile] = React.useState(
-    // declarationItem?.MobileNo || matchedEmployee?.PhoneNo || ""
-    "",
+    declarationItem?.MobileNo || matchedEmployee?.PhoneNo || "",
   );
   const [rentDetails, setRentDetails] = React.useState<any[]>([
     { month: "April", isMetro: null, city: "", rent: "" },
@@ -153,7 +152,7 @@ const ITDeclaration: React.FC = () => {
   const [dynamicSectionData, setDynamicSectionData] = React.useState<
     Record<string, any[]>
   >({});
-  const [housingLoanData, setHousingLoanData] = React.useState({
+  const [housingLoanData, setHousingLoanData] = React.useState<any>({
     propertyType: "None" as "None" | "Self Occupied" | "Let Out Property",
     interestAmount: "",
     finalLettableValue: "",
@@ -166,7 +165,7 @@ const ITDeclaration: React.FC = () => {
     isJointlyAvailed: null,
     approverComments: "",
   });
-  const [previousEmployerData, setPreviousEmployerData] = React.useState({
+  const [previousEmployerData, setPreviousEmployerData] = React.useState<any>({
     employerName: "",
     employerPan: "",
     employerAddress: "",
@@ -182,7 +181,7 @@ const ITDeclaration: React.FC = () => {
   const [declarationAgreement, setDeclarationAgreement] = React.useState({
     agreed: false,
     place: "",
-    date: moment().format("DD-MM-YYYY"),
+    date: moment().format("DD/MM/YYYY"),
   });
 
   const [commentsHR, setCommentsHR] = React.useState("");
@@ -249,7 +248,7 @@ const ITDeclaration: React.FC = () => {
         setShowRegimePopup(true);
       } else if (item?.TaxRegime) {
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        await loadDynamicSteps(item.TaxRegime);
+        await loadDynamicSteps(item.TaxRegime, item);
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         await loadSavedData(item);
       }
@@ -263,19 +262,24 @@ const ITDeclaration: React.FC = () => {
     };
   }, [user, selectedItemFromStore]);
 
-  const loadDynamicSteps = async (regime: string) => {
+  const loadDynamicSteps = async (
+    regime: string,
+    mainItem?: any,
+  ): Promise<{ steps: any[]; sectionData: Record<string, any[]> }> => {
+    let computedSteps: any[] = [];
+    let computedSectionData: Record<string, any[]> = {};
+
     try {
-      const sections = await getListItems(LIST_NAMES.SECTION_CONFIG);
-      const dynamicSteps = sections.map((s: any) => ({
-        key: s.Title,
-        label: s.Title,
-        icon: ICON_MAP[s.Title] || ChartBarLineIcon,
-        order: s.SectionOrder,
-      }));
-      dynamicSteps.sort((a: any, b: any) => a.order - b.order);
+      const sectionsRaw = await getListItems(
+        LIST_NAMES.SECTION_CONFIG,
+        "SectionOrder ne null",
+      );
+      const sections = [...sectionsRaw].sort(
+        (a: any, b: any) => (a.SectionOrder || 0) - (b.SectionOrder || 0),
+      );
 
       if (regime === "New Regime") {
-        setSteps([
+        computedSteps = [
           { key: "Home", label: "Home", icon: Home01Icon },
           {
             key: "Basic Information",
@@ -287,45 +291,27 @@ const ITDeclaration: React.FC = () => {
             label: "Declaration & Summary",
             icon: CheckmarkBadge01Icon,
           },
-        ]);
+        ];
       } else {
-        setSteps([
+        const defaultOldRegimeSteps = [
           { key: "Home", label: "Home", icon: Home01Icon },
           {
             key: "Basic Information",
             label: "Basic Information",
             icon: UserAccountIcon,
           },
-          { key: "House Rental", label: "House Rental", icon: Building06Icon },
+          {
+            key: "House Rental",
+            label: "House Rental",
+            icon: Building06Icon,
+          },
           { key: "LTA", label: "LTA", icon: PlaneIcon },
-          ...dynamicSteps,
-          // .filter((s) =>
-          //   ["Section 80C Deductions", "Section 80 Deductions"].includes(
-          //     s.key,
-          //   ),
-          // )
-          // .map((s: any) => {
-          //   return {
-          //     key: s.key,
-          //     label: s.key,
-          //     icon: ChartBarLineIcon,
-          //   };
-          // })
-          // {
-          //   key: "Section 80C Deductions",
-          //   label: "Section 80C Deductions",
-          //   icon: ChartBarLineIcon,
-          // },
-          // {
-          //   key: "Section 80 Deductions",
-          //   label: "Section 80 Deductions",
-          //   icon: ChartBarLineIcon,
-          // },
-          // {
-          //   key: "Housing Loan Repayment",
-          //   label: "Housing Loan Repayment",
-          //   icon: MoneyReceiveCircleIcon,
-          // },
+          ...sections.map((s: any) => ({
+            key: s.Title,
+            label: s.Title,
+            icon: ICON_MAP[s.Title] || ChartBarLineIcon,
+            order: s.SectionOrder,
+          })),
           {
             key: "Housing Loan Repayment",
             label: "Housing Loan Repayment",
@@ -341,9 +327,46 @@ const ITDeclaration: React.FC = () => {
             label: "Declaration & Summary",
             icon: CheckmarkBadge01Icon,
           },
-        ]);
+        ];
 
-        // Load Lookup Config for dynamic sections
+        const newMaxAmounts: Record<string, number | null> = {};
+        sections.forEach((s: any) => {
+          newMaxAmounts[s.Title] = Number(s.MaxAmount) || null;
+        });
+        setSectionMaxAmounts(newMaxAmounts);
+
+        // If saved SectionDetailsJSON exists, restore section data and steps from it
+        if (mainItem?.SectionDetailsJSON) {
+          try {
+            const savedData = JSON.parse(mainItem.SectionDetailsJSON);
+
+            // Restore steps from stored keys if available, else use defaults
+            if (savedData.__steps && Array.isArray(savedData.__steps)) {
+              computedSteps = (savedData.__steps as string[]).map(
+                (key: string) => ({
+                  key,
+                  label: key,
+                  icon: ICON_MAP[key] || ChartBarLineIcon,
+                }),
+              );
+            } else {
+              computedSteps = defaultOldRegimeSteps;
+            }
+
+            // Restore section data from JSON
+            sections.forEach((s: any) => {
+              computedSectionData[s.Title] = savedData[s.Title] || [];
+            });
+
+            setSteps(computedSteps);
+            setDynamicSectionData(computedSectionData);
+            return { steps: computedSteps, sectionData: computedSectionData };
+          } catch (e) {
+            // Fall through to LookupConfig fetch
+          }
+        }
+
+        // No saved JSON — load initial section data from LookupConfig
         const lookupConfig = await getListItems(
           LIST_NAMES.LOOKUP_CONFIG,
           "",
@@ -351,12 +374,8 @@ const ITDeclaration: React.FC = () => {
           true,
         );
 
-        const newDynamicData: Record<string, any[]> = {};
-        const newMaxAmounts: Record<string, number | null> = {};
-
         sections.forEach((s: any) => {
-          newMaxAmounts[s.Title] = Number(s.MaxAmount) || null;
-          newDynamicData[s.Title] = lookupConfig
+          computedSectionData[s.Title] = lookupConfig
             .filter((item: any) => item.SectionId === s.Id)
             .map((item: any) => ({
               id: item.Id,
@@ -367,12 +386,16 @@ const ITDeclaration: React.FC = () => {
             }));
         });
 
-        setSectionMaxAmounts(newMaxAmounts);
-        setDynamicSectionData(newDynamicData);
+        computedSteps = defaultOldRegimeSteps;
       }
+
+      setSteps(computedSteps);
+      setDynamicSectionData(computedSectionData);
     } catch (e) {
       console.error(e);
     }
+
+    return { steps: computedSteps, sectionData: computedSectionData };
   };
 
   const loadSavedData = async (mainItem: any) => {
@@ -399,8 +422,8 @@ const ITDeclaration: React.FC = () => {
       agreed: mainItem.IsAcknowledged,
       place: mainItem.Place || "",
       date: mainItem.SubmittedDate
-        ? moment(mainItem.SubmittedDate).format("DD-MM-YYYY")
-        : moment().format("DD-MM-YYYY"),
+        ? moment(mainItem.SubmittedDate).format("DD/MM/YYYY")
+        : moment().format("DD/MM/YYYY"),
     });
     if (mainItem.RentDetailsJSON) {
       try {
@@ -500,9 +523,13 @@ const ITDeclaration: React.FC = () => {
         lenderPan: hl.PANofLender || "",
         lenderType: hl.LenderType || "",
         isJointlyAvailed:
-          typeof hl.IsJointlyAvailedPropertyLoan === "boolean"
-            ? hl.IsJointlyAvailedPropertyLoan
-            : null,
+          hl.IsJointlyAvailedPropertyLoan === "Yes" ||
+          hl.IsJointlyAvailedPropertyLoan === true
+            ? true
+            : hl.IsJointlyAvailedPropertyLoan === "No" ||
+                hl.IsJointlyAvailedPropertyLoan === false
+              ? false
+              : null,
         finalLettableValue: hl.FinalLettableValue?.toString() || "",
         letOutInterestAmount: hl.LetOutInterest?.toString() || "",
         otherDeductionsUs24: hl.OtherDeductions?.toString() || "",
@@ -538,20 +565,22 @@ const ITDeclaration: React.FC = () => {
         const savedDynamicData = JSON.parse(mainItem.SectionDetailsJSON);
         setDynamicSectionData((prev) => {
           const merged = { ...prev };
-          Object.keys(savedDynamicData).forEach((sectionTitle) => {
-            if (merged[sectionTitle]) {
-              merged[sectionTitle] = merged[sectionTitle].map((item: any) => {
-                const savedItem = savedDynamicData[sectionTitle].find(
-                  (si: any) => si.id === item.id,
-                );
-                return savedItem
-                  ? { ...item, declaredAmount: savedItem.declaredAmount }
-                  : item;
-              });
-            } else {
-              merged[sectionTitle] = savedDynamicData[sectionTitle];
-            }
-          });
+          Object.keys(savedDynamicData)
+            .filter((k) => k !== "__steps") // __steps stores step order, not section data
+            .forEach((sectionTitle) => {
+              if (merged[sectionTitle]) {
+                merged[sectionTitle] = merged[sectionTitle].map((item: any) => {
+                  const savedItem = savedDynamicData[sectionTitle].find(
+                    (si: any) => si.id === item.id,
+                  );
+                  return savedItem
+                    ? { ...item, declaredAmount: savedItem.declaredAmount }
+                    : item;
+                });
+              } else {
+                merged[sectionTitle] = savedDynamicData[sectionTitle];
+              }
+            });
           return merged;
         });
       } catch (e) {
@@ -587,8 +616,30 @@ const ITDeclaration: React.FC = () => {
         Status: "Draft",
       });
       setShowRegimePopup(false);
-      setDeclarationItem({ ...declarationItem, TaxRegime: regime });
-      await loadDynamicSteps(regime);
+      const updatedItem = { ...declarationItem, TaxRegime: regime };
+      setDeclarationItem(updatedItem);
+
+      // Load dynamic steps (no prior JSON, so data comes from LookupConfig)
+      const result = await loadDynamicSteps(regime, updatedItem);
+
+      // Persist the initial section data and step order to SectionDetailsJSON
+      if (
+        regime !== "New Regime" &&
+        Object.keys(result.sectionData).length > 0
+      ) {
+        const sectionDetailsJSON = JSON.stringify({
+          ...result.sectionData,
+          __steps: result.steps.map((s) => s.key),
+        });
+        await updateListItem(
+          LIST_NAMES.PLANNED_DECLARATION,
+          declarationItem.Id,
+          {
+            SectionDetailsJSON: sectionDetailsJSON,
+          },
+        );
+      }
+
       void dispatch(
         fetchIncomeTaxItems({ getItems: () => Promise.resolve([]) }),
       );
@@ -700,8 +751,6 @@ const ITDeclaration: React.FC = () => {
             !ltaData.journeyStartPlace ||
             !ltaData.journeyDestination ||
             !ltaData.modeOfTravel ||
-            !ltaData.classOfTravel ||
-            !ltaData.ticketNumbers ||
             (!ltaData.classOfTravel && ltaData.modeOfTravel !== "Others") ||
             (!ltaData.ticketNumbers && ltaData.modeOfTravel !== "Others") ||
             !ltaData.lastClaimedYear)
@@ -719,9 +768,15 @@ const ITDeclaration: React.FC = () => {
             _errMsg = "Journey destination is required";
           } else if (!ltaData.modeOfTravel) {
             _errMsg = "Mode of travel is required";
-          } else if (!ltaData.classOfTravel.trim()) {
+          } else if (
+            !ltaData.classOfTravel.trim() &&
+            ltaData.modeOfTravel !== "Others"
+          ) {
             _errMsg = "Class of travel is required";
-          } else if (!ltaData.ticketNumbers.trim()) {
+          } else if (
+            !ltaData.ticketNumbers.trim() &&
+            ltaData.modeOfTravel !== "Others"
+          ) {
             _errMsg = "Ticket number is required";
           } else if (!ltaData.lastClaimedYear) {
             _errMsg = "Last claimed year is required";
@@ -741,7 +796,9 @@ const ITDeclaration: React.FC = () => {
           (!housingLoanData.interestAmount ||
             !housingLoanData.lenderName ||
             !housingLoanData.lenderAddress ||
-            !housingLoanData.lenderType)
+            !housingLoanData.lenderType ||
+            housingLoanData.isJointlyAvailed === null ||
+            housingLoanData.isJointlyAvailed === "")
         ) {
           if (housingLoanData.propertyType === "Let Out Property") {
             if (!housingLoanData.finalLettableValue) {
@@ -916,8 +973,10 @@ const ITDeclaration: React.FC = () => {
             };
 
             if (status === "Draft") {
-              updatePayload.SectionDetailsJSON =
-                JSON.stringify(dynamicSectionData);
+              updatePayload.SectionDetailsJSON = JSON.stringify({
+                ...dynamicSectionData,
+                __steps: steps.map((s) => s.key),
+              });
             }
 
             await updateListItem(
@@ -1095,11 +1154,8 @@ const ITDeclaration: React.FC = () => {
       });
 
       // Wait 3 seconds then navigate back
-      setTimeout(() => {
-        setShowPopup((prev) => ({ ...prev, visible: false }));
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        handleNavigateBack();
-      }, 3000);
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      handleNavigateBack();
     } catch (error) {
       console.error("Error updating status:", error);
     } finally {
@@ -1228,17 +1284,6 @@ const ITDeclaration: React.FC = () => {
                           : "",
                   })),
                 );
-              } else if (field === "exemptionAmount" && Number(val) > 0) {
-                setLtaData((prev: any) => {
-                  const newState = { ...prev, [field]: val };
-                  if (!prev.journeyStartDate) {
-                    newState.journeyStartDate = new Date();
-                  }
-                  if (!prev.journeyEndDate) {
-                    newState.journeyEndDate = new Date();
-                  }
-                  return newState;
-                });
               } else {
                 setLtaData((prev: any) => ({ ...prev, [field]: val }));
               }
@@ -1266,7 +1311,7 @@ const ITDeclaration: React.FC = () => {
             data={housingLoanData}
             onChange={(field, val) => {
               if (field === "propertyType") {
-                setHousingLoanData((prev) => ({
+                setHousingLoanData((prev: any) => ({
                   ...prev,
                   propertyType: val,
                   interestAmount: "",
@@ -1280,7 +1325,7 @@ const ITDeclaration: React.FC = () => {
                   isJointlyAvailed: null,
                 }));
               } else {
-                setHousingLoanData((prev) => ({ ...prev, [field]: val }));
+                setHousingLoanData((prev: any) => ({ ...prev, [field]: val }));
               }
             }}
             showApproverComments={
@@ -1299,7 +1344,10 @@ const ITDeclaration: React.FC = () => {
           <PreviousEmployerStep
             data={previousEmployerData}
             onChange={(field, val) =>
-              setPreviousEmployerData((prev) => ({ ...prev, [field]: val }))
+              setPreviousEmployerData((prev: any) => ({
+                ...prev,
+                [field]: val,
+              }))
             }
             showApproverComments={
               (isAdmin && status == "Submitted" && employeeDeclarationPath) ||
@@ -1312,8 +1360,8 @@ const ITDeclaration: React.FC = () => {
             readOnly={readOnly}
           />
         );
-      case "Declaration & Summary":
-        // Calculate dynamic totals for configuration-based sections
+      case "Declaration & Summary": {
+        // Calculate dynamic totals from in-memory state
         const dynamicTotals: Record<string, string> = {};
         Object.keys(dynamicSectionData).forEach((section) => {
           const total = dynamicSectionData[section].reduce(
@@ -1344,22 +1392,8 @@ const ITDeclaration: React.FC = () => {
                 Number(housingLoanData.interestAmount || 0) +
                 Number(housingLoanData.letOutInterestAmount || 0)
               ).toLocaleString(),
-              section80C: (dynamicSectionData["Section 80C Deductions"] || [])
-                .reduce(
-                  (acc: number, curr: any) =>
-                    acc + Number(curr.declaredAmount || 0),
-                  0,
-                )
-                .toLocaleString(),
-              section80D: (dynamicSectionData["Section 80 Deductions"] || [])
-                .reduce(
-                  (acc: number, curr: any) =>
-                    acc + Number(curr.declaredAmount || 0),
-                  0,
-                )
-                .toLocaleString(),
-              ...dynamicTotals,
             }}
+            dynamicSections={dynamicTotals}
             declaration={declarationAgreement}
             onDeclarationChange={(field: "agreed" | "place", val: any) =>
               setDeclarationAgreement((prev) => ({ ...prev, [field]: val }))
@@ -1378,6 +1412,7 @@ const ITDeclaration: React.FC = () => {
             status={status}
           />
         );
+      }
       default:
         if (dynamicSectionData[activeStep]) {
           return (

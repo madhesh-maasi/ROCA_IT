@@ -49,45 +49,26 @@ const DeclarationFormScreen: React.FC = () => {
         );
 
         // Fetch related data for summary
-        const [ltaItems, items80C, items80D, hlItems, peItems] =
-          await Promise.all([
-            getRelatedListItems(
-              LIST_NAMES.IT_LTA_Actual,
-              Number(id),
-              "ActualDeclarationId",
-            ),
-            getRelatedListItems(
-              LIST_NAMES.IT_80C_SECTION_Actual,
-              Number(id),
-              "ActualDeclarationId",
-            ),
-            getRelatedListItems(
-              LIST_NAMES.IT_80_Actual,
-              Number(id),
-              "ActualDeclarationId",
-            ),
-            getRelatedListItems(
-              LIST_NAMES.IT_HOUSING_LOAN_Actual,
-              Number(id),
-              "ActualDeclarationId",
-            ),
-            getRelatedListItems(
-              LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
-              Number(id),
-              "ActualDeclarationId",
-            ),
-          ]);
+        const [ltaItems, hlItems, peItems] = await Promise.all([
+          getRelatedListItems(
+            LIST_NAMES.IT_LTA_Actual,
+            Number(id),
+            "ActualDeclarationId",
+          ),
+          getRelatedListItems(
+            LIST_NAMES.IT_HOUSING_LOAN_Actual,
+            Number(id),
+            "ActualDeclarationId",
+          ),
+          getRelatedListItems(
+            LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
+            Number(id),
+            "ActualDeclarationId",
+          ),
+        ]);
 
         const totalLTA = ltaItems.reduce(
           (acc: number, curr: any) => acc + Number(curr.ExemptionAmount || 0),
-          0,
-        );
-        const total80C = items80C.reduce(
-          (acc: number, curr: any) => acc + Number(curr.Amount || 0),
-          0,
-        );
-        const total80D = items80D.reduce(
-          (acc: number, curr: any) => acc + Number(curr.Amount || 0),
           0,
         );
 
@@ -118,6 +99,23 @@ const DeclarationFormScreen: React.FC = () => {
           } catch (e) {}
         }
 
+        const dynamicTotals: Record<string, string> = {};
+        if (mainItem.SectionDetailsJSON) {
+          try {
+            const sectionData = JSON.parse(mainItem.SectionDetailsJSON);
+            Object.keys(sectionData).forEach((key) => {
+              const total = sectionData[key].reduce(
+                (sum: number, item: any) =>
+                  sum + Number(item.declaredAmount || 0),
+                0,
+              );
+              if (total > 0) {
+                dynamicTotals[key] = total.toLocaleString();
+              }
+            });
+          } catch (e) {}
+        }
+
         // Find employee info
         const empEmail = mainItem.EmployeeEmail || user?.Email;
         const employee = employeeMaster.find((e) => e.Email === empEmail);
@@ -140,11 +138,10 @@ const DeclarationFormScreen: React.FC = () => {
           declarationSummary: {
             lta: totalLTA?.toLocaleString(),
             houseRental: rentTotal?.toLocaleString(),
-            section80C: total80C?.toLocaleString(),
-            section80D: total80D?.toLocaleString(),
             housingLoanSelfOccupied: hlSelf?.toLocaleString(),
             housingLoanLetOut: hlLetOut?.toLocaleString(),
             previousEmployerIncome: peIncome?.toLocaleString(),
+            dynamicSections: dynamicTotals,
           },
         });
 

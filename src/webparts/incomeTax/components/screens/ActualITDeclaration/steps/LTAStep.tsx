@@ -90,6 +90,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               );
               if (!e.target.value.replace(/[^0-9]/g, "").slice(0, 7)) {
+                /*eslint-disable @typescript-eslint/no-unused-expressions*/
                 ltaAttachments[0]?.Id &&
                   (await onDeleteAttachment?.(
                     UPLOAD_KEY,
@@ -106,12 +107,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             id="lta-start-date"
             label="Journey Start Date"
             value={ltaData.journeyStartDate}
-            onChange={(e: any) => {
-              onLtaChange("journeyStartDate", e.value);
-              onLtaChange("journeyEndDate", e.value);
-            }}
+            onChange={(e: any) => onLtaChange("journeyStartDate", e.value)}
             placeholder="Select"
             disabled={readOnly}
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
@@ -171,7 +170,11 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             label="Mode of Travel"
             options={modeOptions}
             value={ltaData.modeOfTravel}
-            onChange={(e: any) => onLtaChange("modeOfTravel", e.value)}
+            onChange={(e: any) => {
+              onLtaChange("modeOfTravel", e.value);
+              onLtaChange("classOfTravel", "");
+              onLtaChange("ticketNumbers", "");
+            }}
             placeholder="Select"
             disabled={readOnly}
             required={Number(ltaData.exemptionAmount) > 0}
@@ -291,7 +294,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                   <td>
                     <AppCalendar
                       id={`co-dob-${idx}`}
-                      value={new Date(person.dob || "")}
+                      value={person.dob ? new Date(person.dob) : null}
                       onChange={(e: any) =>
                         onCoTravellerChange(idx, "dob", e.value)
                       }

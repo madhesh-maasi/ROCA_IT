@@ -17,33 +17,33 @@ export const generatePDFBlob = async (
     throw new Error(`Element with ID "${elementId}" not found.`);
   }
 
-  // Use a higher scale for better quality
   const canvas = await html2canvas(element, {
-    scale: 2,
+    scale: 1.5,
     useCORS: true,
     logging: false,
     allowTaint: true,
   });
 
-  const imgData = canvas.toDataURL("image/png");
-  
+  // JPEG at 0.75 quality is much smaller than PNG with minimal visible difference
+  const imgData = canvas.toDataURL("image/jpeg", 0.75);
+
   // Calculate dimensions to fit the PDF page
   const imgWidth = 210; // A4 width in mm
   const pageHeight = 297; // A4 height in mm
   const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  
-  const pdf = new jsPDF("p", "mm", "a4");
+
+  const pdf = new jsPDF("p", "mm", "a4", true); // true = compress
   let heightLeft = imgHeight;
   let position = 0;
 
-  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, "", "FAST");
   heightLeft -= pageHeight;
 
   // Add extra pages if the content is longer than one page
   while (heightLeft >= 0) {
     position = heightLeft - imgHeight;
     pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, "", "FAST");
     heightLeft -= pageHeight;
   }
 

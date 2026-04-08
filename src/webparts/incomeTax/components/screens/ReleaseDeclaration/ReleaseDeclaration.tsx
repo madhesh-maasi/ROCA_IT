@@ -452,7 +452,7 @@ const ReleaseDeclaration: React.FC = () => {
 
         // Send release email notifications
         const deadlineStr = formData.OnOrBefore
-          ? formData.OnOrBefore.toLocaleDateString("en-IN")
+          ? moment(formData.OnOrBefore).format("DD/MM/YYYY")
           : undefined;
         const emailTargets = actualItems
           .filter((item) => item.EmployeeEmail)
@@ -542,7 +542,7 @@ const ReleaseDeclaration: React.FC = () => {
 
       // Send release email notifications
       const deadlineStr = formData.OnOrBefore
-        ? formData.OnOrBefore.toLocaleDateString("en-IN")
+        ? moment(formData.OnOrBefore).format("DD/MM/YYYY")
         : "";
       const emailTargets = finalWithIds
         .filter((item) => item.EmployeeEmail)
@@ -700,7 +700,11 @@ const ReleaseDeclaration: React.FC = () => {
     { field: "location", header: "Location", sortable: true },
     { field: "declarationType", header: "Declaration Type", sortable: true },
     { field: "financialYear", header: "Financial Year", sortable: true },
-    { field: "declarationEndDate", header: "Declaration End Date", sortable: true },
+    {
+      field: "declarationEndDate",
+      header: "Declaration End Date",
+      sortable: true,
+    },
     { field: "releasedDate", header: "Released date", sortable: true },
     {
       field: "status",

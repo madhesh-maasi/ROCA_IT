@@ -147,12 +147,12 @@ const SectionConfig: React.FC = () => {
     const amtErr = validateField(formData.maxAmount, [
       required("Max Amount is required"),
     ]);
+    const orderErr = validateField(formData.order, [
+      required("Order is required"),
+    ]);
 
-    if (
-      nameErr
-      // || amtErr
-    ) {
-      showToast(toast, "warn", "Validation Error", nameErr || amtErr);
+    if (nameErr || orderErr) {
+      showToast(toast, "warn", "Validation Error", nameErr || orderErr || amtErr);
       return;
     }
 
@@ -373,6 +373,7 @@ const SectionConfig: React.FC = () => {
                 order: e.target.value.replace(/[^0-9]/g, ""),
               }))
             }
+            required
             className={styles.inputField}
           />
         </div>

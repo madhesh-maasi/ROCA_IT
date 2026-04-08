@@ -81,11 +81,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             value={ltaData.journeyStartDate}
             onChange={(e: any) => {
               onLtaChange("journeyStartDate", e.value);
-              onLtaChange("journeyEndDate", e.value);
             }}
             placeholder="Select"
             disabled={readOnly}
-            required
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
@@ -101,7 +100,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 ? new Date(ltaData.journeyStartDate)
                 : undefined
             }
-            required
+            required={Number(ltaData.exemptionAmount) > 0}
           />
         </div>
         <div className={styles.formGroup}>
@@ -146,7 +145,11 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             label="Mode of Travel"
             options={modeOptions}
             value={ltaData.modeOfTravel}
-            onChange={(e: any) => onLtaChange("modeOfTravel", e.value)}
+            onChange={(e: any) => {
+              onLtaChange("modeOfTravel", e.value);
+              onLtaChange("classOfTravel", "");
+              onLtaChange("ticketNumbers", "");
+            }}
             placeholder="Select"
             disabled={readOnly}
             required={Number(ltaData.exemptionAmount) > 0}
@@ -155,7 +158,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         <div className={styles.formGroup}>
           <label>
             Class of Travel{" "}
-            {ltaData.modeOfTravel !== "Others" && Number(ltaData.exemptionAmount) > 0 ? (
+            {ltaData.modeOfTravel !== "Others" &&
+            Number(ltaData.exemptionAmount) > 0 ? (
               <span style={{ color: "red" }}>*</span>
             ) : null}
           </label>
@@ -185,7 +189,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
         <div className={styles.formGroup}>
           <label>
             Ticket Numbers{" "}
-            {ltaData.modeOfTravel !== "Others" && Number(ltaData.exemptionAmount) > 0 ? (
+            {ltaData.modeOfTravel !== "Others" &&
+            Number(ltaData.exemptionAmount) > 0 ? (
               <span style={{ color: "red" }}>*</span>
             ) : null}
           </label>
@@ -265,7 +270,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                   <td>
                     <AppCalendar
                       id={`co-dob-${idx}`}
-                      value={new Date(person.dob || "")}
+                      value={person.dob ? new Date(person.dob) : null}
                       onChange={(e: any) =>
                         onCoTravellerChange(idx, "dob", e.value)
                       }

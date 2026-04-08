@@ -67,7 +67,7 @@ const EmployeeDeclarations: React.FC = () => {
   const actualItems = useAppSelector(selectActualIncomeTaxItems);
 
   const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(
-    location.state?.tab || "Planned",
+    location.state?.tab || "",
   );
   const [search, setSearch] = React.useState("");
   const [fy, setFy] = React.useState(curFinanicalYear);
@@ -99,7 +99,7 @@ const EmployeeDeclarations: React.FC = () => {
       );
     };
     const fetchActualItems = async () => {
-      await dispatch(
+      const result = await dispatch(
         fetchActualIncomeTaxItems({
           getItems: () =>
             getListItems(
@@ -108,20 +108,24 @@ const EmployeeDeclarations: React.FC = () => {
             ),
         }),
       );
+      return result;
     };
     void (await fetchItems());
-    void (await fetchActualItems());
+    const actualResult = await fetchActualItems();
+
+    // Set active tab based on fetched actual items, before loader dismisses
+    if (!location.state?.tab) {
+      const fetchedActualItems = (actualResult as any)?.payload || [];
+      if (fetchedActualItems.length > 0) {
+        setActiveTab("Actual");
+      } else {
+        setActiveTab("Planned");
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
     setIsProcessing(false);
   };
-  useEffect(() => {
-    setIsProcessing(true);
-    if (actualItems.length > 0) {
-      setActiveTab("Actual");
-    } else {
-      setActiveTab("Planned");
-    }
-    setIsProcessing(false);
-  }, [actualItems.length]);
+
   useEffect(() => {
     void init();
   }, []);

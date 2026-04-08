@@ -14,11 +14,10 @@ interface ISummaryStepProps {
   };
   totals: {
     lta: string;
-    section80C: string;
     houseRental: string;
     housingLoan: string;
-    section80D: string;
   };
+  dynamicSections: Record<string, string>;
   declaration: {
     agreed: boolean;
     place: string;
@@ -38,6 +37,7 @@ interface ISummaryStepProps {
 const SummaryStep: React.FC<ISummaryStepProps> = ({
   employeeInfo,
   totals,
+  dynamicSections,
   declaration,
   onDeclarationChange,
   onSaveAsDraft,
@@ -102,7 +102,10 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             >
               House Rental
             </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+            <div
+              className={styles.readonlyValue}
+              style={{ width: "250px", color: "#000" }}
+            >
               {totals.houseRental || "-"}
             </div>
           </div>
@@ -120,56 +123,42 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             >
               LTA
             </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+            <div
+              className={styles.readonlyValue}
+              style={{ width: "250px", color: "#000" }}
+            >
               {totals.lta || "-"}
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "24px",
-              marginBottom: 10,
-            }}
-          >
-            <label
+          {Object.entries(dynamicSections).map(([sectionName, total]) => (
+            <div
+              key={sectionName}
               style={{
-                fontWeight: 700,
-                width: "23%",
-                textAlign: "right",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "24px",
+                marginBottom: 10,
               }}
             >
-              Section 80C Deductions
-            </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.section80C}
+              <label
+                style={{
+                  fontWeight: 700,
+                  width: "23%",
+                  textAlign: "right",
+                }}
+              >
+                {sectionName}
+              </label>
+              <div
+                className={styles.readonlyValue}
+                style={{ width: "250px", color: "#000" }}
+              >
+                {total || "-"}
+              </div>
             </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "24px",
-              marginBottom: 10,
-            }}
-          >
-            <label
-              style={{
-                fontWeight: 700,
-                width: "23%",
-                textAlign: "right",
-              }}
-            >
-              Section 80 Deduction
-            </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
-              {totals.section80D || "-"}
-              {/* To track 80D totals? Currently not passed. We can just add it later or hardcode dash for now, but design has it */}
-            </div>
-          </div>
+          ))}
           <div
             style={{
               display: "flex",
@@ -188,7 +177,10 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
             >
               Housing Loan Repayment
             </label>
-            <div className={styles.readonlyValue} style={{ width: "250px" }}>
+            <div
+              className={styles.readonlyValue}
+              style={{ width: "250px", color: "#000" }}
+            >
               {totals.housingLoan || "-"}
             </div>
           </div>

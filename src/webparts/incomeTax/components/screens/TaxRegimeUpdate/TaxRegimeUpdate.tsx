@@ -134,6 +134,8 @@ const TaxRegimeUpdate: React.FC = () => {
           ApproverCommentsJson: "",
           Status: "Draft",
           RentDetailsJSON: "",
+          ActiveStep: "",
+          SectionDetailsJSON: "",
         });
 
         // 2. If changing from Old to New, soft-delete child lists
@@ -143,16 +145,12 @@ const TaxRegimeUpdate: React.FC = () => {
               ? [
                   LIST_NAMES.IT_LANDLORD_DETAILS,
                   LIST_NAMES.IT_LTA,
-                  LIST_NAMES.IT_80C_SECTION,
-                  LIST_NAMES.IT_80,
                   LIST_NAMES.IT_HOUSING_LOAN,
                   LIST_NAMES.IT_PREVIOUS_EMPLOYER,
                 ]
               : [
                   LIST_NAMES.IT_LANDLORD_DETAILS_Actual,
                   LIST_NAMES.IT_LTA_Actual,
-                  LIST_NAMES.IT_80C_SECTION_Actual,
-                  LIST_NAMES.IT_80_Actual,
                   LIST_NAMES.IT_HOUSING_LOAN_Actual,
                   LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
                   LIST_NAMES.IT_DOCUMENTS,
