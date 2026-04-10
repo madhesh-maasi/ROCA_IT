@@ -186,8 +186,8 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.8 : 1,
                 backgroundColor: "#fff",
               }}

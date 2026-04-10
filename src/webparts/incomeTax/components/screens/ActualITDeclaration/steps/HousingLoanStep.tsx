@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import * as React from "react";
 import {
   InputField,
@@ -19,7 +20,7 @@ interface IHousingLoanData {
   lenderAddress: string;
   lenderPan: string;
   lenderType: string;
-  isJointlyAvailed: boolean | string;
+  isJointlyAvailed: string | null;
   attachments?: any[];
   othersAttachments?: any[];
 }
@@ -153,6 +154,24 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
     }
     return false;
   };
+
+  const handlePropertyTypeChange = async () => {
+    if (data.attachments && data.attachments.length > 0 && onDeleteAttachment) {
+      for (const att of data.attachments) {
+        await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id);
+        await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id);
+      }
+    }
+    if (
+      data.othersAttachments &&
+      data.othersAttachments.length > 0 &&
+      onOthersDeleteAttachment
+    ) {
+      for (const att of data.othersAttachments) {
+        await onOthersDeleteAttachment(UPLOAD_KEY_OTHERS, att.Id);
+      }
+    }
+  };
   return (
     <div>
       <div className={styles.stepHeader}>Type of Property</div>
@@ -165,16 +184,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
             selectedValue={data.propertyType}
             onChange={async (val) => {
               onChange("propertyType", val);
-              if (
-                data.attachments &&
-                data.attachments.length > 0 &&
-                onDeleteAttachment
-              ) {
-                for (const att of data.attachments) {
-                  await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id);
-                  await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id);
-                }
-              }
+              handlePropertyTypeChange();
             }}
             disabled={readOnly}
           />
@@ -183,7 +193,10 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
             name="propertyType"
             value="Self Occupied"
             selectedValue={data.propertyType}
-            onChange={(val) => onChange("propertyType", val)}
+            onChange={async (val) => {
+              onChange("propertyType", val);
+              handlePropertyTypeChange();
+            }}
             disabled={readOnly}
           />
           <AppRadioButton
@@ -191,7 +204,10 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
             name="propertyType"
             value="Let Out Property"
             selectedValue={data.propertyType}
-            onChange={(val) => onChange("propertyType", val)}
+            onChange={async (val) => {
+              onChange("propertyType", val);
+              handlePropertyTypeChange();
+            }}
             disabled={readOnly}
           />
         </div>
@@ -381,7 +397,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               <AppRadioButton
                 label="Yes"
                 name="isJointlyAvailed"
-                value={true}
+                value="Yes"
                 selectedValue={data.isJointlyAvailed}
                 onChange={(val) => onChange("isJointlyAvailed", val)}
                 disabled={readOnly}
@@ -389,7 +405,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               <AppRadioButton
                 label="No"
                 name="isJointlyAvailed"
-                value={false}
+                value="No"
                 selectedValue={data.isJointlyAvailed}
                 onChange={(val) => onChange("isJointlyAvailed", val)}
                 disabled={readOnly}
@@ -398,7 +414,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               <div className={styles.formGroup}>
                 {/* <label>
               Upload PDF{" "}
-              {data.isJointlyAvailed === true ? (
+              {data.isJointlyAvailed === "Yes" ? (
                 <span style={{ color: "red" }}>*</span>
               ) : null}
             </label> */}
@@ -507,8 +523,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.8 : 1,
                 backgroundColor: "#fff",
               }}

@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   InputField,
   AppRadioButton,
+  IconButton,
 } from "../../../../../../CommonInputComponents";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
@@ -50,6 +51,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   readOnly,
 }) => {
   const activeCount = landlords?.filter((l) => !l.isDeleted).length;
+
+  const landlordPanMandatory = rentDetails?.some((l) => Number(l.rent) > 8333);
+
   return (
     <div>
       <div className={styles.stepHeader}>House Rental Information</div>
@@ -170,7 +174,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                 />
               </div>
               <div className={styles.formGroup}>
-                <label>PAN of Landlord</label>
+                <label>
+                  PAN of Landlord {landlordPanMandatory && <span>*</span>}
+                </label>
                 <InputField
                   id={`ll-pan-${idx}`}
                   value={ll.pan}
@@ -195,15 +201,17 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   disabled={readOnly}
                 />
               </div>
-              {!readOnly && activeCount > 1 && (
+              {/* {!readOnly && activeCount > 1 && ( */}
+              {!readOnly && (
                 <div style={{ paddingBottom: "10px" }}>
-                  <i
-                    className="pi pi-trash"
+                  <IconButton
+                    icon="pi pi-trash"
                     style={{
                       color: "#e11d48",
-                      cursor: "pointer",
+                      cursor: activeCount == 1 ? "not-allowed" : "pointer",
                       fontSize: "16px",
                     }}
+                    disabled={activeCount == 1}
                     onClick={() => onDeleteLandlord(idx)}
                   />
                 </div>
@@ -225,8 +233,8 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.8 : 1,
                 backgroundColor: "#fff",
               }}
