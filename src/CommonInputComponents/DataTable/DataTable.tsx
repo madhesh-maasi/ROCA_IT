@@ -73,7 +73,7 @@ const AppDataTable: React.FC<IDataTableProps> = ({
         emptyMessage={emptyMessage}
         paginator={paginator}
         rows={rows}
-        paginatorTemplate="CurrentPageReport PrevPageLink PageLinks NextPageLink"
+        paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
         // stripedRows={false}
         // showGridlines={false}
@@ -84,7 +84,7 @@ const AppDataTable: React.FC<IDataTableProps> = ({
         globalFilter={globalFilter}
         globalFilterFields={globalFilterFields}
         className={`${styles.dataTable} ${cursor ? styles.cursor : ""}`}
-        tableStyle={{ width: "100%", tableLayout: "fixed" }}
+        tableStyle={{ width: "100%", tableLayout: "auto" }}
       >
         {onSelectionChange && (
           <Column

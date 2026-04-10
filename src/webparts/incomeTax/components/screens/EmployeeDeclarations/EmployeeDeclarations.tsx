@@ -94,6 +94,8 @@ const EmployeeDeclarations: React.FC = () => {
             getListItems(
               LIST_NAMES.PLANNED_DECLARATION,
               `FinancialYear eq '${curFinanicalYear}'`,
+              "Modified",
+              false,
             ),
         }),
       );
@@ -105,6 +107,8 @@ const EmployeeDeclarations: React.FC = () => {
             getListItems(
               LIST_NAMES.ACTUAL_DECLARATION,
               `FinancialYear eq '${curFinanicalYear}'`,
+              "Modified",
+              false,
             ),
         }),
       );
@@ -300,6 +304,7 @@ const EmployeeDeclarations: React.FC = () => {
                 setSelectedRows([]);
               }
             }}
+            style={{ top: 2, position: "relative" }}
           />
         ),
         body: (row: IEmployeeRow) => {
@@ -330,7 +335,7 @@ const EmployeeDeclarations: React.FC = () => {
           );
         },
         sortable: false,
-        style: { width: "3%" },
+        style: { width: "2%" },
       },
       {
         field: "requestId",
@@ -338,17 +343,33 @@ const EmployeeDeclarations: React.FC = () => {
         body: (row: IEmployeeRow) => (
           <span className={styles.reqID}>{row.requestId}</span>
         ),
-        style: { width: "15%" },
+        style: { minWidth: "180px" },
       },
       {
         field: "taxRegimeType",
         header: "Tax Regime Type",
-        style: { width: "11%" },
+        style: { minWidth: "80px" },
       },
-      { field: "investmentType", header: "Investment Type" },
-      { field: "employeeId", header: "Employee ID", style: { width: "10%" } },
-      { field: "employeeName", header: "Employee Name" },
-      { field: "dateOfSubmission", header: "Date of Submission" },
+      {
+        field: "investmentType",
+        header: "Investment Type",
+        style: { minWidth: "80px" },
+      },
+      {
+        field: "employeeId",
+        header: "Employee Code",
+        style: { minWidth: "80px" },
+      },
+      {
+        field: "employeeName",
+        header: "Employee Name",
+        style: { minWidth: "80px" },
+      },
+      {
+        field: "dateOfSubmission",
+        header: "Date of Submission",
+        style: { minWidth: "100px" },
+      },
       {
         field: "status",
         header: "Status",
@@ -361,6 +382,7 @@ const EmployeeDeclarations: React.FC = () => {
       cols.push({
         field: "declarationStatus",
         header: "Declaration Status",
+        style: { minWidth: "100px" },
         body: (row: IEmployeeRow) => (
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <StatusBadge
@@ -401,10 +423,13 @@ const EmployeeDeclarations: React.FC = () => {
       "Financial Year": row.financialYear,
       "Tax Regime": row.taxRegimeType,
       "Investment Type": row.investmentType,
-      "Employee ID": row.employeeId,
+      "Employee Code": row.employeeId,
       "Employee Name": row.employeeName,
-      "Submission Date": row.dateOfSubmission,
+      "Date of Submission": row.dateOfSubmission,
       Status: row.status.toUpperCase(),
+      ...(activeTab === "Actual" && {
+        "Declaration Status": row.declarationStatus,
+      }),
     }));
 
     const fileName = `${activeTab}_Declarations_${fy}`;
@@ -455,7 +480,7 @@ const EmployeeDeclarations: React.FC = () => {
       >
         <SearchInput value={search} onChange={(val) => setSearch(val)} />
         <div className={styles.filters}>
-          <div style={{ width: "165px" }}>
+          <div style={{ width: "130px" }}>
             <AppDropdown
               value={selectedRegime}
               onChange={(e) => setSelectedRegime(e.value)}
@@ -498,6 +523,7 @@ const EmployeeDeclarations: React.FC = () => {
       </div>
 
       <AppDataTable
+        key={activeTab}
         data={finalData}
         columns={columns}
         dataKey="id"
