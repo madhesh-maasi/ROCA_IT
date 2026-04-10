@@ -527,10 +527,10 @@ const LookupConfig: React.FC = () => {
 
       if (dialog.type === "EDIT" && dialog.id) {
         await updateListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id, payload);
-        showToast(toast, "success", "Saved", "Item updated successfully.");
+        showToast(toast, "success", "Saved", "Record updated successfully.");
       } else {
         await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
-        showToast(toast, "success", "Saved", "Item added successfully.");
+        showToast(toast, "success", "Saved", "Record added successfully.");
       }
 
       setDialog({ type: null, id: null });
@@ -548,7 +548,7 @@ const LookupConfig: React.FC = () => {
     setLoader(true);
     try {
       await deleteListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id);
-      showToast(toast, "success", "Deleted", "Item deleted successfully.");
+      showToast(toast, "success", "Deleted", "Record deleted successfully.");
       setDialog({ type: null, id: null });
       await init();
     } catch (error) {
@@ -562,7 +562,7 @@ const LookupConfig: React.FC = () => {
 
   const actionTemplate = (rowData: ILookupData) => {
     return (
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div className={styles.actionCell}>
         <IconButton
           variant="edit"
           icon="pi pi-pencil"
@@ -735,7 +735,7 @@ const LookupConfig: React.FC = () => {
           void handleDelete();
         }}
         actionType="Delete"
-        message={`Are you sure you want to delete\n this item?`}
+        message={`Are you sure you want to delete\n this Record?`}
         iconFlag={false}
       />
 

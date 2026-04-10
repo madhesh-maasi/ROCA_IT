@@ -142,7 +142,7 @@ const FinanceApprover: React.FC = () => {
         toast,
         "success",
         "Added",
-        "The finance approver has been successfully added",
+        "The finance approver has been added successfully",
       );
       await init();
     } catch (err) {
@@ -180,15 +180,17 @@ const FinanceApprover: React.FC = () => {
   // ─── Column definitions ───────────────────────────────────────────────────
   const actionTemplate = (rowData: IAdminUser) => {
     return (
-      <IconButton
-        variant="delete"
-        icon="pi pi-trash"
-        title="Delete"
-        onClick={() => {
-          setUserToDelete(rowData);
-          setShowDeletePopup(true);
-        }}
-      />
+      <div className={styles.actionCell}>
+        <IconButton
+          variant="delete"
+          icon="pi pi-trash"
+          title="Delete"
+          onClick={() => {
+            setUserToDelete(rowData);
+            setShowDeletePopup(true);
+          }}
+        />
+      </div>
     );
   };
 
@@ -309,7 +311,7 @@ const FinanceApprover: React.FC = () => {
           void handleDeleteUser();
         }}
         actionType="Delete"
-        message={`Are you sure you want to delete\n"${userToDelete?.Title}"?`}
+        message={`Are you sure you want to delete\n"${userToDelete?.Title || ""}"?`}
       />
     </div>
   );

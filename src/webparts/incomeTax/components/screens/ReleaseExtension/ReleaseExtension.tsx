@@ -120,12 +120,7 @@ const ReleaseExtension: React.FC = () => {
   // Actions
   const handleExtend = async () => {
     if (!selectedDate) {
-      showToast(
-        toast,
-        "warn",
-        "Validation",
-        "Please select an extension date.",
-      );
+      showToast(toast, "warn", "Validation", "Please select an extension date");
       return;
     }
     if (selectedEmployees.length === 0) {
@@ -133,7 +128,7 @@ const ReleaseExtension: React.FC = () => {
         toast,
         "warn",
         "Validation",
-        "Please select at least one employee.",
+        "Please select at least one employee",
       );
       return;
     }
@@ -276,6 +271,7 @@ const ReleaseExtension: React.FC = () => {
       <div className={styles.tableCard}>
         <AppDataTable
           columns={columns}
+          key={activeIndex}
           data={filteredData}
           globalFilter={searchTerm}
           paginator

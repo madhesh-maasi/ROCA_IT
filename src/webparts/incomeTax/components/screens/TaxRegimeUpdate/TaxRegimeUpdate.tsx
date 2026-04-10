@@ -306,6 +306,7 @@ const TaxRegimeUpdate: React.FC = () => {
 
       <div className={styles.tableCard}>
         <AppDataTable
+          key={activeIndex}
           columns={columns}
           data={filteredData}
           globalFilter={searchTerm}

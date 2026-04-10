@@ -107,7 +107,10 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             id="lta-start-date"
             label="Journey Start Date"
             value={ltaData.journeyStartDate}
-            onChange={(e: any) => onLtaChange("journeyStartDate", e.value)}
+            onChange={(e: any) => {
+              onLtaChange("journeyStartDate", e.value);
+              onLtaChange("journeyEndDate", null);
+            }}
             placeholder="Select"
             disabled={readOnly}
             required={Number(ltaData.exemptionAmount) > 0}
@@ -118,9 +121,11 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             id="lta-end-date"
             label="Journey End Date"
             value={ltaData.journeyEndDate}
-            onChange={(e: any) => onLtaChange("journeyEndDate", e.value)}
+            onChange={(e: any) => {
+              onLtaChange("journeyEndDate", e.value);
+            }}
             placeholder="Select"
-            disabled={readOnly}
+            disabled={readOnly || !ltaData.journeyStartDate}
             minDate={
               ltaData.journeyStartDate
                 ? new Date(ltaData.journeyStartDate)
@@ -424,8 +429,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.8 : 1,
                 backgroundColor: "#fff",
               }}

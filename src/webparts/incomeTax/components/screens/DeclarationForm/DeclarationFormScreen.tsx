@@ -130,9 +130,11 @@ const DeclarationFormScreen: React.FC = () => {
             location: employee?.Location || "-",
             panNumber: mainItem.PAN || employee?.PAN || "-",
             officialEmailId: empEmail || "-",
-            mobileNumber: mainItem.MobileNumber || "-",
+            mobileNumber: mainItem.MobileNumber || employee?.PhoneNo || "-",
             financialYear: mainItem.FinancialYear || curFinanicalYear,
-            dateOfJoining: employee?.DOJ || "-",
+            dateOfJoining: employee?.DOJ
+              ? moment(employee.DOJ).format("DD/MM/YYYY")
+              : "-",
             taxRegime: mainItem.TaxRegime || "-",
           },
           declarationSummary: {
@@ -221,9 +223,16 @@ const DeclarationFormScreen: React.FC = () => {
         SubmissionDate: moment().format("DD/MM/YYYY HH:mm"),
         DeclarationIsAgreed: true,
       });
+      showToast(
+        toast,
+        "success",
+        "Success",
+        "Declaration form submitted successfully",
+      );
       navigate("/submittedDeclarations", { state: { tab: "Actual" } });
     } catch (error) {
       console.error("Error updating status", error);
+      showToast(toast, "error", "Error", "Error updating status");
     } finally {
       setIsSubmitting(false);
     }

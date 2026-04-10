@@ -152,7 +152,12 @@ const SectionConfig: React.FC = () => {
     ]);
 
     if (nameErr || orderErr) {
-      showToast(toast, "warn", "Validation Error", nameErr || orderErr || amtErr);
+      showToast(
+        toast,
+        "warn",
+        "Validation Error",
+        nameErr || orderErr || amtErr,
+      );
       return;
     }
 
@@ -217,7 +222,7 @@ const SectionConfig: React.FC = () => {
         toast,
         "success",
         "Deleted",
-        "Section and related lookup items deleted successfully.",
+        "Section and related lookup deleted successfully.",
       );
       setDialog({ type: null, id: null });
       await init();
@@ -230,7 +235,7 @@ const SectionConfig: React.FC = () => {
 
   const actionTemplate = (rowData: ISectionData) => {
     return (
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div className={styles.actionCell}>
         <IconButton
           variant="edit"
           icon="pi pi-pencil"

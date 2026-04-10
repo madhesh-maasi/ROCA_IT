@@ -93,12 +93,13 @@ const ITDeclaration: React.FC = () => {
 
   const matchedEmployee = React.useMemo(() => {
     if (!employeeMaster.length) return null;
-    const targetEmail =
-      declarationItem?.EmployeeEmail.toLowerCase() || user?.Email.toLowerCase();
+    const targetEmail = declarationItem?.EmployeeEmail.toLowerCase();
     if (!targetEmail) return null;
 
     return (
-      employeeMaster.find((e) => e.Email?.toLowerCase() === targetEmail) || null
+      employeeMaster.find(
+        (e) => e.Email?.toLowerCase() === targetEmail?.toLowerCase(),
+      ) || null
     );
   }, [user, employeeMaster, declarationItem]);
 
@@ -112,7 +113,8 @@ const ITDeclaration: React.FC = () => {
   // Form States
   const [pan, setPan] = React.useState("");
   const [mobile, setMobile] = React.useState(
-    declarationItem?.MobileNo || matchedEmployee?.PhoneNo || "",
+    // declarationItem?.MobileNo || matchedEmployee?.PhoneNo || "",
+    "",
   );
   const [rentDetails, setRentDetails] = React.useState<any[]>([
     { month: "April", isMetro: null, city: "", rent: "" },
@@ -146,8 +148,8 @@ const ITDeclaration: React.FC = () => {
     { relationship: "Spouse", name: "", dob: null, gender: "" },
     { relationship: "Child 1", name: "", dob: null, gender: "" },
     { relationship: "Child 2", name: "", dob: null, gender: "" },
-    { relationship: "Dependent Father", name: "", dob: null, gender: "Male" },
-    { relationship: "Dependent Mother", name: "", dob: null, gender: "Female" },
+    { relationship: "Dependent Father", name: "", dob: null, gender: "" },
+    { relationship: "Dependent Mother", name: "", dob: null, gender: "" },
   ]);
   const [dynamicSectionData, setDynamicSectionData] = React.useState<
     Record<string, any[]>
@@ -416,7 +418,7 @@ const ITDeclaration: React.FC = () => {
     }
 
     setPan(panToSet);
-    setMobile(mainItem?.MobileNumber || matchedEmployee?.PhoneNo || "");
+    setMobile(mainItem.MobileNumber);
     setActiveStep(mainItem.ActiveStep || "Home");
     setDeclarationAgreement({
       agreed: mainItem.IsAcknowledged,
@@ -525,10 +527,10 @@ const ITDeclaration: React.FC = () => {
         isJointlyAvailed:
           hl.IsJointlyAvailedPropertyLoan === "Yes" ||
           hl.IsJointlyAvailedPropertyLoan === true
-            ? true
+            ? "Yes"
             : hl.IsJointlyAvailedPropertyLoan === "No" ||
                 hl.IsJointlyAvailedPropertyLoan === false
-              ? false
+              ? "No"
               : null,
         finalLettableValue: hl.FinalLettableValue?.toString() || "",
         letOutInterestAmount: hl.LetOutInterest?.toString() || "",
@@ -616,6 +618,7 @@ const ITDeclaration: React.FC = () => {
         Status: "Draft",
       });
       setShowRegimePopup(false);
+      setMobile(declarationItem?.MobileNumber?.toString());
       const updatedItem = { ...declarationItem, TaxRegime: regime };
       setDeclarationItem(updatedItem);
 
@@ -655,10 +658,14 @@ const ITDeclaration: React.FC = () => {
 
     switch (stepName) {
       case "Basic Information":
-        if (!pan.trim()) {
-          _errMsg = "PAN is required";
+        if (!mobile?.trim()) {
+          _errMsg = "Mobile Number is mandatory";
+        } else if (mobile.trim().length !== 10) {
+          _errMsg = "Please enter a valid 10-digit Mobile Number";
+        } else if (!pan.trim()) {
+          _errMsg = "PAN is mandatory";
         } else if (!validatePAN(pan)) {
-          _errMsg = "Invalid PAN format";
+          _errMsg = "Please enter a valid PAN in the correct format";
         }
         break;
 
@@ -681,7 +688,7 @@ const ITDeclaration: React.FC = () => {
               (r.city.trim() || r.rent.trim()) &&
               (r.isMetro === null || r.isMetro === "")
             ) {
-              _errMsg = `Metro/Non-Metro selection is required for ${r.month}`;
+              _errMsg = `Metro/Non-Metro selection is mandatory for ${r.month}`;
               break;
             }
           }
@@ -697,15 +704,15 @@ const ITDeclaration: React.FC = () => {
                 rentDetails[i].isMetro === null
               ) {
                 _errMsg =
-                  "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled.";
+                  "Please ensure continuous month entry for House Rent. Intermediate months cannot be left unfilled";
                 break;
               }
               if (!rentDetails[i].city.trim()) {
-                _errMsg = `City is required for ${rentDetails[i].month}`;
+                _errMsg = `City is mandatory for ${rentDetails[i].month}`;
                 break;
               }
               if (!rentDetails[i].rent.trim()) {
-                _errMsg = `Rent is required for ${rentDetails[i].month}`;
+                _errMsg = `Rent is mandatory for ${rentDetails[i].month}`;
                 break;
               }
             }
@@ -718,25 +725,26 @@ const ITDeclaration: React.FC = () => {
                 activeLls.some((ll) => !ll.address?.trim()))
             ) {
               if (activeLls.some((ll) => !ll.name?.trim())) {
-                _errMsg = "Landlord name is required";
+                _errMsg = "Landlord name is mandatory";
               } else if (activeLls.some((ll) => !ll.address?.trim())) {
-                _errMsg = "Tenant address is required";
+                _errMsg = "Tenant address is mandatory";
               }
             } else if (
               isLandlordRequired &&
               activeLls.some((ll) => !ll.pan?.trim())
             ) {
-              _errMsg = "Landlord PAN is required";
+              _errMsg = "Landlord PAN is mandatory";
             } else if (
               isLandlordRequired &&
               activeLls.some((r) => !validatePAN(r.pan?.trim()))
             ) {
-              _errMsg = "Invalid Landlord PAN format";
+              _errMsg =
+                "Please enter a valid Landlord PAN in the correct format";
             } else if (
               isLandlordNameAndAdd &&
               (!landlords.length || landlords.every((e) => e.isDeleted))
             ) {
-              _errMsg = "Landlord details are required";
+              _errMsg = "Landlord details are mandatory";
             }
           }
         }
@@ -756,78 +764,132 @@ const ITDeclaration: React.FC = () => {
             !ltaData.lastClaimedYear)
         ) {
           if (!ltaData.journeyStartDate) {
-            _errMsg = "Journey start date is required";
+            _errMsg = "Journey start date is mandatory";
           } else if (!ltaData.journeyEndDate) {
-            _errMsg = "Journey end date is required";
+            _errMsg = "Journey end date is mandatory";
           } else if (ltaData.journeyEndDate < ltaData.journeyStartDate) {
             _errMsg =
               "Journey end date should be greater than journey start date";
           } else if (!ltaData.journeyStartPlace.trim()) {
-            _errMsg = "Journey start place is required";
+            _errMsg = "Journey start place is mandatory";
           } else if (!ltaData.journeyDestination.trim()) {
-            _errMsg = "Journey destination is required";
+            _errMsg = "Journey destination is mandatory";
           } else if (!ltaData.modeOfTravel) {
-            _errMsg = "Mode of travel is required";
+            _errMsg = "Mode of travel is mandatory";
           } else if (
             !ltaData.classOfTravel.trim() &&
             ltaData.modeOfTravel !== "Others"
           ) {
-            _errMsg = "Class of travel is required";
+            _errMsg = "Class of travel is mandatory";
           } else if (
             !ltaData.ticketNumbers.trim() &&
             ltaData.modeOfTravel !== "Others"
           ) {
-            _errMsg = "Ticket number is required";
+            _errMsg = "Ticket number is mandatory";
           } else if (!ltaData.lastClaimedYear) {
-            _errMsg = "Last claimed year is required";
+            _errMsg = "Year of last LTA claimed is mandatory";
           }
         }
         break;
 
       case "Housing Loan Repayment":
         if (
+          !_errMsg &&
           declarationItem.TaxRegime === "Old Regime" &&
-          housingLoanData.propertyType !== "None" &&
-          ((housingLoanData.propertyType === "Let Out Property" &&
-            !housingLoanData.finalLettableValue) ||
-            !housingLoanData.letOutInterestAmount) &&
-          //  ||
-          // !housingLoanData.otherDeductionsUs24
-          (!housingLoanData.interestAmount ||
-            !housingLoanData.lenderName ||
-            !housingLoanData.lenderAddress ||
-            !housingLoanData.lenderType ||
-            housingLoanData.isJointlyAvailed === null ||
-            housingLoanData.isJointlyAvailed === "")
+          housingLoanData.propertyType === "Let Out Property"
         ) {
-          if (housingLoanData.propertyType === "Let Out Property") {
-            if (!housingLoanData.finalLettableValue) {
-              _errMsg = "Final lettable value is required";
-            } else if (!housingLoanData.letOutInterestAmount) {
-              _errMsg = "Let out interest amount is required";
-            }
-            // else if (!housingLoanData.otherDeductionsUs24) {
-            //   _errMsg = "Other deductions u/s 24 is required";
-            // }
-          } else if (!housingLoanData.interestAmount) {
-            _errMsg = "Interest amount is required";
-          } else if (!housingLoanData.lenderName) {
-            _errMsg = "Lender name is required";
-          } else if (!housingLoanData.lenderAddress) {
-            _errMsg = "Lender address is required";
-          } else if (!housingLoanData.lenderPan) {
-            _errMsg = "Lender PAN is required";
-          } else if (!validatePAN(housingLoanData.lenderPan)) {
+          if (!housingLoanData.finalLettableValue) {
+            _errMsg = "Final lettable value is mandatory";
+          } else if (!housingLoanData.letOutInterestAmount) {
+            _errMsg = "Let out interest amount is mandatory";
+          }
+        }
+        if (housingLoanData.propertyType != "None" && !_errMsg) {
+          if (
+            housingLoanData.propertyType == "Self Occupied" &&
+            !housingLoanData.interestAmount
+          ) {
+            _errMsg = "Interest amount is mandatory";
+          } else if (!housingLoanData.lenderName?.trim()) {
+            _errMsg = "Lender name is mandatory";
+          } else if (!housingLoanData.lenderAddress?.trim()) {
+            _errMsg = "Lender address is mandatory";
+          } else if (!housingLoanData.lenderPan?.trim()) {
+            _errMsg = "Lender PAN is mandatory";
+          } else if (!validatePAN(housingLoanData.lenderPan.trim())) {
             _errMsg = "Invalid Lender PAN format";
           } else if (!housingLoanData.lenderType) {
-            _errMsg = "Lender type is required";
+            _errMsg = "Lender type is mandatory";
           } else if (
             housingLoanData.isJointlyAvailed === null ||
             housingLoanData.isJointlyAvailed === ""
           ) {
-            _errMsg = "Jointly availed Property Loan selection is required";
+            _errMsg = "Jointly availed Property Loan selection is mandatory";
           }
         }
+
+        // Additional validations for Let Out Property under Old Regime
+
+        // if (
+        //   (declarationItem.TaxRegime === "Old Regime" &&
+        //     housingLoanData.propertyType !== "None" &&
+        //     housingLoanData.propertyType == "Let Out Property" &&
+        //     !housingLoanData.finalLettableValue &&
+        //     !housingLoanData.letOutInterestAmount) ||
+        //   //  ||
+        //   // !housingLoanData.otherDeductionsUs24
+        //   !housingLoanData.interestAmount ||
+        //   !housingLoanData.lenderName ||
+        //   !housingLoanData.lenderAddress ||
+        //   !housingLoanData.lenderType ||
+        //   housingLoanData.isJointlyAvailed === null ||
+        //   housingLoanData.isJointlyAvailed === ""
+        // ) {
+        //   if (housingLoanData.propertyType === "Let Out Property") {
+        //     if (!housingLoanData.finalLettableValue) {
+        //       _errMsg = "Final lettable value is mandatory";
+        //     } else if (!housingLoanData.letOutInterestAmount) {
+        //       _errMsg = "Let out interest amount is mandatory";
+        //     } else if (!housingLoanData.interestAmount) {
+        //       _errMsg = "Interest amount is mandatory";
+        //     } else if (!housingLoanData.lenderName.trim()) {
+        //       _errMsg = "Lender name is mandatory";
+        //     } else if (!housingLoanData.lenderAddress.trim()) {
+        //       _errMsg = "Lender address is mandatory";
+        //     } else if (!housingLoanData.lenderPan.trim()) {
+        //       _errMsg = "Lender PAN is mandatory";
+        //     } else if (!validatePAN(housingLoanData.lenderPan.trim())) {
+        //       _errMsg = "Invalid Lender PAN format";
+        //     } else if (!housingLoanData.lenderType) {
+        //       _errMsg = "Lender type is mandatory";
+        //     } else if (
+        //       housingLoanData.isJointlyAvailed === null ||
+        //       housingLoanData.isJointlyAvailed === ""
+        //     ) {
+        //       _errMsg = "Jointly availed Property Loan selection is mandatory";
+        //     }
+        //     // else if (!housingLoanData.otherDeductionsUs24) {
+        //     //   _errMsg = "Other deductions u/s 24 is mandatory";
+        //     // }
+        //   } else if (!housingLoanData.interestAmount) {
+        //     _errMsg = "Interest amount is mandatory";
+        //   } else if (!housingLoanData.lenderName.trim()) {
+        //     _errMsg = "Lender name is mandatory";
+        //   } else if (!housingLoanData.lenderAddress.trim()) {
+        //     _errMsg = "Lender address is mandatory";
+        //   } else if (!housingLoanData.lenderPan.trim()) {
+        //     _errMsg = "Lender PAN is mandatory";
+        //   } else if (!validatePAN(housingLoanData.lenderPan.trim())) {
+        //     _errMsg = "Invalid Lender PAN format";
+        //   } else if (!housingLoanData.lenderType) {
+        //     _errMsg = "Lender type is mandatory";
+        //   } else if (
+        //     housingLoanData.isJointlyAvailed === null ||
+        //     housingLoanData.isJointlyAvailed === ""
+        //   ) {
+        //     _errMsg = "Jointly availed Property Loan selection is mandatory";
+        //   }
+        // }
         break;
 
       case "Previous Employer Details":
@@ -835,7 +897,8 @@ const ITDeclaration: React.FC = () => {
           previousEmployerData.employerPan?.trim() &&
           !validatePAN(previousEmployerData.employerPan.trim())
         ) {
-          _errMsg = "Invalid Previous Employer PAN format";
+          _errMsg =
+            "Please enter a valid Previous Employer PAN in the correct format.";
         }
         break;
 
@@ -843,7 +906,7 @@ const ITDeclaration: React.FC = () => {
         if (!declarationAgreement.agreed) {
           _errMsg = "Declaration agreement is not agreed";
         } else if (!declarationAgreement.place.trim()) {
-          _errMsg = "Place is required";
+          _errMsg = "Place is mandatory";
         }
         break;
     }
@@ -965,29 +1028,6 @@ const ITDeclaration: React.FC = () => {
           break;
         }
 
-        default: {
-          if (dynamicSectionData[step]) {
-            const updatePayload: any = {
-              ApproverCommentsJson: commentsJSON,
-              ActiveStep: status === "Draft" ? nextStep || activeStep : "",
-            };
-
-            if (status === "Draft") {
-              updatePayload.SectionDetailsJSON = JSON.stringify({
-                ...dynamicSectionData,
-                __steps: steps.map((s) => s.key),
-              });
-            }
-
-            await updateListItem(
-              LIST_NAMES.PLANNED_DECLARATION,
-              mainId,
-              updatePayload,
-            );
-          }
-          break;
-        }
-
         case "Housing Loan Repayment":
           await updateListItem(LIST_NAMES.PLANNED_DECLARATION, mainId, {
             ApproverCommentsJson: commentsJSON,
@@ -1005,9 +1045,11 @@ const ITDeclaration: React.FC = () => {
               PANofLender: hl.lenderPan,
               LenderType: hl.lenderType,
               IsJointlyAvailedPropertyLoan:
-                typeof hl.isJointlyAvailed === "boolean"
-                  ? hl.isJointlyAvailed
-                  : null,
+                hl.isJointlyAvailed === "Yes"
+                  ? "Yes"
+                  : hl.isJointlyAvailed === "No"
+                    ? "No"
+                    : null,
               FinalLettableValue: hl.finalLettableValue,
               LetOutInterest: hl.letOutInterestAmount,
               OtherDeductions: hl.otherDeductionsUs24,
@@ -1048,6 +1090,27 @@ const ITDeclaration: React.FC = () => {
             ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
           break;
+
+        default: {
+          if (dynamicSectionData[step]) {
+            const updatePayload: any = {
+              ApproverCommentsJson: commentsJSON,
+              ActiveStep: status === "Draft" ? nextStep || activeStep : "",
+            };
+
+            updatePayload.SectionDetailsJSON = JSON.stringify({
+              ...dynamicSectionData,
+              __steps: steps.map((s) => s.key),
+            });
+
+            await updateListItem(
+              LIST_NAMES.PLANNED_DECLARATION,
+              mainId,
+              updatePayload,
+            );
+          }
+          break;
+        }
       }
     } catch (err) {
       console.error("Error saving step", err);
@@ -1271,19 +1334,23 @@ const ITDeclaration: React.FC = () => {
                   ticketNumbers: "",
                   lastClaimedYear: "",
                 });
-                setCoTravellers((prev: any[]) =>
-                  prev.map((ct) => ({
-                    ...ct,
+                setCoTravellers([
+                  { relationship: "Spouse", name: "", dob: null, gender: "" },
+                  { relationship: "Child 1", name: "", dob: null, gender: "" },
+                  { relationship: "Child 2", name: "", dob: null, gender: "" },
+                  {
+                    relationship: "Dependent Father",
                     name: "",
                     dob: null,
-                    gender:
-                      ct.relationship === "Dependent Father"
-                        ? "Male"
-                        : ct.relationship === "Dependent Mother"
-                          ? "Female"
-                          : "",
-                  })),
-                );
+                    gender: "",
+                  },
+                  {
+                    relationship: "Dependent Mother",
+                    name: "",
+                    dob: null,
+                    gender: "",
+                  },
+                ]);
               } else {
                 setLtaData((prev: any) => ({ ...prev, [field]: val }));
               }
@@ -1498,14 +1565,9 @@ const ITDeclaration: React.FC = () => {
               steps={steps}
               activeStep={activeStep}
               onStepClick={async (key) => {
-                // const lastsaveIdx = steps.findIndex(
-                //   // (s) => s.key === declarationItem.ActiveStep,
-                //   (s) => s.key === activeStep,
-                // );
-                // const idx = steps.findIndex((s) => s.key === key);
-                // if (idx > lastsaveIdx) {
-                //   await handleSaveStep(key);
-                // }
+                if (!isFormReadOnly && activeStep !== "Home") {
+                  await handleSaveStep(key);
+                }
                 setActiveStep(key);
                 setIsEditMode(false);
               }}
@@ -1604,7 +1666,8 @@ const ITDeclaration: React.FC = () => {
             {isAdmin &&
               status == "Approved" &&
               activeStep == "Declaration & Summary" &&
-              !declarationItem?.IsExported && (
+              !declarationItem?.IsExported &&
+              employeeDeclarationPath && (
                 <ActionButton
                   variant="cancel"
                   label="Reopen"
@@ -1629,7 +1692,6 @@ const ITDeclaration: React.FC = () => {
             {/* Edit Button */}
             {isAdmin &&
               status === "Submitted" &&
-              declarationItem?.TaxRegime == "Old Regime" &&
               !isEditMode &&
               activeStep !== "Declaration & Summary" &&
               activeStep !== "Home" &&
@@ -1671,9 +1733,11 @@ const ITDeclaration: React.FC = () => {
               )}
 
             {!isFormReadOnly &&
+              status != "Rework" &&
               activeStep !== "Declaration & Summary" &&
               declarationItem.EmployeeEmail.toLowerCase() ==
-                user?.Email.toLowerCase() && (
+                user?.Email.toLowerCase() &&
+              !employeeDeclarationPath && (
                 <ActionButton
                   variant="draft"
                   className="primaryBtn"

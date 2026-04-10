@@ -139,7 +139,7 @@ const ExportDeclaration: React.FC = () => {
         toast,
         "warn",
         "Incomplete",
-        "Please select Declaration Type and Tax Regime before exporting.",
+        "Please select Declaration Type and Tax Regime before exporting",
       );
       return;
     }
@@ -151,11 +151,12 @@ const ExportDeclaration: React.FC = () => {
     );
 
     if (exportData.length === 0) {
-      showToast(toast, "warn", "No Data", "No new records found for export.");
+      showToast(toast, "warn", "No Data", "No new records found for export");
       return;
     }
 
     setIsLoading(true);
+    setShowDownloadPopup(true);
     try {
       // 1. Export to Excel
       const excelData = exportData.map((d) => ({
@@ -197,7 +198,6 @@ const ExportDeclaration: React.FC = () => {
             ),
           );
         }
-        setShowDownloadPopup(true);
       }
 
       // 2. Batch Update IsExported Status
@@ -211,9 +211,6 @@ const ExportDeclaration: React.FC = () => {
         data: { IsExported: true },
       }));
       await updateListItemsBatch(listName, updates);
-      setTimeout(() => {
-        setShowDownloadPopup(false);
-      }, 3000);
 
       // 3. Refresh
       await fetchData();
@@ -222,6 +219,9 @@ const ExportDeclaration: React.FC = () => {
       showToast(toast, "error", "Error", "Export failed.");
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        setShowDownloadPopup(false);
+      }, 3000);
     }
   };
 
@@ -353,6 +353,7 @@ const ExportDeclaration: React.FC = () => {
 
       <div className={styles.tableCard}>
         <AppDataTable
+          key={activeTab}
           columns={columns}
           data={filteredDeclarations}
           globalFilter={searchTerm}

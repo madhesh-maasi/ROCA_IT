@@ -17,7 +17,8 @@
       .p-datatable-wrapper {
         overflow: auto !important;
       }
-      .p-selection-column .p-checkbox {
+
+      .p-selection-column .p-column-header-content .p-checkbox {
         position: relative;
         top: 3px;
       }
@@ -177,10 +178,10 @@
       }
 
       // first/last jump buttons (hide to keep it clean)
-      .p-paginator-first,
-      .p-paginator-last {
-        display: none;
-      }
+      // .p-paginator-first,
+      // .p-paginator-last {
+      //   display: none;
+      // }
 
       // ── checkbox selection fixes ──────────────────────────────────────────────
       // Hide the native accessible input to prevent overlapping a second native black tick

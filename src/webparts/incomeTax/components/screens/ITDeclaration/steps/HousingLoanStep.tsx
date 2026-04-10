@@ -20,7 +20,7 @@ interface IHousingLoanData {
   lenderAddress: string;
   lenderPan: string;
   lenderType: string;
-  isJointlyAvailed: boolean | string | null;
+  isJointlyAvailed: string | null;
 }
 
 interface IHousingLoanStepProps {
@@ -266,7 +266,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               <AppRadioButton
                 label="Yes"
                 name="isJointlyAvailed"
-                value={true}
+                value="Yes"
                 selectedValue={data.isJointlyAvailed}
                 onChange={(val) => onChange("isJointlyAvailed", val)}
                 disabled={readOnly}
@@ -274,7 +274,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
               <AppRadioButton
                 label="No"
                 name="isJointlyAvailed"
-                value={false}
+                value="No"
                 selectedValue={data.isJointlyAvailed}
                 onChange={(val) => onChange("isJointlyAvailed", val)}
                 disabled={readOnly}
@@ -295,8 +295,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.8 : 1,
                 backgroundColor: "#fff",
               }}

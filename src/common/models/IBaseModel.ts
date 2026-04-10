@@ -49,6 +49,7 @@ export interface IEmployee {
   Designation?: string;
   Location?: string;
   DOJ?: string;
+  IsActive?: boolean;
 }
 
 /**

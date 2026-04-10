@@ -87,7 +87,7 @@ const buildEmailBody = (payload: IEmailPayload): string => {
         : "";
     actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}${linkText}<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Rework") {
-    actionBody = `<p>Dear ${employeeName},<br /><br />Please check the remarks column in your income tax declaration and resubmit the data at the earliest.${detailsBlock}<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
+    actionBody = `<p>Dear ${employeeName},<br /><br />Please check the remarks column in your income tax declaration and resubmit the data at the earliest.${detailsBlock}<br /><br />Please <a href="${deepLink}">click here</a> to access the portal.<br /><br />Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action == "ActualApproved") {
     actionBody = `<p>Dear ${employeeName},<br /><br />Income tax declaration request has been approved.${detailsBlock}<br /><br /> Please <a href="${deepLink}">click here</a> to access your declaration form. <br /><br /> Thanks and regards,<br />ROCA IT Portal</p>`;
   } else if (action === "Export") {
