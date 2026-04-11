@@ -759,8 +759,10 @@ const ITDeclaration: React.FC = () => {
             !ltaData.journeyStartPlace ||
             !ltaData.journeyDestination ||
             !ltaData.modeOfTravel ||
-            (!ltaData.classOfTravel && ltaData.modeOfTravel !== "Others") ||
-            (!ltaData.ticketNumbers && ltaData.modeOfTravel !== "Others") ||
+            (!ltaData.classOfTravel.trim() &&
+              ltaData.modeOfTravel !== "Others") ||
+            (!ltaData.ticketNumbers.trim() &&
+              ltaData.modeOfTravel !== "Others") ||
             !ltaData.lastClaimedYear)
         ) {
           if (!ltaData.journeyStartDate) {

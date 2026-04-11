@@ -32,7 +32,7 @@ interface IPreviousEmployerStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
 }
 
 const UPLOAD_KEY = "prev-employer";
@@ -74,7 +74,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 onDeleteAttachment
               ) {
                 for (const att of data.attachments) {
-                  await onDeleteAttachment(UPLOAD_KEY, att.Id);
+                  await onDeleteAttachment(UPLOAD_KEY, att.Id, true);
                 }
               }
             }}

@@ -945,11 +945,17 @@ const ITDeclaration: React.FC = () => {
       setIsLoading(false);
     }
   };
-  const handleDeleteAttachment = async (key: string, fileId: number) => {
+  const handleDeleteAttachment = async (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => {
     try {
       setIsLoading(true);
       await updateListItem(LIST_NAMES.IT_DOCUMENTS, fileId, { IsDelete: true });
-      showToast(toast, "success", "Removed", "Attachment removed.");
+      if (!silent) {
+        showToast(toast, "success", "Removed", "Attachment removed.");
+      }
 
       if (key.startsWith("landlord-")) {
         const idx = Number(key.replace("landlord-", ""));
@@ -1129,8 +1135,10 @@ const ITDeclaration: React.FC = () => {
             !ltaData.journeyStartPlace ||
             !ltaData.journeyDestination ||
             !ltaData.modeOfTravel ||
-            (!ltaData.classOfTravel && ltaData.modeOfTravel !== "Others") ||
-            (!ltaData.ticketNumbers && ltaData.modeOfTravel !== "Others") ||
+            (!ltaData.classOfTravel.trim() &&
+              ltaData.modeOfTravel !== "Others") ||
+            (!ltaData.ticketNumbers.trim() &&
+              ltaData.modeOfTravel !== "Others") ||
             !ltaData.lastClaimedYear ||
             !ltaData.attachments ||
             ltaData.attachments.length === 0)
@@ -1231,79 +1239,6 @@ const ITDeclaration: React.FC = () => {
             "Upload PDF is mandatory when Jointly availed Property Loan is Yes";
         }
 
-        // if (declarationItem.TaxRegime === "Old Regime") {
-        //   if (
-        //     housingLoanData.propertyType !== "None" &&
-        //     ((housingLoanData.propertyType === "Let Out Property" &&
-        //       !housingLoanData.finalLettableValue) ||
-        //       !housingLoanData.letOutInterestAmount) &&
-        //     (!housingLoanData.interestAmount ||
-        //       !housingLoanData.lenderName ||
-        //       !housingLoanData.lenderAddress ||
-        //       !housingLoanData.lenderType)
-        //   ) {
-        //     if (housingLoanData.propertyType === "Let Out Property") {
-        //       if (!housingLoanData.finalLettableValue) {
-        //         _errMsg = "Final lettable value is mandatory";
-        //       } else if (!housingLoanData.letOutInterestAmount) {
-        //         _errMsg = "Let out interest amount is mandatory";
-        //       } else if (!housingLoanData.interestAmount) {
-        //         _errMsg = "Interest amount is mandatory";
-        //       } else if (!housingLoanData.lenderName.trim()) {
-        //         _errMsg = "Lender name is mandatory";
-        //       } else if (!housingLoanData.lenderAddress.trim()) {
-        //         _errMsg = "Lender address is mandatory";
-        //       } else if (!housingLoanData.lenderPan.trim()) {
-        //         _errMsg = "Lender PAN is mandatory";
-        //       } else if (!validatePAN(housingLoanData.lenderPan.trim())) {
-        //         _errMsg = "Invalid Lender PAN format";
-        //       } else if (!housingLoanData.lenderType) {
-        //         _errMsg = "Lender type is mandatory";
-        //       }
-        //     } else if (!housingLoanData.interestAmount) {
-        //       _errMsg = "Interest amount is mandatory";
-        //     } else if (!housingLoanData.lenderName.trim()) {
-        //       _errMsg = "Lender name is mandatory";
-        //     } else if (!housingLoanData.lenderAddress.trim()) {
-        //       _errMsg = "Lender address is mandatory";
-        //     } else if (!housingLoanData.lenderPan.trim()) {
-        //       _errMsg = "Lender PAN is mandatory";
-        //     } else if (!validatePAN(housingLoanData.lenderPan.trim())) {
-        //       _errMsg = "Invalid Lender PAN format";
-        //     } else if (!housingLoanData.lenderType) {
-        //       _errMsg = "Lender type is mandatory";
-        //     }
-        //   }
-
-        //   if (
-        //     !_errMsg &&
-        //     (housingLoanData.propertyType === "Self Occupied" ||
-        //       housingLoanData.propertyType === "Let Out Property") &&
-        //     (!housingLoanData.attachments ||
-        //       housingLoanData.attachments.length === 0)
-        //   ) {
-        //     _errMsg = `Attachment is mandatory for ${housingLoanData.propertyType} Housing Loan`;
-        //   }
-        //   if (
-        //     !_errMsg &&
-        //     housingLoanData.propertyType !== "None" &&
-        //     (housingLoanData.isJointlyAvailed === null ||
-        //       housingLoanData.isJointlyAvailed === "")
-        //   ) {
-        //     _errMsg = "Jointly availed Property Loan selection is mandatory";
-        //   }
-
-        //   if (
-        //     !_errMsg &&
-        //     housingLoanData.propertyType !== "None" &&
-        //     housingLoanData.isJointlyAvailed === true &&
-        //     (!housingLoanData.othersAttachments ||
-        //       housingLoanData.othersAttachments.length === 0)
-        //   ) {
-        //     _errMsg =
-        //       "Upload PDF is mandatory when Jointly availed Property Loan is Yes";
-        //   }
-        // }
         break;
 
       case "Previous Employer Details":
@@ -1869,15 +1804,31 @@ const ITDeclaration: React.FC = () => {
           />
         );
       case "Declaration & Summary": {
-        // Calculate dynamic totals from in-memory state
+        // Calculate dynamic totals from SectionDetailsJSON (persisted data)
         const dynamicTotals: Record<string, string> = {};
-        Object.keys(dynamicSectionData).forEach((section) => {
-          const total = dynamicSectionData[section].reduce(
-            (acc: number, curr: any) => acc + Number(curr.declaredAmount || 0),
-            0,
-          );
-          dynamicTotals[section] = total.toLocaleString();
-        });
+        if (declarationItem?.SectionDetailsJSON) {
+          try {
+            const savedSectionData = JSON.parse(
+              declarationItem.SectionDetailsJSON,
+            );
+            Object.keys(savedSectionData).forEach((section) => {
+              if (section === "__steps") return;
+              const arr = savedSectionData[section];
+              if (!Array.isArray(arr)) return;
+              const total = arr.reduce(
+                (acc: number, curr: any) =>
+                  acc + Number(curr.declaredAmount || 0),
+                0,
+              );
+              dynamicTotals[section] = total.toLocaleString();
+            });
+          } catch (e) {
+            console.error(
+              "Error parsing SectionDetailsJSON for summary totals",
+              e,
+            );
+          }
+        }
 
         return (
           <SummaryStep

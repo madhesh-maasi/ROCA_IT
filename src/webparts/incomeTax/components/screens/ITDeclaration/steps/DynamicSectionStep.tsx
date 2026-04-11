@@ -49,8 +49,8 @@ const DynamicSectionStep: React.FC<IDynamicSectionStepProps> = ({
       <div className={styles.stepHeader}>{title}</div>
       {sectionMaxAmount ? (
         <div className={styles.noteBox}>
-          Note : Only <strong>Rs {sectionMaxAmount?.toLocaleString()}</strong>{" "}
-          is deductible under this section
+          Note : Only <strong>Rs {sectionMaxAmount}</strong> is deductible under
+          this section
         </div>
       ) : null}
 
@@ -91,7 +91,7 @@ const DynamicSectionStep: React.FC<IDynamicSectionStepProps> = ({
                 </td>
                 <td>
                   <div className={styles.readonlyValue}>
-                    {Number(item.maxAmount || 0).toLocaleString()}
+                    {Number(item.maxAmount || 0)}
                   </div>
                 </td>
                 <td>

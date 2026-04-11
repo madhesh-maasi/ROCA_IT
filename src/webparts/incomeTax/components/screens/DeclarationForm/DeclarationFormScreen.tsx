@@ -104,14 +104,17 @@ const DeclarationFormScreen: React.FC = () => {
           try {
             const sectionData = JSON.parse(mainItem.SectionDetailsJSON);
             Object.keys(sectionData).forEach((key) => {
-              const total = sectionData[key].reduce(
+              if (key === "__steps") return;
+              const arr = sectionData[key];
+              if (!Array.isArray(arr)) return;
+              const total = arr.reduce(
                 (sum: number, item: any) =>
                   sum + Number(item.declaredAmount || 0),
                 0,
               );
-              if (total > 0) {
-                dynamicTotals[key] = total.toLocaleString();
-              }
+              // if (total > 0) {
+              dynamicTotals[key] = total.toLocaleString();
+              // }
             });
           } catch (e) {}
         }
@@ -187,12 +190,16 @@ const DeclarationFormScreen: React.FC = () => {
       setIsSubmitting(false);
       return;
     }
-    if (!submittedUserName || !submittedDesignation || !submittedPlace) {
+    if (
+      !submittedUserName.trim() ||
+      !submittedDesignation.trim() ||
+      !submittedPlace.trim()
+    ) {
       showToast(
         toast,
         "error",
         "Error",
-        `Please provide ${!submittedUserName ? "User name" : !submittedDesignation ? "Designation" : "Place"}`,
+        `Please provide ${!submittedUserName.trim() ? "User name" : !submittedDesignation.trim() ? "Designation" : "Place"}`,
       );
       setIsSubmitting(false);
       return;

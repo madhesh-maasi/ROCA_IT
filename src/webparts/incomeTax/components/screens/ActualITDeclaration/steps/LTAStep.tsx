@@ -42,7 +42,7 @@ interface ILTAStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
 }
 
 const UPLOAD_KEY = "lta";
@@ -95,6 +95,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                   (await onDeleteAttachment?.(
                     UPLOAD_KEY,
                     ltaAttachments[0]?.Id,
+                    true,
                   ));
               }
             }}

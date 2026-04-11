@@ -34,9 +34,9 @@ interface IHousingLoanStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
   onOthersUpload?: (key: string, file: File) => Promise<void>;
-  onOthersDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onOthersDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
 }
 
 const UPLOAD_KEY_SELF = "housing-self";
@@ -158,8 +158,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   const handlePropertyTypeChange = async () => {
     if (data.attachments && data.attachments.length > 0 && onDeleteAttachment) {
       for (const att of data.attachments) {
-        await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id);
-        await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id);
+        await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id, true);
+        await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id, true);
       }
     }
     if (
@@ -168,7 +168,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
       onOthersDeleteAttachment
     ) {
       for (const att of data.othersAttachments) {
-        await onOthersDeleteAttachment(UPLOAD_KEY_OTHERS, att.Id);
+        await onOthersDeleteAttachment(UPLOAD_KEY_OTHERS, att.Id, true);
       }
     }
   };
