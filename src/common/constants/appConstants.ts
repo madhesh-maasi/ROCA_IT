@@ -137,7 +137,7 @@ export const deploymentConfig = (_siteUrl: string): string => {
   if (window.location.origin == "https://chandrudemo.sharepoint.com") {
     _rocaSiteUrl = "https://chandrudemo.sharepoint.com/sites/Roca";
   } else if (window.location.origin == "https://rocasanitario.sharepoint.com") {
-    if ((_siteUrl || "").toLowerCase().includes("rinrfwd")) {
+    if ((_siteUrl || "").toLowerCase().includes("rinit")) {
       _rocaSiteUrl = "https://rocasanitario.sharepoint.com/sites/RBPPLWOW";
     } else {
       _rocaSiteUrl = "https://rocasanitario.sharepoint.com/sites/RINMASTERDEV";
