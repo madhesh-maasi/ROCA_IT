@@ -597,8 +597,6 @@ const ITDeclaration: React.FC = () => {
         const cMap = JSON.parse(commentSource);
         setCommentsHR(cMap.HouseRental || "");
         setCommentsLTA(cMap.LTA || "");
-        // setComments80C(cMap.Section80C || "");
-        // setComments80D(cMap.Section80D || "");
         setDynamicComments(cMap.DynamicComments || {});
         setCommentsPE(cMap.PreviousEmployer || "");
         setCommentsHousingLoan(cMap.HousingLoan || "");
@@ -1064,8 +1062,6 @@ const ITDeclaration: React.FC = () => {
       const commentsJSON = JSON.stringify({
         HouseRental: commentsHR,
         LTA: commentsLTA,
-        // Section80C: comments80C,
-        // Section80D: comments80D,
         DynamicComments: dynamicComments,
         PreviousEmployer: commentsPE,
         HousingLoan: commentsHousingLoan,

@@ -541,8 +541,6 @@ export const getDeclarationPDFUrl = async (
  *   IsDelete            = false
  *   ActualDeclarationId = meta.actualDeclarationId (always required)
  *   LandLordId          = meta.landLordId          (only for House Rental rows)
- *   Section80CId        = meta.section80CId        (only for 80C rows)
- *   Section80DId        = meta.section80DId        (only for 80D rows)
  *
  * Soft-delete behaviour: Overwrite is disabled — each upload is a distinct file.
  * To "delete" a file, call updateListItem(IT_DOCUMENTS, id, { IsDelete: true }).
@@ -597,8 +595,6 @@ export const uploadITDocument = async (
       IsDelete: false,
       ActualDeclarationId: meta.actualDeclarationId,
       LandLordId: meta.landLordId ?? null,
-      Section80CId: meta.section80CId ?? null,
-      Section80DId: meta.section80DId ?? null,
       LookupConfigId: meta.lookupConfigId ?? null,
     };
 
@@ -615,8 +611,6 @@ export const uploadITDocument = async (
  *
  * @param actualDeclarationId   - Numeric ID of the IT_Actual_Declarations item.
  * @param filter.landLordId     - Filter to a specific landlord row.
- * @param filter.section80CId   - Filter to a specific 80C row.
- * @param filter.section80DId   - Filter to a specific 80D row.
  * @param filter.lookupConfigId - Filter to a specific dynamic section row.
  */
 export const getITDocuments = async (
@@ -635,12 +629,6 @@ export const getITDocuments = async (
     if (filter?.landLordId !== undefined) {
       filterStr += ` and LandLordId eq ${filter.landLordId}`;
     }
-    if (filter?.section80CId !== undefined) {
-      filterStr += ` and Section80CId eq ${filter.section80CId}`;
-    }
-    if (filter?.section80DId !== undefined) {
-      filterStr += ` and Section80DId eq ${filter.section80DId}`;
-    }
     if (filter?.lookupConfigId !== undefined) {
       filterStr += ` and LookupConfigId eq ${filter.lookupConfigId}`;
     }
@@ -654,8 +642,6 @@ export const getITDocuments = async (
         "Created",
         "ActualDeclarationId",
         "LandLordId",
-        "Section80CId",
-        "Section80DId",
         "LookupConfigId",
       )
       .filter(filterStr)
