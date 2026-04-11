@@ -541,8 +541,6 @@ export const getDeclarationPDFUrl = async (
  *   IsDelete            = false
  *   ActualDeclarationId = meta.actualDeclarationId (always required)
  *   LandLordId          = meta.landLordId          (only for House Rental rows)
- *   Section80CId        = meta.section80CId        (only for 80C rows)
- *   Section80DId        = meta.section80DId        (only for 80D rows)
  *
  * Soft-delete behaviour: Overwrite is disabled — each upload is a distinct file.
  * To "delete" a file, call updateListItem(IT_DOCUMENTS, id, { IsDelete: true }).
@@ -555,8 +553,6 @@ export const uploadITDocument = async (
   meta: {
     actualDeclarationId: number;
     landLordId?: number;
-    section80CId?: number;
-    section80DId?: number;
     lookupConfigId?: number;
   },
 ): Promise<void> => {
@@ -579,7 +575,8 @@ export const uploadITDocument = async (
     // Append a timestamp to guarantee uniqueness across uploads
     const baseName = file.name.replace(/\.pdf$/i, "");
     const ts = buildTimestamp();
-    const fileName = `${baseName}_${ts}.pdf`;
+    // const fileName = `${baseName}_${ts}.pdf`;
+    const fileName = `_${ts}.pdf`;
 
     // Upload — Overwrite: false so each upload is a new file preserving history
     await sp.web
@@ -597,8 +594,6 @@ export const uploadITDocument = async (
       IsDelete: false,
       ActualDeclarationId: meta.actualDeclarationId,
       LandLordId: meta.landLordId ?? null,
-      Section80CId: meta.section80CId ?? null,
-      Section80DId: meta.section80DId ?? null,
       LookupConfigId: meta.lookupConfigId ?? null,
     };
 
@@ -615,16 +610,12 @@ export const uploadITDocument = async (
  *
  * @param actualDeclarationId   - Numeric ID of the IT_Actual_Declarations item.
  * @param filter.landLordId     - Filter to a specific landlord row.
- * @param filter.section80CId   - Filter to a specific 80C row.
- * @param filter.section80DId   - Filter to a specific 80D row.
  * @param filter.lookupConfigId - Filter to a specific dynamic section row.
  */
 export const getITDocuments = async (
   actualDeclarationId: number,
   filter?: {
     landLordId?: number;
-    section80CId?: number;
-    section80DId?: number;
     lookupConfigId?: number;
   },
 ): Promise<any[]> => {
@@ -634,12 +625,6 @@ export const getITDocuments = async (
 
     if (filter?.landLordId !== undefined) {
       filterStr += ` and LandLordId eq ${filter.landLordId}`;
-    }
-    if (filter?.section80CId !== undefined) {
-      filterStr += ` and Section80CId eq ${filter.section80CId}`;
-    }
-    if (filter?.section80DId !== undefined) {
-      filterStr += ` and Section80DId eq ${filter.section80DId}`;
     }
     if (filter?.lookupConfigId !== undefined) {
       filterStr += ` and LookupConfigId eq ${filter.lookupConfigId}`;
@@ -654,8 +639,6 @@ export const getITDocuments = async (
         "Created",
         "ActualDeclarationId",
         "LandLordId",
-        "Section80CId",
-        "Section80DId",
         "LookupConfigId",
       )
       .filter(filterStr)
@@ -738,8 +721,13 @@ export const downloadAttachmentsAsZip = async (
           .getBlob();
 
         const segments = (doc.FileRef as string).split("/").filter(Boolean);
-        const folderName =
+        const rawFolder =
           segments.length >= 2 ? segments[segments.length - 2] : "Documents";
+
+        // All Housing Loan sub-folders (Self, LetOut, Others) belong in one folder
+        const folderName = rawFolder.startsWith("Housing_Loan_Repayment")
+          ? "Housing Loan Repayment"
+          : rawFolder;
 
         // Place the file inside its folder inside the ZIP
         zip.folder(folderName)!.file(doc.FileLeafRef, fileBlob);

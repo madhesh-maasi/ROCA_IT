@@ -34,9 +34,17 @@ interface IHousingLoanStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
+  onDeleteAttachment?: (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => Promise<void>;
   onOthersUpload?: (key: string, file: File) => Promise<void>;
-  onOthersDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
+  onOthersDeleteAttachment?: (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => Promise<void>;
 }
 
 const UPLOAD_KEY_SELF = "housing-self";
@@ -485,7 +493,10 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                           whiteSpace: "nowrap",
                           maxWidth: "180px",
                         }}
-                        title={att.FileLeafRef}
+                        title={att.FileLeafRef.replace(
+                          /_\d{14}(\.pdf)$/i,
+                          "$1",
+                        )}
                       >
                         {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
                       </span>

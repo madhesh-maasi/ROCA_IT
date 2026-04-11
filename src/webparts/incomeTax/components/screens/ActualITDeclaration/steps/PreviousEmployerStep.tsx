@@ -32,7 +32,11 @@ interface IPreviousEmployerStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number, silent?: boolean) => Promise<void>;
+  onDeleteAttachment?: (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => Promise<void>;
 }
 
 const UPLOAD_KEY = "prev-employer";
@@ -255,9 +259,9 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 whiteSpace: "nowrap",
                 maxWidth: "180px",
               }}
-              title={att.FileLeafRef}
+              title={att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
             >
-              {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+              {att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
             </span>
             {!readOnly && onDeleteAttachment && (
               <i

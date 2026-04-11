@@ -29,9 +29,6 @@ import {
   getITDocuments,
   addListItem,
   downloadAttachmentsAsZip,
-  getAllItems,
-  updateListItemsBatch,
-  getMyPlannedDeclaration,
   getMyActualDeclaration,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";

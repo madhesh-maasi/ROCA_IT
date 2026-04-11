@@ -267,7 +267,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                             whiteSpace: "nowrap",
                             maxWidth: "180px",
                           }}
-                          title={att.FileLeafRef}
+                          title={att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
                           onClick={() => {
                             window.open(
                               att.FileRef,
@@ -276,7 +276,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                             );
                           }}
                         >
-                          {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+                          {att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
                         </span>
                         {!readOnly && onDeleteAttachment && (
                           <i

@@ -135,9 +135,9 @@ const SectionConfig: React.FC = () => {
   // ─── Form Actions ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    const existingNames = data
-      .filter((item) => item.id !== dialog.id)
-      .map((item) => item.name);
+    const existingItems = data.filter((item) => item.id !== dialog.id);
+    const existingNames = existingItems.map((item) => item.name);
+    const existingOrders = existingItems.map((item) => item.order);
 
     // Validate
     const nameErr = validateField(formData.name, [
@@ -149,6 +149,7 @@ const SectionConfig: React.FC = () => {
     ]);
     const orderErr = validateField(formData.order, [
       required("Order is required"),
+      isUnique(existingOrders, "This order already exists"),
     ]);
 
     if (nameErr || orderErr) {
@@ -163,17 +164,6 @@ const SectionConfig: React.FC = () => {
 
     setLoader(true);
     try {
-      // Automatic duplicate order reset
-      if (formData.order) {
-        const duplicateItem = data.find(
-          (item) => item.id !== dialog.id && item.order === formData.order,
-        );
-        if (duplicateItem) {
-          await updateListItem(LIST_NAMES.SECTION_CONFIG, duplicateItem.id, {
-            SectionOrder: null,
-          });
-        }
-      }
 
       const payload = {
         Title: formData.name.trim(),

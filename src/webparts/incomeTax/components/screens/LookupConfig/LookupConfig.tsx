@@ -359,6 +359,34 @@ const LookupConfig: React.FC = () => {
           return;
         }
 
+        // Check against already-saved data for duplicates
+        const existsInData = data.some(
+          (item) =>
+            Number(item.sectionId) === matched.value &&
+            item.subSection.trim().toLowerCase() === subSection.toLowerCase() &&
+            item.types.trim().toLowerCase() === types.toLowerCase(),
+        );
+        if (existsInData) {
+          rowErrors.push(
+            `Row ${rowNum}: Duplicate — Section "${sectionLabel}", Sub-Section "${subSection || "(none)"}", Type "${types}" already exists.`,
+          );
+          return;
+        }
+
+        // Check for duplicates within the file itself
+        const existsInFile = validRows.some(
+          (r) =>
+            r.sectionId === matched.value &&
+            r.subSection.toLowerCase() === subSection.toLowerCase() &&
+            r.types.toLowerCase() === types.toLowerCase(),
+        );
+        if (existsInFile) {
+          rowErrors.push(
+            `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}", Sub-Section "${subSection || "(none)"}", Type "${types}" appears more than once.`,
+          );
+          return;
+        }
+
         validRows.push({
           sectionId: matched.value,
           subSection,
@@ -368,39 +396,21 @@ const LookupConfig: React.FC = () => {
         });
       });
 
-      if (rowErrors.length > 0 && validRows.length === 0) {
+      if (rowErrors.length > 0) {
         showToast(
           toast,
           "error",
-          "Validation Failed",
-          `${rowErrors.length} error(s) found. No records imported. First error: ${rowErrors[0]}`,
+          "Import Rejected",
+          `${rowErrors.length} issue(s) found — no records were imported. First issue: ${rowErrors[0]}`,
         );
         setLoader(false);
         return;
       }
 
-      if (rowErrors.length > 0) {
-        showToast(
-          toast,
-          "warn",
-          "Partial Validation",
-          `${rowErrors.length} row(s) skipped. First: ${rowErrors[0]}`,
-        );
-      }
-
-      // 5. Upsert each valid row
+      // 5. Add all rows (no duplicates at this point)
       let addedCount = 0;
-      let updatedCount = 0;
 
       for (const row of validRows) {
-        const existingItem = data.find(
-          (item) =>
-            Number(item.sectionId) === row.sectionId &&
-            item.subSection.trim().toLowerCase() ===
-              row.subSection.toLowerCase() &&
-            item.types.trim().toLowerCase() === row.types.toLowerCase(),
-        );
-
         const payload = {
           SectionId: row.sectionId,
           SubSection: row.subSection,
@@ -408,28 +418,16 @@ const LookupConfig: React.FC = () => {
           MaxAmount: row.maxAmount,
         };
 
-        if (existingItem) {
-          await updateListItem(
-            LIST_NAMES.LOOKUP_CONFIG,
-            existingItem.id,
-            payload,
-          );
-          updatedCount++;
-        } else {
-          await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
-          addedCount++;
-        }
+        await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
+        addedCount++;
       }
 
       // 6. Success feedback & refresh
-      const summary: string[] = [];
-      if (addedCount > 0) summary.push(`${addedCount} added`);
-      if (updatedCount > 0) summary.push(`${updatedCount} updated`);
       showToast(
         toast,
         "success",
         "Import Successful",
-        summary.join(", ") + " successfully.",
+        `${addedCount} record(s) added successfully.`,
       );
 
       setShowImportPopup(false);
