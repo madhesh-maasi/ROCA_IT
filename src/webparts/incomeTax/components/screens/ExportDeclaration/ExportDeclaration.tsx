@@ -335,7 +335,7 @@ const ExportDeclaration: React.FC = () => {
           ENDDA: group.endda,
           // BEGDA: getEffectiveBEGDA(decl.EmployeeCode),
           BEGDA: group.begda,
-          METRO: group.isMetro ? 1 : 0,
+          METRO: group.isMetro ? 1 : "",
           HRTXE: 1,
           RTAMT: group.rentAmt,
           LDAD1: address.substring(0, 40),
