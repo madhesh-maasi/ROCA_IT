@@ -13,6 +13,7 @@ import "@pnp/sp/folders";
 import { handleError } from "./errorUtils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { removeTimestamp } from "./functions";
 
 // ─── Singleton ────────────────────────────────────────────────────────────────
 
@@ -553,6 +554,8 @@ export const uploadITDocument = async (
   meta: {
     actualDeclarationId: number;
     landLordId?: number;
+    section80CId?: number;
+    section80DId?: number;
     lookupConfigId?: number;
   },
 ): Promise<void> => {
@@ -575,8 +578,7 @@ export const uploadITDocument = async (
     // Append a timestamp to guarantee uniqueness across uploads
     const baseName = file.name.replace(/\.pdf$/i, "");
     const ts = buildTimestamp();
-    // const fileName = `${baseName}_${ts}.pdf`;
-    const fileName = `_${ts}.pdf`;
+    const fileName = `${baseName}_${ts}.pdf`;
 
     // Upload — Overwrite: false so each upload is a new file preserving history
     await sp.web
@@ -616,6 +618,8 @@ export const getITDocuments = async (
   actualDeclarationId: number,
   filter?: {
     landLordId?: number;
+    section80CId?: number;
+    section80DId?: number;
     lookupConfigId?: number;
   },
 ): Promise<any[]> => {
@@ -730,7 +734,9 @@ export const downloadAttachmentsAsZip = async (
           : rawFolder;
 
         // Place the file inside its folder inside the ZIP
-        zip.folder(folderName)!.file(doc.FileLeafRef, fileBlob);
+        zip
+          .folder(folderName)!
+          .file(removeTimestamp(doc.FileLeafRef), fileBlob);
       }),
     );
 
@@ -765,10 +771,11 @@ export const getListItems = async (
     const filterQuery = extraFilter
       ? `IsDelete ne 1 and (${extraFilter})`
       : "IsDelete ne 1";
+    const orderByField = orderBy || "ID";
     return await sp.web.lists
       .getByTitle(listName)
       .items.filter(filterQuery)
-      .orderBy(orderBy, ascending)
+      .orderBy(orderByField, ascending)
       .top(5000)();
   } catch (err) {
     await handleError(err, `Fetching items from ${listName}`);

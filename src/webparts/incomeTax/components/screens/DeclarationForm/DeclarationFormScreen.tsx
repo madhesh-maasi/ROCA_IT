@@ -112,9 +112,7 @@ const DeclarationFormScreen: React.FC = () => {
                   sum + Number(item.declaredAmount || 0),
                 0,
               );
-              // if (total > 0) {
               dynamicTotals[key] = total.toLocaleString();
-              // }
             });
           } catch (e) {}
         }
@@ -133,7 +131,7 @@ const DeclarationFormScreen: React.FC = () => {
             location: employee?.Location || "-",
             panNumber: mainItem.PAN || employee?.PAN || "-",
             officialEmailId: empEmail || "-",
-            mobileNumber: mainItem.MobileNumber || employee?.PhoneNo || "-",
+            mobileNumber: mainItem.MobileNumber || "-",
             financialYear: mainItem.FinancialYear || curFinanicalYear,
             dateOfJoining: employee?.DOJ
               ? moment(employee.DOJ).format("DD/MM/YYYY")

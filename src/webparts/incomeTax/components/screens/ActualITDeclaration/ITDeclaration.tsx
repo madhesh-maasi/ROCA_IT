@@ -219,6 +219,18 @@ const ITDeclaration: React.FC = () => {
   );
   const selectedItemFromStore = useAppSelector(selectSelectedItem);
 
+  const getPlannedItem = async (plannedId: number) => {
+    const sp = getSP();
+    const plannedItem: any = await sp.web.lists
+      .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
+      .items.filter(
+        `Id eq ${plannedId} and Status eq 'Approved' and IsDelete ne 1`,
+      )
+      .select("TaxRegime")
+      .top(1)();
+    return plannedItem;
+  };
+
   // Reset edit mode when step changes
   React.useEffect(() => {
     setIsEditMode(false);
@@ -290,11 +302,12 @@ const ITDeclaration: React.FC = () => {
           try {
             // Attempt to resolve Regime from Planned if not set on Actual
             if (!regime) {
-              const plannedItem = await sp.web.lists
-                .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
-                .items.getById(plannedId)
-                .select("TaxRegime")();
-              regime = plannedItem?.TaxRegime || "";
+              // const plannedItem:any = await sp.web.lists
+              //   .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
+              //   .items.filter(`Id eq ${plannedId} and Status eq 'Approved' and IsDelete ne 1`)
+              //   .select("TaxRegime");
+              const plannedItem: any = await getPlannedItem(plannedId);
+              regime = plannedItem?.[0]?.TaxRegime || "";
             }
 
             if (regime) {
@@ -428,40 +441,51 @@ const ITDeclaration: React.FC = () => {
         });
         setSectionMaxAmounts(newMaxAmounts);
 
-        // If saved SectionDetailsJSON exists, restore section data and steps from it
-        if (mainItem?.SectionDetailsJSON) {
+        const itemStatus = mainItem?.Status || "Draft";
+        const isSnapshotStatus =
+          itemStatus === "Submitted" || itemStatus === "Approved";
+
+        if (isSnapshotStatus && mainItem?.SectionDetailsJSON) {
+          // Submitted / Approved: restore entirely from the saved JSON snapshot
           try {
             const savedData = JSON.parse(mainItem.SectionDetailsJSON);
 
-            // Restore steps from stored keys if available, else use defaults
-            if (savedData.__steps && Array.isArray(savedData.__steps)) {
-              computedSteps = (savedData.__steps as string[]).map(
-                (key: string) => ({
-                  key,
-                  label: key,
-                  icon: ICON_MAP[key] || ChartBarLineIcon,
-                }),
-              );
-            } else {
-              computedSteps = defaultOldRegimeSteps;
-            }
+            computedSteps =
+              savedData.__steps && Array.isArray(savedData.__steps)
+                ? (savedData.__steps as string[]).map((key: string) => ({
+                    key,
+                    label: key,
+                    icon: ICON_MAP[key] || ChartBarLineIcon,
+                  }))
+                : defaultOldRegimeSteps;
 
-            // Restore section data from JSON (reset attachments for fresh load)
-            sections.forEach((s: any) => {
-              computedSectionData[s.Title] = (savedData[s.Title] || []).map(
-                (item: any) => ({ ...item, attachments: [] }),
-              );
+            Object.keys(savedData).forEach((key) => {
+              if (key !== "__steps") {
+                computedSectionData[key] = (savedData[key] as any[]).map(
+                  (item: any) => ({ ...item, attachments: [] }),
+                );
+              }
             });
 
             setSteps(computedSteps);
             setDynamicSectionData(computedSectionData);
             return { steps: computedSteps, sectionData: computedSectionData };
           } catch (e) {
-            // Fall through to LookupConfig fetch
+            // Fall through to backend fetch on parse error
           }
         }
 
-        // No saved JSON — load initial section data from LookupConfig
+        // Draft / Rework (or parse error fallback): structure from backend lists,
+        // amounts merged from SectionDetailsJSON where available
+        let savedValues: Record<string, any[]> = {};
+        if (mainItem?.SectionDetailsJSON) {
+          try {
+            savedValues = JSON.parse(mainItem.SectionDetailsJSON);
+          } catch {
+            // ignore parse errors
+          }
+        }
+
         const lookupConfig = await getListItems(
           LIST_NAMES.LOOKUP_CONFIG,
           "",
@@ -470,18 +494,28 @@ const ITDeclaration: React.FC = () => {
         );
 
         sections.forEach((s: any) => {
+          const savedSection: any[] = savedValues[s.Title] || [];
           computedSectionData[s.Title] = lookupConfig
             .filter((item: any) => item.SectionId === s.Id)
-            .map((item: any) => ({
-              id: item.Id,
-              section: item.SubSection || "-",
-              investmentType: item.Types || item.Title,
-              maxAmount: Number(item.MaxAmount) || 0,
-              declaredAmount: "",
-              attachments: [],
-            }));
+            .map((item: any) => {
+              const savedItem = savedSection.find(
+                (sv: any) => sv.investmentType === (item.Types || item.Title),
+              );
+              return {
+                id: item.Id,
+                section: item.SubSection || "-",
+                investmentType: item.Types || item.Title,
+                maxAmount: Number(item.MaxAmount) || 0,
+                sbs: item.SBS ? String(item.SBS) : "",
+                code: item.Code || "",
+                sbd: item.SBD ? String(item.SBD) : "",
+                declaredAmount: savedItem?.declaredAmount || "",
+                attachments: [],
+              };
+            });
         });
 
+        // Always use the live backend step list so newly added sections appear
         computedSteps = defaultOldRegimeSteps;
       }
 
@@ -512,14 +546,6 @@ const ITDeclaration: React.FC = () => {
     }
 
     setPan(panToSet);
-    const empEmail = (
-      mainItem.EmployeeEmail ||
-      user?.Email ||
-      ""
-    ).toLowerCase();
-    const employeeFromMaster = employeeMaster.find(
-      (e) => e.Email?.toLowerCase() === empEmail,
-    );
     setMobile(mainItem.MobileNumber);
     setActiveStep(mainItem.ActiveStep || "Home");
     setDeclarationAgreement({
@@ -674,6 +700,8 @@ const ITDeclaration: React.FC = () => {
     if (mainItem.SectionDetailsJSON) {
       try {
         const savedSectionData = JSON.parse(mainItem.SectionDetailsJSON);
+        const isSnapshot =
+          mainItem.Status === "Submitted" || mainItem.Status === "Approved";
         setDynamicSectionData((prev) => {
           const merged: Record<string, any[]> = { ...prev };
           Object.keys(savedSectionData)
@@ -685,11 +713,19 @@ const ITDeclaration: React.FC = () => {
                     (s: any) => s.id === item.id,
                   );
                   return match
-                    ? { ...item, declaredAmount: match.declaredAmount || "" }
+                    ? {
+                        ...item,
+                        declaredAmount: match.declaredAmount || "",
+                        // For non-snapshots (Drafts), sbs/sbd stay as the latest from Config (item.sbs)
+                        // For snapshots, match already contains the captured sbs/sbd
+                        ...(isSnapshot
+                          ? { code: match.code, sbs: match.sbs, sbd: match.sbd }
+                          : {}),
+                      }
                     : item;
                 });
-              } else {
-                // Section not yet in prev (LookupConfig load pending) —
+              } else if (isSnapshot) {
+                // Submitted / Approved: restore deleted sections from snapshot,
                 // initialize attachments: [] so loadAttachments can populate them
                 merged[sectionKey] = savedSectionData[sectionKey].map(
                   (item: any) => ({ ...item, attachments: [] }),
@@ -948,7 +984,7 @@ const ITDeclaration: React.FC = () => {
     silent?: boolean,
   ) => {
     try {
-      setIsLoading(true);
+      // setIsLoading(true);
       await updateListItem(LIST_NAMES.IT_DOCUMENTS, fileId, { IsDelete: true });
       if (!silent) {
         showToast(toast, "success", "Removed", "Attachment removed.");
@@ -1015,7 +1051,7 @@ const ITDeclaration: React.FC = () => {
       showToast(toast, "error", "Error", "Could not remove attachment.");
       console.error(err);
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
@@ -1387,7 +1423,7 @@ const ITDeclaration: React.FC = () => {
             [housingLoanData],
             (hl: any) => ({
               PropertyType: hl.propertyType,
-              Interest: Number(hl.interestAmount || 0),
+              Interest: hl.interestAmount,
               LenderName: hl.lenderName,
               LenderAddress: hl.lenderAddress,
               PANofLender: hl.lenderPan,
@@ -1398,9 +1434,9 @@ const ITDeclaration: React.FC = () => {
                   : hl.isJointlyAvailed === "No"
                     ? "No"
                     : null,
-              FinalLettableValue: Number(hl.finalLettableValue || 0),
-              LetOutInterest: Number(hl.letOutInterestAmount || 0),
-              OtherDeductions: Number(hl.otherDeductionsUs24 || 0),
+              FinalLettableValue: hl.finalLettableValue,
+              LetOutInterest: hl.letOutInterestAmount,
+              OtherDeductions: hl.otherDeductionsUs24,
             }),
             "ActualDeclarationId",
           );
@@ -1410,27 +1446,27 @@ const ITDeclaration: React.FC = () => {
           await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, mainId, {
             ...mainUpdate,
           });
-          if (previousEmployerData.employerName.trim()) {
-            await upsertRelatedListBatch(
-              LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
-              mainId,
-              [previousEmployerData],
-              (pe: any) => ({
-                Title: pe.employerName,
-                EmployeePAN: pe.employerPan,
-                TAN: pe.employerTan,
-                EmploymentFrom: pe.periodFrom,
-                EmploymentTo: pe.periodTo,
-                SalaryAfterExemptionUS10: Number(pe.salaryAfterExemption || 0),
-                PFContribution: Number(pe.pfContribution || 0),
-                VPF: Number(pe.vpfContribution || 0),
-                ProfessionalTax: Number(pe.professionalTax || 0),
-                TDS: Number(pe.taxDeductedAtSource || 0),
-                Address: pe.employerAddress,
-              }),
-              "ActualDeclarationId",
-            );
-          }
+          // if (previousEmployerData.employerName.trim()) {
+          await upsertRelatedListBatch(
+            LIST_NAMES.IT_PREVIOUS_EMPLOYER_Actual,
+            mainId,
+            [previousEmployerData],
+            (pe: any) => ({
+              Title: pe.employerName,
+              EmployeePAN: pe.employerPan,
+              TAN: pe.employerTan,
+              EmploymentFrom: pe.periodFrom,
+              EmploymentTo: pe.periodTo,
+              SalaryAfterExemptionUS10: pe.salaryAfterExemption,
+              PFContribution: pe.pfContribution,
+              VPF: pe.vpfContribution,
+              ProfessionalTax: pe.professionalTax,
+              TDS: pe.taxDeductedAtSource,
+              Address: pe.employerAddress,
+            }),
+            "ActualDeclarationId",
+          );
+          // }
           break;
 
         case "Declaration & Summary":
@@ -1737,6 +1773,8 @@ const ITDeclaration: React.FC = () => {
             readOnly={readOnly}
             onUpload={handleUpload}
             onDeleteAttachment={handleDeleteAttachment}
+            employeeMaster={employeeMaster}
+            user={user}
           />
         );
       case "Housing Loan Repayment":
@@ -1757,6 +1795,7 @@ const ITDeclaration: React.FC = () => {
                   lenderPan: "",
                   lenderType: "",
                   ...(val === "None" ? { isJointlyAvailed: null } : {}),
+                  isJointlyAvailed: null,
                 }));
               } else {
                 setHousingLoanData((prev: any) => ({ ...prev, [field]: val }));
@@ -1801,31 +1840,18 @@ const ITDeclaration: React.FC = () => {
           />
         );
       case "Declaration & Summary": {
-        // Calculate dynamic totals from SectionDetailsJSON (persisted data)
+        // Calculate dynamic totals from live in-memory state so amounts entered
+        // in the current session are reflected immediately (without a save + refresh)
         const dynamicTotals: Record<string, string> = {};
-        if (declarationItem?.SectionDetailsJSON) {
-          try {
-            const savedSectionData = JSON.parse(
-              declarationItem.SectionDetailsJSON,
-            );
-            Object.keys(savedSectionData).forEach((section) => {
-              if (section === "__steps") return;
-              const arr = savedSectionData[section];
-              if (!Array.isArray(arr)) return;
-              const total = arr.reduce(
-                (acc: number, curr: any) =>
-                  acc + Number(curr.declaredAmount || 0),
-                0,
-              );
-              dynamicTotals[section] = total.toLocaleString();
-            });
-          } catch (e) {
-            console.error(
-              "Error parsing SectionDetailsJSON for summary totals",
-              e,
-            );
-          }
-        }
+        Object.keys(dynamicSectionData).forEach((section) => {
+          const arr = dynamicSectionData[section];
+          if (!Array.isArray(arr)) return;
+          const total = arr.reduce(
+            (acc: number, curr: any) => acc + Number(curr.declaredAmount || 0),
+            0,
+          );
+          dynamicTotals[section] = total.toLocaleString();
+        });
 
         return (
           <SummaryStep
@@ -2050,8 +2076,8 @@ const ITDeclaration: React.FC = () => {
     try {
       const actualId = declarationItem.Id;
       const plannedId = (declarationItem as any).PlannedDeclarationId;
-
-      if (plannedId) {
+      const plannedItemSts = await getPlannedItem(plannedId);
+      if (plannedId && plannedItemSts?.[0]?.Status == "Approved") {
         // Clone copies SectionDetailsJSON (incl. __steps) from Planned
         await handleClonePlannedData(actualId, plannedId, regime);
       } else {
@@ -2070,7 +2096,7 @@ const ITDeclaration: React.FC = () => {
         .items.getById(actualId)
         .select("*")();
 
-      const item = { ...refreshed, TaxRegime: regime };
+      let item = { ...refreshed, TaxRegime: regime };
       setDeclarationItem(item);
 
       // Pass item so loadDynamicSteps can restore steps/sections from stored JSON
@@ -2088,11 +2114,16 @@ const ITDeclaration: React.FC = () => {
             ({ attachments: _a, ...rest }) => rest,
           );
         });
+        const sectionDetailsJSON = JSON.stringify({
+          ...sectionDataToSave,
+          __steps: result.steps.map((s) => s.key),
+        });
         await updateListItem(LIST_NAMES.ACTUAL_DECLARATION, actualId, {
-          SectionDetailsJSON: JSON.stringify({
-            ...sectionDataToSave,
-            __steps: result.steps.map((s) => s.key),
-          }),
+          SectionDetailsJSON: sectionDetailsJSON,
+        });
+        setDeclarationItem({
+          ...item,
+          SectionDetailsJSON: sectionDetailsJSON,
         });
       }
 
@@ -2238,7 +2269,9 @@ const ITDeclaration: React.FC = () => {
                   <ActionButton
                     variant="approve"
                     label="Approve"
-                    onClick={() => {
+                    onClick={async () => {
+                      const isValid = await validation();
+                      if (isValid) return;
                       setShowPopup({
                         visible: true,
                         type: "approve",
@@ -2312,7 +2345,8 @@ const ITDeclaration: React.FC = () => {
                   label="Next"
                   onClick={async () => {
                     const idx = steps.findIndex((s) => s.key === activeStep);
-                    if (idx < steps.length - 1) {
+
+                    if (idx !== -1 && idx < steps.length - 1) {
                       const nextStep = steps[idx + 1].key;
                       await handleSaveStep(nextStep);
                       setActiveStep(nextStep);

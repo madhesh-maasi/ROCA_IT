@@ -7,6 +7,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface ICoTraveller {
   relationship: string;
@@ -47,6 +48,8 @@ interface ILTAStepProps {
     fileId: number,
     silent?: boolean,
   ) => Promise<void>;
+  employeeMaster: any[];
+  user: any;
 }
 
 const UPLOAD_KEY = "lta";
@@ -64,6 +67,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   readOnly,
   onUpload,
   onDeleteAttachment,
+  employeeMaster,
+  user,
 }) => {
   const ltaAttachments = (ltaData.attachments || []).filter(
     (a: any) => !a.isDeleted,
@@ -119,6 +124,13 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             placeholder="Select"
             disabled={readOnly}
             required={Number(ltaData.exemptionAmount) > 0}
+            minDate={
+              new Date(
+                employeeMaster.find(
+                  (e) => e.Email.toLowerCase() === user.Email.toLowerCase(),
+                )?.DOJ,
+              )
+            }
           />
         </div>
         <div className={styles.formGroup}>
@@ -398,12 +410,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 whiteSpace: "nowrap",
                 maxWidth: "180px",
               }}
-              title={att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
+              title={removeTimestamp(att.FileLeafRef)}
               onClick={() => {
                 window.open(att.FileRef, "_blank", "noopener,noreferrer");
               }}
             >
-              {att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
+              {removeTimestamp(att.FileLeafRef)}
             </span>
             {!readOnly && onDeleteAttachment && (
               <i

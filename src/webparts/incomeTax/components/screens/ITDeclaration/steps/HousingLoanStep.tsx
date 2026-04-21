@@ -210,15 +210,18 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                   <span style={{ color: "red" }}>*</span>
                 ) : null}
               </label>
-              <InputField
-                id="hl-lender-addr"
-                value={data.lenderAddress}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("lenderAddress", e.target.value)
-                }
-                placeholder="Enter address"
-                disabled={readOnly}
-              />
+              <div title={readOnly ? data.lenderAddress : ""}>
+                <InputField
+                  id="hl-lender-addr"
+                  value={data.lenderAddress}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onChange("lenderAddress", e.target.value)
+                  }
+                  placeholder="Enter address"
+                  disabled={readOnly}
+                  maxLength={120}
+                />
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label>

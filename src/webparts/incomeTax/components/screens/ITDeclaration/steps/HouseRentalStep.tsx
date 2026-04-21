@@ -191,15 +191,18 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                 <label>
                   Tenant's Address <span>*</span>
                 </label>
-                <InputField
-                  id={`ll-addr-${idx}`}
-                  value={ll.address}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    onLandlordChange(idx, "address", e.target.value)
-                  }
-                  placeholder="Enter Address"
-                  disabled={readOnly}
-                />
+                <div title={readOnly ? ll.address : undefined}>
+                  <InputField
+                    id={`ll-addr-${idx}`}
+                    value={ll.address}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      onLandlordChange(idx, "address", e.target.value)
+                    }
+                    placeholder="Enter Address"
+                    disabled={readOnly}
+                    maxLength={120}
+                  />
+                </div>
               </div>
               {/* {!readOnly && activeCount > 1 && ( */}
               {!readOnly && (

@@ -26,6 +26,7 @@ import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
   validateField,
   required,
+  isUnique,
 } from "../../../../../common/utils/validationUtils";
 import { globalSearchFilter } from "../../../../../common/utils/functions";
 import AppToast, {
@@ -38,11 +39,14 @@ import { ActionPopup } from "../../../../../common/components";
 
 interface ILookupData {
   id: number;
+  code: string; // mapped from Code
   sectionId: string;
   section: string; // mapped from Title or Lookup
   subSection: string; // mapped from SubSection
   types: string; // mapped from Types
   maxAmount: string; // mapped from MaxAmount
+  sbs: string; // mapped from SBS
+  sbd: string; // mapped from SBD
 }
 
 const LookupConfig: React.FC = () => {
@@ -69,9 +73,12 @@ const LookupConfig: React.FC = () => {
   // Consolidated Form State
   const [formData, setFormData] = React.useState({
     sectionId: "",
+    code: "",
     subSection: "",
     types: "",
     maxAmount: "",
+    sbs: "",
+    sbd: "",
   });
 
   const [sectionOptions, setSectionOptions] = React.useState<
@@ -104,11 +111,14 @@ const LookupConfig: React.FC = () => {
         const matched = options.find((o) => o.value === sid);
         return {
           id: item.Id,
+          code: item.Code || "",
           sectionId: sid ? String(sid) : "",
           section: matched ? matched.label : item.Title || "",
           subSection: item.SubSection || "",
           types: item.Types || "",
           maxAmount: item.MaxAmount ? String(item.MaxAmount) : "",
+          sbs: item.SBS ? String(item.SBS) : "",
+          sbd: item.SBD ? String(item.SBD) : "",
         };
       });
       setData(mapped);
@@ -132,18 +142,30 @@ const LookupConfig: React.FC = () => {
     return globalSearchFilter(data, searchTerm);
   }, [data, searchTerm]);
 
+  const isSection80 = React.useMemo(() => {
+    const selectedSection = sectionOptions.find(
+      (o) => o.value === Number(formData.sectionId),
+    );
+    return selectedSection?.label === "Section 80 Deductions";
+  }, [formData.sectionId, sectionOptions]);
+
   const handleExport = () => {
     if (filteredData.length === 0) {
       showToast(toast, "warn", "No Data", "No data available to export");
       return;
     }
     exportToExcel(
-      filteredData.map(({ section, subSection, types, maxAmount }) => ({
-        Sections: section,
-        "Sub-Sections": subSection || "-",
-        Types: types,
-        "Max Amount": maxAmount || "-",
-      })),
+      filteredData.map(
+        ({ code, section, subSection, types, maxAmount, sbs, sbd }) => ({
+          Code: code || "-",
+          Sections: section,
+          "Sub-Sections": subSection || "-",
+          Types: types,
+          "Max Amount": maxAmount || "-",
+          SBS: sbs || "-",
+          SBD: sbd || "-",
+        }),
+      ),
       "Lookup_Configuration",
     );
     setShowDownloadPopup(true);
@@ -259,7 +281,14 @@ const LookupConfig: React.FC = () => {
 
   // ─── Import Confirm Handler ──────────────────────────────────────────────────
 
-  const REQUIRED_IMPORT_COLS = ["sections", "types"];
+  const REQUIRED_IMPORT_COLS = [
+    "sections",
+    "types",
+    "code",
+    "sbs",
+    "sbd",
+    "max amount",
+  ];
 
   const handleConfirmImport = async () => {
     if (!importFile) {
@@ -319,7 +348,11 @@ const LookupConfig: React.FC = () => {
 
       // 4. Validate each row and map to payload
       interface IImportRow {
+        code: string;
+        sbs: string;
+        sbd: string;
         sectionId: number;
+        sectionLabel: string;
         subSection: string;
         types: string;
         maxAmount: string;
@@ -337,6 +370,9 @@ const LookupConfig: React.FC = () => {
         const sectionLabel = getCol(row, "sections");
         const subSection = getCol(row, "sub-sections");
         const types = getCol(row, "types");
+        const code = getCol(row, "code");
+        const sbsRaw = getCol(row, "sbs");
+        const sbdRaw = getCol(row, "sbd");
         const maxAmount = getCol(row, "max amount");
 
         if (!sectionLabel) {
@@ -354,41 +390,185 @@ const LookupConfig: React.FC = () => {
         );
         if (!matched) {
           rowErrors.push(
-            `Row ${rowNum}: Section "${sectionLabel}" not found in Section Config.`,
+            `Row ${rowNum}: Section "${sectionLabel}" not found in Section Config`,
           );
           return;
         }
 
-        // Check against already-saved data for duplicates
-        const existsInData = data.some(
-          (item) =>
-            Number(item.sectionId) === matched.value &&
-            item.subSection.trim().toLowerCase() === subSection.toLowerCase() &&
-            item.types.trim().toLowerCase() === types.toLowerCase(),
-        );
-        if (existsInData) {
-          rowErrors.push(
-            `Row ${rowNum}: Duplicate — Section "${sectionLabel}", Sub-Section "${subSection || "(none)"}", Type "${types}" already exists.`,
-          );
-          return;
-        }
+        const isSection80Import = matched.label === "Section 80 Deductions";
 
-        // Check for duplicates within the file itself
-        const existsInFile = validRows.some(
-          (r) =>
-            r.sectionId === matched.value &&
-            r.subSection.toLowerCase() === subSection.toLowerCase() &&
-            r.types.toLowerCase() === types.toLowerCase(),
-        );
-        if (existsInFile) {
-          rowErrors.push(
-            `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}", Sub-Section "${subSection || "(none)"}", Type "${types}" appears more than once.`,
+        if (isSection80Import) {
+          // ── Section 80 Deductions: validate SBS and SBD instead of Code ──
+          if (!sbsRaw) {
+            rowErrors.push(
+              `Row ${rowNum}: SBS is required for Section 80 Deductions.`,
+            );
+            return;
+          }
+          if (isNaN(Number(sbsRaw))) {
+            rowErrors.push(`Row ${rowNum}: SBS must be a number.`);
+            return;
+          }
+          if (!sbdRaw) {
+            rowErrors.push(
+              `Row ${rowNum}: SBD is required for Section 80 Deductions.`,
+            );
+            return;
+          }
+          if (isNaN(Number(sbdRaw))) {
+            rowErrors.push(`Row ${rowNum}: SBD must be a number.`);
+            return;
+          }
+
+          // Check SBS+SBD combination against already-saved data
+          const sbsComboInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.sbs === sbsRaw &&
+              item.sbd === sbdRaw,
           );
-          return;
+          if (sbsComboInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — SBS "${sbsRaw}" and SBD "${sbdRaw}" combination already exists in the system`,
+            );
+            return;
+          }
+
+          // Check SBS+SBD combination for duplicates within the file itself
+          const sbsComboInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.sbs === sbsRaw &&
+              r.sbd === sbdRaw,
+          );
+          if (sbsComboInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — SBS "${sbsRaw}" and SBD "${sbdRaw}" combination appears more than once`,
+            );
+            return;
+          }
+        } else {
+          // ── Standard sections: validate Code as before ──
+          if (!code) {
+            rowErrors.push(`Row ${rowNum}: Code is required.`);
+            return;
+          }
+
+          // Check Code against already-saved data
+          const codeExistsInData = data.some(
+            (item) => item.code.trim().toLowerCase() === code.toLowerCase(),
+          );
+          if (codeExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Code "${code}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check Code for duplicates within the file itself
+          const codeExistsInFile = validRows.some(
+            (r) => r.code.toLowerCase() === code.toLowerCase(),
+          );
+          if (codeExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate Code "${code}" appears more than once`,
+            );
+            return;
+          }
+
+          // Check combination against already-saved data
+          const comboExistsInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.subSection.trim().toLowerCase() ===
+                subSection.toLowerCase() &&
+              item.types.trim().toLowerCase() === types.toLowerCase() &&
+              item.code.trim().toLowerCase() === code.toLowerCase(),
+          );
+          if (comboExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — Section "${sectionLabel}", Sub-Section "${subSection}", Type "${types}", Code "${code}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check combination for duplicates within the file itself
+          const comboExistsInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.subSection.toLowerCase() === subSection.toLowerCase() &&
+              r.types.toLowerCase() === types.toLowerCase() &&
+              r.code.toLowerCase() === code.toLowerCase(),
+          );
+          if (comboExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}", Sub-Section "${subSection}", Type "${types}", Code "${code}" appears more than once`,
+            );
+            return;
+          }
+
+          // Check Section, Sub-Section, and Types combination against already-saved data
+          const sectionSubSectionTypeExistsInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.subSection.trim().toLowerCase() ===
+                subSection.toLowerCase() &&
+              item.types.trim().toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionSubSectionTypeExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — Section "${sectionLabel}", Sub-Section "${subSection}", and Type "${types}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check Section, Sub-Section, and Types combination for duplicates within the file itself
+          const sectionSubSectionTypeExistsInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.subSection.toLowerCase() === subSection.toLowerCase() &&
+              r.types.toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionSubSectionTypeExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}", Sub-Section "${subSection}", and Type "${types}" appears more than once`,
+            );
+            return;
+          }
+
+          // Check Section and Types combination against already-saved data
+          const sectionTypeExistsInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.types.trim().toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionTypeExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — Section "${sectionLabel}" and Type "${types}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check Section and Types combination for duplicates within the file itself
+          const sectionTypeExistsInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.types.toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionTypeExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}" and Type "${types}" appears more than once`,
+            );
+            return;
+          }
         }
 
         validRows.push({
+          code: isSection80Import ? "" : code,
+          sbs: sbsRaw,
+          sbd: sbdRaw,
           sectionId: matched.value,
+          sectionLabel: matched.label,
           subSection,
           types,
           maxAmount,
@@ -411,11 +591,15 @@ const LookupConfig: React.FC = () => {
       let addedCount = 0;
 
       for (const row of validRows) {
-        const payload = {
+        const isSection80Row = row.sectionLabel === "Section 80 Deductions";
+        const payload: any = {
           SectionId: row.sectionId,
           SubSection: row.subSection,
           Types: row.types,
           MaxAmount: row.maxAmount,
+          Code: isSection80Row ? "" : row.code,
+          SBS: isSection80Row && row.sbs ? Number(row.sbs) : null,
+          SBD: isSection80Row && row.sbd ? Number(row.sbd) : null,
         };
 
         await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
@@ -444,16 +628,27 @@ const LookupConfig: React.FC = () => {
   // ─── Dialog Triggers ────────────────────────────────────────────────────────
 
   const openAddPopup = () => {
-    setFormData({ sectionId: "", subSection: "", types: "", maxAmount: "" });
+    setFormData({
+      code: "",
+      sectionId: "",
+      subSection: "",
+      types: "",
+      maxAmount: "",
+      sbs: "",
+      sbd: "",
+    });
     setDialog({ type: "ADD", id: null });
   };
 
   const openEditPopup = (row: ILookupData) => {
     setFormData({
+      code: row.code,
       sectionId: row.sectionId,
       subSection: row.subSection,
       types: row.types,
       maxAmount: row.maxAmount,
+      sbs: row.sbs,
+      sbd: row.sbd,
     });
     setDialog({ type: "EDIT", id: row.id });
   };
@@ -469,15 +664,42 @@ const LookupConfig: React.FC = () => {
     const sectionErr = validateField(formData.sectionId, [
       required("Section is required"),
     ]);
-    const subSectionErr = ""; // Removed regex validation, filtering handled in onChange
     const typesErr = validateField(formData.types, [
       required("Types is required"),
     ]);
-    // const maxAmtErr = validateField(formData.maxAmount, [
-    //   required("Max Amount is required"),
-    // ]);
+    const existingCodes = data
+      .filter((item) => !(dialog.type === "EDIT" && item.id === dialog.id))
+      .map((item) => item.code.toLowerCase());
+    const codeErr = !isSection80
+      ? validateField(formData.code.toLowerCase(), [
+          required("Code is required"),
+          isUnique(existingCodes, "This code already exists"),
+        ])
+      : "";
 
-    // Validate uniqueness of the combination
+    // Specific validation for Section 80 Deductions (SBS/SBD combination)
+    let sbsSbdErr = "";
+    if (isSection80) {
+      if (!formData.sbs) {
+        sbsSbdErr = "SBS is required";
+      } else if (!formData.sbd) {
+        sbsSbdErr = "SBD is required";
+      } else {
+        const comboDuplicate = data.some((item) => {
+          if (dialog.type === "EDIT" && item.id === dialog.id) return false;
+          return (
+            item.sectionId === formData.sectionId &&
+            item.sbs === formData.sbs &&
+            item.sbd === formData.sbd
+          );
+        });
+        if (comboDuplicate) {
+          sbsSbdErr = "Duplicate SBS and SBD combination is not allowed.";
+        }
+      }
+    }
+
+    // Validate uniqueness of the Section + Sub-Section + Type combination
     let duplicateErr = "";
     const isDuplicate = data.some((item) => {
       if (dialog.type === "EDIT" && item.id === dialog.id) return false;
@@ -491,23 +713,14 @@ const LookupConfig: React.FC = () => {
 
     if (isDuplicate) {
       duplicateErr =
-        "This combination of Section, Sub-Section, and Type already exists.";
+        "This combination of Section, Sub-Section and Type already exists.";
     }
 
-    if (
-      sectionErr ||
-      // subSectionErr ||
-      typesErr ||
-      // || maxAmtErr
-      duplicateErr
-    ) {
-      const errorMsg =
-        duplicateErr ||
-        sectionErr ||
-        // || subSectionErr
-        typesErr;
-      //  || maxAmtErr;
-      showToast(toast, "warn", "Validation Error", errorMsg);
+    const finalErr =
+      sectionErr || typesErr || codeErr || duplicateErr || sbsSbdErr;
+
+    if (finalErr) {
+      showToast(toast, "warn", "Validation Error", finalErr);
       return;
     }
 
@@ -516,11 +729,14 @@ const LookupConfig: React.FC = () => {
       // const selectedSection = sectionOptions.find(
       //   (o) => o.value === Number(formData.sectionId),
       // );
-      const payload = {
+      const payload: any = {
         SectionId: Number(formData.sectionId),
         SubSection: formData.subSection.trim(),
         Types: formData.types.trim(),
+        Code: isSection80 ? "" : formData.code.trim(),
         MaxAmount: formData.maxAmount.trim(),
+        SBS: isSection80 ? Number(formData.sbs) : null,
+        SBD: isSection80 ? Number(formData.sbd) : null,
       };
 
       if (dialog.type === "EDIT" && dialog.id) {
@@ -588,6 +804,9 @@ const LookupConfig: React.FC = () => {
       style: { width: "25%" },
     },
     { field: "types", header: "Types", style: { width: "25%" } },
+    { field: "sbs", header: "SBS", style: { width: "10%" } },
+    { field: "sbd", header: "SBD", style: { width: "10%" } },
+    { field: "code", header: "Code", style: { width: "10%" } },
     {
       field: "maxAmount",
       header: "Max Amount",
@@ -708,6 +927,50 @@ const LookupConfig: React.FC = () => {
             }
             className={styles.inputField}
           />
+          {!isSection80 ? (
+            <InputField
+              id="code"
+              label="Code"
+              placeholder="Enter code"
+              value={formData.code}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, code: e.target.value }))
+              }
+              required
+              className={styles.inputField}
+            />
+          ) : (
+            <>
+              <InputField
+                id="sbs"
+                label="SBS"
+                placeholder="Enter SBS"
+                value={formData.sbs}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    sbs: e.target.value.replace(/[^0-9]/g, ""),
+                  }))
+                }
+                required
+                className={styles.inputField}
+              />
+              <InputField
+                id="sbd"
+                label="SBD"
+                placeholder="Enter SBD"
+                value={formData.sbd}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    sbd: e.target.value.replace(/[^0-9]/g, ""),
+                  }))
+                }
+                required
+                className={styles.inputField}
+              />
+            </>
+          )}
           <InputField
             id="maxAmount"
             label="Max Amount"

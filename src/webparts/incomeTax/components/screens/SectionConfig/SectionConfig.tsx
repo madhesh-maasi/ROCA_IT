@@ -35,6 +35,7 @@ import { ActionPopup } from "../../../../../common/components";
 
 interface ISectionData {
   id: number;
+  code: string; // mapped from Code
   name: string; // mapped from Title
   maxAmount: string; // mapped from MaxAmount
   order: string; // mapped from SectionOrder
@@ -56,6 +57,7 @@ const SectionConfig: React.FC = () => {
 
   // Consolidated Form State
   const [formData, setFormData] = React.useState({
+    code: "",
     name: "",
     maxAmount: "",
     order: "",
@@ -68,6 +70,7 @@ const SectionConfig: React.FC = () => {
       const items = await getListItems(LIST_NAMES.SECTION_CONFIG);
       const mapped: ISectionData[] = items.map((item) => ({
         id: item.Id,
+        code: item.Code || "",
         name: item.Title || "",
         maxAmount: item.MaxAmount ? String(item.MaxAmount) : "",
         order: item.SectionOrder ? String(item.SectionOrder) : "",
@@ -98,8 +101,9 @@ const SectionConfig: React.FC = () => {
       return;
     }
     exportToExcel(
-      filteredData.map(({ name, maxAmount, order }) => ({
+      filteredData.map(({ code, name, maxAmount, order }) => ({
         Order: order || "-",
+        Code: code || "-",
         Sections: name,
         "Max Amount": maxAmount || "-",
       })),
@@ -115,13 +119,14 @@ const SectionConfig: React.FC = () => {
   // ─── Dialog Triggers ────────────────────────────────────────────────────────
 
   const openAddPopup = () => {
-    setFormData({ name: "", maxAmount: "", order: "" });
+    setFormData({ code: "", name: "", maxAmount: "", order: "" });
     setDialog({ type: "ADD", id: null });
   };
 
   const openEditPopup = (row: ISectionData) => {
     setFormData({
       name: row.name,
+      code: row.code,
       maxAmount: row.maxAmount,
       order: row.order,
     });
@@ -138,8 +143,14 @@ const SectionConfig: React.FC = () => {
     const existingItems = data.filter((item) => item.id !== dialog.id);
     const existingNames = existingItems.map((item) => item.name);
     const existingOrders = existingItems.map((item) => item.order);
-
+    const existingCodes = data
+      .filter((item) => item.id !== dialog.id)
+      .map((item) => item.code.toLowerCase());
     // Validate
+    const codeErr = validateField(formData.code.toLowerCase(), [
+      required("Code is required"),
+      isUnique(existingCodes, "This code already exists"),
+    ]);
     const nameErr = validateField(formData.name, [
       required("Section Name is required"),
       isUnique(existingNames, "This section already exists"),
@@ -152,20 +163,20 @@ const SectionConfig: React.FC = () => {
       isUnique(existingOrders, "This order already exists"),
     ]);
 
-    if (nameErr || orderErr) {
+    if (codeErr || nameErr || orderErr) {
       showToast(
         toast,
         "warn",
         "Validation Error",
-        nameErr || orderErr || amtErr,
+        codeErr || nameErr || orderErr || amtErr,
       );
       return;
     }
 
     setLoader(true);
     try {
-
       const payload = {
+        Code: formData.code.trim(),
         Title: formData.name.trim(),
         MaxAmount: formData.maxAmount.trim(),
         SectionOrder: formData.order ? Number(formData.order) : null,
@@ -252,6 +263,7 @@ const SectionConfig: React.FC = () => {
       },
       style: { width: "25%" },
     },
+    { field: "code", header: "Code", style: { width: "15%" } },
     {
       field: "order",
       header: "Order",
@@ -355,6 +367,20 @@ const SectionConfig: React.FC = () => {
                 maxAmount: e.target.value.replace(/[^0-9]/g, "").slice(0, 7),
               }))
             }
+            className={styles.inputField}
+          />
+          <InputField
+            id="code"
+            label="Code"
+            placeholder="Enter code"
+            value={formData.code}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                code: e.target.value,
+              }))
+            }
+            required
             className={styles.inputField}
           />
           <InputField

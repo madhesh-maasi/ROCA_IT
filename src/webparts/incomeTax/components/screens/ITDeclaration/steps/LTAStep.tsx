@@ -39,6 +39,8 @@ interface ILTAStepProps {
   approverComments?: string;
   status?: string;
   readOnly?: boolean;
+  employeeMaster: any[];
+  user: any;
 }
 
 const LTAStep: React.FC<ILTAStepProps> = ({
@@ -52,6 +54,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   onCommentChange,
   status,
   readOnly,
+  employeeMaster,
+  user,
 }) => {
   return (
     <div>
@@ -86,6 +90,13 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             placeholder="Select"
             disabled={readOnly}
             required={Number(ltaData.exemptionAmount) > 0}
+            minDate={
+              new Date(
+                employeeMaster.find(
+                  (e) => e.Email.toLowerCase() === user.Email.toLowerCase(),
+                )?.DOJ,
+              )
+            }
           />
         </div>
         <div className={styles.formGroup}>

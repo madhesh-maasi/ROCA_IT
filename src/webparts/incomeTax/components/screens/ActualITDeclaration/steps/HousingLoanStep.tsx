@@ -9,6 +9,7 @@ import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicke
 import styles from "../ITDeclaration.module.scss";
 import { panFormatter } from "../../../../../../common/utils/validationUtils";
 import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface IHousingLoanData {
   propertyType: "None" | "Self Occupied" | "Let Out Property";
@@ -131,9 +132,9 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 whiteSpace: "nowrap",
                 maxWidth: "180px",
               }}
-              title={att.FileLeafRef}
+              title={removeTimestamp(att.FileLeafRef)}
             >
-              {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+              {removeTimestamp(att.FileLeafRef)}
             </span>
             {!readOnly && onDeleteAttachment && (
               <i
@@ -342,15 +343,18 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                   <span style={{ color: "red" }}>*</span>
                 ) : null}
               </label>
-              <InputField
-                id="hl-lender-addr"
-                value={data.lenderAddress}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("lenderAddress", e.target.value)
-                }
-                placeholder="Enter address"
-                disabled={readOnly}
-              />
+              <div title={readOnly ? data.lenderAddress : ""}>
+                <InputField
+                  id="hl-lender-addr"
+                  value={data.lenderAddress}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onChange("lenderAddress", e.target.value)
+                  }
+                  placeholder="Enter address"
+                  disabled={readOnly}
+                  maxLength={120}
+                />
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label>

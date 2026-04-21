@@ -7,6 +7,7 @@ import {
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
 import { panFormatter } from "../../../../../../common/utils/validationUtils";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface IPreviousEmployerData {
   employerName: string;
@@ -100,15 +101,18 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
         </div>
         <div className={styles.formGroup}>
           <label>Address of Employer</label>
-          <InputField
-            id="pe-address"
-            value={data.employerAddress}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange("employerAddress", e.target.value)
-            }
-            placeholder="Enter address"
-            disabled={readOnly}
-          />
+          <div title={readOnly ? data.employerAddress : ""}>
+            <InputField
+              id="pe-address"
+              value={data.employerAddress}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                onChange("employerAddress", e.target.value)
+              }
+              placeholder="Enter address"
+              disabled={readOnly}
+              maxLength={120}
+            />
+          </div>
         </div>
         <div className={styles.formGroup}>
           <label>TAN of Employer</label>
@@ -126,18 +130,22 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
           <label>Period of Employement From</label>
           <AppCalendar
             value={data.periodFrom ? new Date(data.periodFrom) : null}
-            onChange={(e: any) => onChange("periodFrom", e.value)}
+            onChange={(e: any) => {
+              onChange("periodFrom", e.value);
+              onChange("periodTo", null);
+            }}
             placeholder="Select"
             disabled={readOnly}
           />
         </div>
         <div className={styles.formGroup}>
-          <label>Period of Employement TO</label>
+          <label>Period of Employement To</label>
           <AppCalendar
             value={data.periodTo ? new Date(data.periodTo) : null}
             onChange={(e: any) => onChange("periodTo", e.value)}
             placeholder="Select"
-            disabled={readOnly}
+            disabled={readOnly || !data.periodFrom}
+            minDate={data.periodFrom ? new Date(data.periodFrom) : undefined}
           />
         </div>
         <div className={styles.formGroup}>
@@ -175,7 +183,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onChange("vpfContribution", e.target.value)
             }
-            placeholder="Select"
+            placeholder="Enter"
             disabled={readOnly}
           />
         </div>
@@ -187,7 +195,7 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onChange("professionalTax", e.target.value)
             }
-            placeholder="Select"
+            placeholder="Enter"
             disabled={readOnly}
           />
         </div>
@@ -259,9 +267,9 @@ const PreviousEmployerStep: React.FC<IPreviousEmployerStepProps> = ({
                 whiteSpace: "nowrap",
                 maxWidth: "180px",
               }}
-              title={att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
+              title={removeTimestamp(att.FileLeafRef)}
             >
-              {att.FileLeafRef.replace(/\d{14}(\.pdf)$/i, "$1")}
+              {removeTimestamp(att.FileLeafRef)}
             </span>
             {!readOnly && onDeleteAttachment && (
               <i

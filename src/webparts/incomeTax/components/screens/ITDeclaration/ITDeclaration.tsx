@@ -28,6 +28,7 @@ import {
   getFieldChoices,
   upsertRelatedListBatch,
   updateListItem,
+  deleteListItem,
 } from "../../../../../common/utils/pnpService";
 import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
@@ -337,38 +338,49 @@ const ITDeclaration: React.FC = () => {
         });
         setSectionMaxAmounts(newMaxAmounts);
 
-        // If saved SectionDetailsJSON exists, restore section data and steps from it
-        if (mainItem?.SectionDetailsJSON) {
+        const itemStatus = mainItem?.Status || "Draft";
+        const isSnapshotStatus =
+          itemStatus === "Submitted" || itemStatus === "Approved";
+
+        if (isSnapshotStatus && mainItem?.SectionDetailsJSON) {
+          // Submitted / Approved: restore entirely from the saved JSON snapshot
           try {
             const savedData = JSON.parse(mainItem.SectionDetailsJSON);
 
-            // Restore steps from stored keys if available, else use defaults
-            if (savedData.__steps && Array.isArray(savedData.__steps)) {
-              computedSteps = (savedData.__steps as string[]).map(
-                (key: string) => ({
-                  key,
-                  label: key,
-                  icon: ICON_MAP[key] || ChartBarLineIcon,
-                }),
-              );
-            } else {
-              computedSteps = defaultOldRegimeSteps;
-            }
+            computedSteps =
+              savedData.__steps && Array.isArray(savedData.__steps)
+                ? (savedData.__steps as string[]).map((key: string) => ({
+                    key,
+                    label: key,
+                    icon: ICON_MAP[key] || ChartBarLineIcon,
+                  }))
+                : defaultOldRegimeSteps;
 
-            // Restore section data from JSON
-            sections.forEach((s: any) => {
-              computedSectionData[s.Title] = savedData[s.Title] || [];
+            Object.keys(savedData).forEach((key) => {
+              if (key !== "__steps") {
+                computedSectionData[key] = savedData[key];
+              }
             });
 
             setSteps(computedSteps);
             setDynamicSectionData(computedSectionData);
             return { steps: computedSteps, sectionData: computedSectionData };
           } catch (e) {
-            // Fall through to LookupConfig fetch
+            // Fall through to backend fetch on parse error
           }
         }
 
-        // No saved JSON — load initial section data from LookupConfig
+        // Draft / Rework (or parse error fallback): structure from backend lists,
+        // amounts merged from SectionDetailsJSON where available
+        let savedValues: Record<string, any[]> = {};
+        if (mainItem?.SectionDetailsJSON) {
+          try {
+            savedValues = JSON.parse(mainItem.SectionDetailsJSON);
+          } catch {
+            // ignore parse errors
+          }
+        }
+
         const lookupConfig = await getListItems(
           LIST_NAMES.LOOKUP_CONFIG,
           "",
@@ -377,17 +389,27 @@ const ITDeclaration: React.FC = () => {
         );
 
         sections.forEach((s: any) => {
+          const savedSection: any[] = savedValues[s.Title] || [];
           computedSectionData[s.Title] = lookupConfig
             .filter((item: any) => item.SectionId === s.Id)
-            .map((item: any) => ({
-              id: item.Id,
-              section: item.SubSection || "-",
-              investmentType: item.Types || item.Title,
-              maxAmount: Number(item.MaxAmount) || 0,
-              declaredAmount: "",
-            }));
+            .map((item: any) => {
+              const savedItem = savedSection.find(
+                (sv: any) => sv.investmentType === (item.Types || item.Title),
+              );
+              return {
+                id: item.Id,
+                section: item.SubSection || "-",
+                investmentType: item.Types || item.Title,
+                maxAmount: Number(item.MaxAmount) || 0,
+                code: item.Code ? item.Code : "",
+                sbs: item.SBS ? String(item.SBS) : "",
+                sbd: item.SBD ? String(item.SBD) : "",
+                declaredAmount: savedItem?.declaredAmount || "",
+              };
+            });
         });
 
+        // Always use the live backend step list so newly added sections appear
         computedSteps = defaultOldRegimeSteps;
       }
 
@@ -565,6 +587,8 @@ const ITDeclaration: React.FC = () => {
     if (mainItem.SectionDetailsJSON) {
       try {
         const savedDynamicData = JSON.parse(mainItem.SectionDetailsJSON);
+        const isSnapshot =
+          mainItem.Status === "Submitted" || mainItem.Status === "Approved";
         setDynamicSectionData((prev) => {
           const merged = { ...prev };
           Object.keys(savedDynamicData)
@@ -576,12 +600,26 @@ const ITDeclaration: React.FC = () => {
                     (si: any) => si.id === item.id,
                   );
                   return savedItem
-                    ? { ...item, declaredAmount: savedItem.declaredAmount }
+                    ? {
+                        ...item,
+                        declaredAmount: savedItem.declaredAmount,
+                        // For non-snapshots (Drafts), sbs/sbd/code stay as the latest from Config (item.sbs)
+                        // For snapshots, savedItem already contains the captured sbs/sbd/code
+                        ...(isSnapshot
+                          ? {
+                              code: savedItem.code,
+                              sbs: savedItem.sbs,
+                              sbd: savedItem.sbd,
+                            }
+                          : {}),
+                      }
                     : item;
                 });
-              } else {
+              } else if (isSnapshot) {
+                // Submitted / Approved: restore deleted sections from snapshot as-is
                 merged[sectionTitle] = savedDynamicData[sectionTitle];
               }
+              // Draft / Rework: skip sections not in the backend — they were deleted
             });
           return merged;
         });
@@ -641,6 +679,10 @@ const ITDeclaration: React.FC = () => {
             SectionDetailsJSON: sectionDetailsJSON,
           },
         );
+        setDeclarationItem({
+          ...updatedItem,
+          SectionDetailsJSON: sectionDetailsJSON,
+        });
       }
 
       void dispatch(
@@ -1064,26 +1106,26 @@ const ITDeclaration: React.FC = () => {
             ApproverCommentsJson: commentsJSON,
             ActiveStep: status == "Draft" ? nextStep || activeStep : "",
           });
-          if (previousEmployerData.employerName.trim()) {
-            await upsertRelatedListBatch(
-              LIST_NAMES.IT_PREVIOUS_EMPLOYER,
-              mainId,
-              [previousEmployerData],
-              (pe) => ({
-                Title: pe.employerName,
-                EmployeePAN: pe.employerPan,
-                TAN: pe.employerTan,
-                EmploymentFrom: pe.periodFrom,
-                EmploymentTo: pe.periodTo,
-                SalaryAfterExemptionUS10: pe.salaryAfterExemption,
-                PFContribution: pe.pfContribution,
-                VPF: pe.vpfContribution,
-                ProfessionalTax: pe.professionalTax,
-                TDS: pe.taxDeductedAtSource,
-                Address: pe.employerAddress,
-              }),
-            );
-          }
+          // if (previousEmployerData.employerName.trim()) {
+          await upsertRelatedListBatch(
+            LIST_NAMES.IT_PREVIOUS_EMPLOYER,
+            mainId,
+            [previousEmployerData],
+            (pe) => ({
+              Title: pe.employerName,
+              EmployeePAN: pe.employerPan,
+              TAN: pe.employerTan,
+              EmploymentFrom: pe.periodFrom,
+              EmploymentTo: pe.periodTo,
+              SalaryAfterExemptionUS10: pe.salaryAfterExemption,
+              PFContribution: pe.pfContribution,
+              VPF: pe.vpfContribution,
+              ProfessionalTax: pe.professionalTax,
+              TDS: pe.taxDeductedAtSource,
+              Address: pe.employerAddress,
+            }),
+          );
+          // }
           break;
         }
         case "Declaration & Summary":
@@ -1371,6 +1413,8 @@ const ITDeclaration: React.FC = () => {
             onCommentChange={setCommentsLTA}
             status={status}
             readOnly={readOnly}
+            employeeMaster={employeeMaster}
+            user={user}
           />
         );
 
@@ -1430,10 +1474,13 @@ const ITDeclaration: React.FC = () => {
           />
         );
       case "Declaration & Summary": {
-        // Calculate dynamic totals from in-memory state
+        // Calculate dynamic totals from live in-memory state so amounts entered
+        // in the current session are reflected immediately (without a save + refresh)
         const dynamicTotals: Record<string, string> = {};
         Object.keys(dynamicSectionData).forEach((section) => {
-          const total = dynamicSectionData[section].reduce(
+          const arr = dynamicSectionData[section];
+          if (!Array.isArray(arr)) return;
+          const total = arr.reduce(
             (acc: number, curr: any) => acc + Number(curr.declaredAmount || 0),
             0,
           );
