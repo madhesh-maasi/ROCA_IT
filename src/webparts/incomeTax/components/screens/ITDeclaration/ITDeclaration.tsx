@@ -1414,7 +1414,7 @@ const ITDeclaration: React.FC = () => {
             status={status}
             readOnly={readOnly}
             employeeMaster={employeeMaster}
-            user={user}
+            usermail={declarationItem.EmployeeEmail.toLowerCase()}
           />
         );
 

@@ -3,6 +3,8 @@ import * as XLSX from "xlsx-js-style";
 export interface ISheetData {
   sheetName: string;
   data: any[];
+  /** Column headers to show even when data is empty */
+  headers?: string[];
 }
 
 /**
@@ -10,8 +12,26 @@ export interface ISheetData {
  */
 function buildWorkbook(sheets: ISheetData[]): XLSX.WorkBook {
   const workbook = XLSX.utils.book_new();
-  for (const { sheetName, data } of sheets) {
-    if (!data || data.length === 0) continue;
+  for (const { sheetName, data, headers } of sheets) {
+    if (!data || data.length === 0) {
+      // Always include the sheet with a styled header row when headers are provided
+      const headerRow = headers && headers.length > 0 ? [headers] : [];
+      const worksheet = XLSX.utils.aoa_to_sheet(headerRow);
+      if (headerRow.length > 0) {
+        worksheet["!cols"] = headers!.map((h) => ({ wch: Math.min(h.length + 2, 50) }));
+        for (let i = 0; i < headers!.length; i++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
+          if (worksheet[cellAddress]) {
+            worksheet[cellAddress].s = {
+              fill: { fgColor: { rgb: "307a8a" } },
+              font: { color: { rgb: "FFFFFF" }, bold: true },
+            };
+          }
+        }
+      }
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      continue;
+    }
     const worksheet = XLSX.utils.json_to_sheet(data);
     const columns = Object.keys(data[0]).map((key) => {
       const maxLength = data.reduce((max, row) => {

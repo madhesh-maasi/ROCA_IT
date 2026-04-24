@@ -1774,7 +1774,7 @@ const ITDeclaration: React.FC = () => {
             onUpload={handleUpload}
             onDeleteAttachment={handleDeleteAttachment}
             employeeMaster={employeeMaster}
-            user={user}
+            usermail={declarationItem.EmployeeEmail.toLowerCase()}
           />
         );
       case "Housing Loan Repayment":

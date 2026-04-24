@@ -49,7 +49,7 @@ interface ILTAStepProps {
     silent?: boolean,
   ) => Promise<void>;
   employeeMaster: any[];
-  user: any;
+  usermail: string;
 }
 
 const UPLOAD_KEY = "lta";
@@ -68,7 +68,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   onUpload,
   onDeleteAttachment,
   employeeMaster,
-  user,
+  usermail,
 }) => {
   const ltaAttachments = (ltaData.attachments || []).filter(
     (a: any) => !a.isDeleted,
@@ -126,9 +126,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             required={Number(ltaData.exemptionAmount) > 0}
             minDate={
               new Date(
-                employeeMaster.find(
-                  (e) => e.Email.toLowerCase() === user.Email.toLowerCase(),
-                )?.DOJ,
+                employeeMaster.find((e) => e.Email.toLowerCase() === usermail)
+                  ?.DOJ,
               )
             }
           />

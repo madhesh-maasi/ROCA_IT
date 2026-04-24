@@ -254,7 +254,9 @@ const ExportDeclaration: React.FC = () => {
       }
 
       // Metro: 1 if any month is metro, else 0
-      const metro: number = rentRows.some((r) => r.isMetro === true) ? 1 : 0;
+      const metro: number | string = rentRows.some((r) => r.isMetro === true)
+        ? 1
+        : "";
 
       const declLandlords = landlordsByDecl[idx] || [];
       const landlordList = declLandlords.length > 0 ? declLandlords : [null];
@@ -273,7 +275,7 @@ const ExportDeclaration: React.FC = () => {
           PERNR: decl.EmployeeCode,
           ENDDA: ENDDA,
           BEGDA: getEffectiveBEGDA(decl.EmployeeCode),
-          METRO: metro,
+          METRO: metro || "",
           HRTXE: 1,
           RTAMT: 0,
           LDAD1: "",
@@ -404,32 +406,33 @@ const ExportDeclaration: React.FC = () => {
     const rows: any[] = [];
     exportData.forEach((decl, idx) => {
       const ltaItems = ltaByDecl[idx] || [];
-      const ltaList = ltaItems.length > 0 ? ltaItems : [null];
-      for (const lta of ltaList) {
-        rows.push({
-          PERNR: decl.EmployeeCode,
-          SUBTY: "LTA",
-          OBJPS: "",
-          ENDDA,
-          BEGDA: getEffectiveBEGDA(decl.EmployeeCode),
-          AMTEX: lta?.ExemptionAmount ?? "",
-          JBGDT: formatDateDDMMYYYY(lta?.JourneyStartDate),
-          JENDT: formatDateDDMMYYYY(lta?.JourneyEndDate),
-          STPNT: lta?.StartPlace || "",
-          DESTN: lta?.Destination || "",
-          MTRVL: lta?.ModeOfTravel || "",
-          CTRVL: lta?.ClassOfTravel || "",
-          TKTNO: lta?.TicketNumbers || "",
-          SLFTR: "X",
-          CLMCF: "X",
-        });
+      for (const lta of ltaItems) {
+        if (Number(lta?.ExemptionAmount) > 0) {
+          rows.push({
+            PERNR: decl.EmployeeCode,
+            SUBTY: "LTA",
+            OBJPS: "01",
+            ENDDA,
+            BEGDA: getEffectiveBEGDA(decl.EmployeeCode),
+            AMTEX: lta?.ExemptionAmount ?? "",
+            JBGDT: formatDateDDMMYYYY(lta?.JourneyStartDate),
+            JENDT: formatDateDDMMYYYY(lta?.JourneyEndDate),
+            STPNT: lta?.StartPlace || "",
+            DESTN: lta?.Destination || "",
+            MTRVL: lta?.ModeOfTravel || "",
+            CTRVL: lta?.ClassOfTravel || "",
+            TKTNO: lta?.TicketNumbers || "",
+            SLFTR: "X",
+            CLMCF: "X",
+          });
+        }
       }
     });
     return rows;
   };
   const buildSectionSheets = async (
     exportData: IDeclarationItem[],
-  ): Promise<{ sheetName: string; data: any[] }[]> => {
+  ): Promise<{ sheetName: string; data: any[]; headers: string[] }[]> => {
     // 1. Sections ordered by SectionOrder, only those with SectionOrder set
     const sectionItems = await getListItems(
       LIST_NAMES.SECTION_CONFIG,
@@ -472,7 +475,7 @@ const ExportDeclaration: React.FC = () => {
       );
     }
 
-    const sheets: { sheetName: string; data: any[] }[] = [];
+    const sheets: { sheetName: string; data: any[]; headers: string[] }[] = [];
     for (const section of sectionItems) {
       const sectionTitle: string = section.Title || "";
       // Use Code as the sheet name; fall back to Title when Code is blank so
@@ -550,11 +553,13 @@ const ExportDeclaration: React.FC = () => {
           };
 
           // Parse SectionDetailsJSON to get declared amounts
+          // For Planned: only PCN columns — read from decl.SectionDetailsJSON
+          // For Actual:  only ACN columns — read from the actual decl.SectionDetailsJSON (no PCN)
           let sectionData: any[] = [];
           try {
             const json =
               declarationType === "Actual"
-                ? plannedSectionJsonMap.get(decl.ID) || ""
+                ? (decl as any).SectionDetailsJSON || ""
                 : (decl as any).SectionDetailsJSON || "";
             if (json) {
               const parsed = JSON.parse(json);
@@ -569,29 +574,35 @@ const ExportDeclaration: React.FC = () => {
             row[`SBS${pad}`] = slot.sbsVal;
             row[`SBD${pad}`] = slot.sbdVal;
 
-            // Use PCN prefix for Planned declarations, ACN for Actual
-            const pcnPrefix = declarationType === "Actual" ? "ACN" : "PCN";
+            // Use ACN prefix for Actual declarations, PCN for Planned
+            const colPrefix = declarationType === "Actual" ? "ACN" : "PCN";
 
             if (slot.lookup) {
-              // Find the declared amount for this (SBS, SBD) pair by matching sbs/sbd values
               const match = sectionData.find(
                 (item: any) =>
                   (item.sbs === slot.sbsVal.toString() &&
                     item.sbd === slot.sbdVal.toString()) ||
                   slot.lookup?.Types === item.investmentType,
               );
-              row[`${pcnPrefix}${pad}`] = match
+              row[`${colPrefix}${pad}`] = match
                 ? Number(match.declaredAmount)
                 : 0;
             } else {
               // Gap-fill: no lookup entry — amount is 0
-              row[`${pcnPrefix}${pad}`] = 0;
+              row[`${colPrefix}${pad}`] = 0;
             }
           }
 
           rows0585.push(row);
         }
-        sheets.push({ sheetName: sectionCode, data: rows0585 });
+        // Build headers from the allSlots column structure
+        const colPrefix0585 = declarationType === "Actual" ? "ACN" : "PCN";
+        const headers0585: string[] = ["PERNR", "BEGDA", "ENDDA", "ACOPC"];
+        for (const slot of allSlots) {
+          const pad = slot.idx.toString().padStart(2, "0");
+          headers0585.push(`SBS${pad}`, `SBD${pad}`, `${colPrefix0585}${pad}`);
+        }
+        sheets.push({ sheetName: sectionCode, data: rows0585, headers: headers0585 });
         continue;
       }
 
@@ -665,7 +676,16 @@ const ExportDeclaration: React.FC = () => {
           }
           rows0586.push(row);
         }
-        sheets.push({ sheetName: sectionCode, data: rows0586 });
+        // Build headers from the ITC/PIN column structure
+        const headers0586: string[] = ["PERNR", "BEGDA", "ENDDA", "ACOPC"];
+        for (let i = 1; i <= maxIndex; i++) {
+          const pad = i.toString().padStart(2, "0");
+          const lookup0586 = lookupsWithIndex.find((l) => l.index === i);
+          let pinCode = lookup0586 ? lookup0586.Code || `PIN${pad}` : `PIN${pad}`;
+          if (declarationType === "Actual") pinCode = pinCode.replace(/^P/i, "A");
+          headers0586.push(`ITC${pad}`, pinCode);
+        }
+        sheets.push({ sheetName: sectionCode, data: rows0586, headers: headers0586 });
         continue;
       }
 
@@ -706,14 +726,6 @@ const ExportDeclaration: React.FC = () => {
         for (const lookup of sectionLookups) {
           const lookupCode: string = lookup.Code || "";
 
-          const plannedMatch = plannedSectionData.find(
-            (item: any) =>
-              item.investmentType === lookup.Types || item.code === lookup.Code,
-          );
-          pcnRow[lookupCode] = plannedMatch
-            ? Number(plannedMatch.declaredAmount) || 0
-            : 0;
-
           if (declarationType === "Actual") {
             const actualMatch = actualSectionData.find(
               (item: any) =>
@@ -723,20 +735,40 @@ const ExportDeclaration: React.FC = () => {
             acnRow[`${lookupCode.replace("P", "A")}`] = actualMatch
               ? Number(actualMatch.declaredAmount) || 0
               : 0;
+          } else {
+            const plannedMatch = plannedSectionData.find(
+              (item: any) =>
+                item.investmentType === lookup.Types ||
+                item.code === lookup.Code,
+            );
+            pcnRow[lookupCode] = plannedMatch
+              ? Number(plannedMatch.declaredAmount) || 0
+              : 0;
           }
         }
 
-        if (declarationType === "Actual") {
+        if (declarationType == "Actual") {
           acnRows.push(acnRow);
         } else {
           pcnRows.push(pcnRow);
         }
       }
 
+      // Build headers from the lookup codes for this section
+      const standardHeaders: string[] = ["PERNR"];
+      for (const lookup of sectionLookups) {
+        const code: string = lookup.Code || "";
+        if (declarationType === "Actual") {
+          standardHeaders.push(code.replace("P", "A"));
+        } else {
+          standardHeaders.push(code);
+        }
+      }
+
       if (declarationType === "Actual") {
-        sheets.push({ sheetName: sectionCode, data: acnRows });
+        sheets.push({ sheetName: sectionCode, data: acnRows, headers: standardHeaders });
       } else {
-        sheets.push({ sheetName: sectionCode, data: pcnRows });
+        sheets.push({ sheetName: sectionCode, data: pcnRows, headers: standardHeaders });
       }
     }
     return sheets;
@@ -761,25 +793,26 @@ const ExportDeclaration: React.FC = () => {
     const rows: any[] = [];
     exportData.forEach((decl, idx) => {
       const hlItems = hlByDecl[idx] || [];
-      // Always add at least one row per declaration (blank HL fields if none saved)
-      const hlList = hlItems.length > 0 ? hlItems : [null];
-      for (const hl of hlList) {
+      for (const hl of hlItems) {
+        // Only add a row when PropertyType is set and is not "None"
+        if (!hl?.PropertyType || hl.PropertyType === "None") continue;
         const address: string = hl?.LenderAddress || "";
         rows.push({
           PERNR: decl.EmployeeCode,
-          SUBTY: "0001",
+          // SUBTY: "0001",
           LETVL: hl?.FinalLettableValue ?? "",
           INT24: hl?.FinalLettableValue
             ? hl?.LetOutInterest
             : (hl?.Interest ?? ""),
           OTH24: 0,
-          LLMIT: 0,
+          // LLMIT: 0,
           LENAM: hl?.LenderName || "",
           LEAD1: address.substring(0, 40),
           LEAD2: address.substring(40, 80),
           LEAD3: address.substring(80, 120),
           LEPAN: hl?.PANofLender || "",
-          LETYP: hl?.LenderType || "",
+          LETYP:
+            hl?.LenderType == "Financial Institution" ? "(a)" : hl?.LenderType,
         });
       }
     });
@@ -821,9 +854,21 @@ const ExportDeclaration: React.FC = () => {
             buildSectionSheets(exportData),
           ]);
         const sheets = [
-          { sheetName: "0581", data: sheet0581 },
-          { sheetName: "0582", data: sheet0582 },
-          { sheetName: "0584", data: sheet0584 },
+          {
+            sheetName: "0581",
+            data: sheet0581,
+            headers: ["PERNR", "ENDDA", "BEGDA", "METRO", "HRTXE", "RTAMT", "LDAD1", "LDAD2", "LDAD3", "LDAID", "LDADE", "LDNAM"],
+          },
+          {
+            sheetName: "0582",
+            data: sheet0582,
+            headers: ["PERNR", "SUBTY", "OBJPS", "ENDDA", "BEGDA", "AMTEX", "JBGDT", "JENDT", "STPNT", "DESTN", "MTRVL", "CTRVL", "TKTNO", "SLFTR", "CLMCF"],
+          },
+          {
+            sheetName: "0584",
+            data: sheet0584,
+            headers: ["PERNR", "LETVL", "INT24", "OTH24", "LENAM", "LEAD1", "LEAD2", "LEAD3", "LEPAN", "LETYP"],
+          },
           ...sectionSheets,
         ];
         exportToExcelMultiSheet(sheets, fileName);

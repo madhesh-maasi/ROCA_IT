@@ -894,7 +894,16 @@ const LookupConfig: React.FC = () => {
             value={formData.sectionId ? Number(formData.sectionId) : ""}
             options={sectionOptions}
             onChange={(e) =>
-              setFormData((p) => ({ ...p, sectionId: String(e.value) }))
+              setFormData((p) => ({
+                ...p,
+                sbs: "",
+                sbd: "",
+                sectionId: String(e.value),
+                subSection: "",
+                types: "",
+                maxAmount: "",
+                code: "",
+              }))
             }
             required
             className={styles.inputField}

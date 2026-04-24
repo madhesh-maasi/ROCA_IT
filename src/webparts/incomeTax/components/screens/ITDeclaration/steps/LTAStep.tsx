@@ -40,7 +40,7 @@ interface ILTAStepProps {
   status?: string;
   readOnly?: boolean;
   employeeMaster: any[];
-  user: any;
+  usermail: string;
 }
 
 const LTAStep: React.FC<ILTAStepProps> = ({
@@ -55,7 +55,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   status,
   readOnly,
   employeeMaster,
-  user,
+  usermail,
 }) => {
   return (
     <div>
@@ -92,9 +92,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             required={Number(ltaData.exemptionAmount) > 0}
             minDate={
               new Date(
-                employeeMaster.find(
-                  (e) => e.Email.toLowerCase() === user.Email.toLowerCase(),
-                )?.DOJ,
+                employeeMaster.find((e) => e.Email.toLowerCase() === usermail)
+                  ?.DOJ,
               )
             }
           />
