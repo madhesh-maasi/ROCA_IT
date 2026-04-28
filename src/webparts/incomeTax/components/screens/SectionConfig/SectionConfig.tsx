@@ -125,8 +125,8 @@ const SectionConfig: React.FC = () => {
 
   const openEditPopup = (row: ISectionData) => {
     setFormData({
-      code: row.code,
       name: row.name,
+      code: row.code,
       maxAmount: row.maxAmount,
       order: row.order,
     });
@@ -140,15 +140,14 @@ const SectionConfig: React.FC = () => {
   // ─── Form Actions ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    const existingNames = data
-      .filter((item) => item.id !== dialog.id)
-      .map((item) => item.name);
+    const existingItems = data.filter((item) => item.id !== dialog.id);
+    const existingNames = existingItems.map((item) => item.name);
+    const existingOrders = existingItems.map((item) => item.order);
     const existingCodes = data
       .filter((item) => item.id !== dialog.id)
-      .map((item) => item.code);
-
+      .map((item) => item.code.toLowerCase());
     // Validate
-    const codeErr = validateField(formData.code, [
+    const codeErr = validateField(formData.code.toLowerCase(), [
       required("Code is required"),
       isUnique(existingCodes, "This code already exists"),
     ]);
@@ -161,6 +160,7 @@ const SectionConfig: React.FC = () => {
     ]);
     const orderErr = validateField(formData.order, [
       required("Order is required"),
+      isUnique(existingOrders, "This order already exists"),
     ]);
 
     if (codeErr || nameErr || orderErr) {
@@ -175,18 +175,6 @@ const SectionConfig: React.FC = () => {
 
     setLoader(true);
     try {
-      // Automatic duplicate order reset
-      if (formData.order) {
-        const duplicateItem = data.find(
-          (item) => item.id !== dialog.id && item.order === formData.order,
-        );
-        if (duplicateItem) {
-          await updateListItem(LIST_NAMES.SECTION_CONFIG, duplicateItem.id, {
-            SectionOrder: null,
-          });
-        }
-      }
-
       const payload = {
         Code: formData.code.trim(),
         Title: formData.name.trim(),
@@ -235,7 +223,7 @@ const SectionConfig: React.FC = () => {
         toast,
         "success",
         "Deleted",
-        "Section and related lookup items deleted successfully.",
+        "Section and related lookup deleted successfully.",
       );
       setDialog({ type: null, id: null });
       await init();
@@ -248,7 +236,7 @@ const SectionConfig: React.FC = () => {
 
   const actionTemplate = (rowData: ISectionData) => {
     return (
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div className={styles.actionCell}>
         <IconButton
           variant="edit"
           icon="pi pi-pencil"
@@ -266,7 +254,7 @@ const SectionConfig: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "name", header: "Sections", style: { width: "35%" } },
+    { field: "name", header: "Sections", style: { width: "50%" } },
     {
       field: "maxAmount",
       header: "Max Amount",

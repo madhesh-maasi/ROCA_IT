@@ -196,3 +196,10 @@
   }
 }
 
+.actionCell {
+  display: flex;
+  align-items: center;
+  i {
+    font-size: 13px !important;
+  }
+}

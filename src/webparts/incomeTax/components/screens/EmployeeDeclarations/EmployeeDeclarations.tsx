@@ -389,7 +389,7 @@ const EmployeeDeclarations: React.FC = () => {
               status={
                 row.declarationStatus === "Submitted"
                   ? "submitted"
-                  : "not_submitted"
+                  : "not submitted"
               }
             />
             {row.declarationStatus === "Submitted" && (

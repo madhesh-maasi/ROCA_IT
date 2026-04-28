@@ -41,6 +41,7 @@ export const fetchEmployeeMaster = createAsyncThunk<
       Designation: item.Designation ?? "",
       Location: item.Location.Title ?? "",
       DOJ: item.DateOfJoining ? item.DateOfJoining : "",
+      IsActive: item.IsActive,
     }));
 
     return data;
@@ -68,6 +69,8 @@ export const fetchSiteMembers = createAsyncThunk<IEmployee[]>(
         Email: item.Email ?? "",
         Department: "",
         Designation: "",
+        Location: "",
+        DOJ: "",
       }));
       return data;
     } catch (error) {

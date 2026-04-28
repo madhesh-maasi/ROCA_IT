@@ -352,7 +352,6 @@ const ReleaseDeclaration: React.FC = () => {
               const curEmp = employeeMaster.find(
                 (emp) => emp.EmployeeId === row.EmployeeID?.toString(),
               );
-
               itemsToRelease.push({
                 ...baseItem,
                 EmployeeName: curEmp ? curEmp.Title || curEmp.Name : row.Title,
@@ -458,7 +457,7 @@ const ReleaseDeclaration: React.FC = () => {
           toast,
           "success",
           "Success",
-          `Declaration Released successfully`,
+          `Released ${actualItems.length} successfully`,
         );
 
         // Send release email notifications
@@ -547,7 +546,7 @@ const ReleaseDeclaration: React.FC = () => {
         toast,
         "success",
         "Success",
-        `Declaration Released successfully`,
+        `Released ${finalItems.length} successfully`,
       );
 
       // Send release email notifications

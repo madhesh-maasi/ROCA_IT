@@ -45,6 +45,8 @@ interface ILookupData {
   subSection: string; // mapped from SubSection
   types: string; // mapped from Types
   maxAmount: string; // mapped from MaxAmount
+  sbs: string; // mapped from SBS
+  sbd: string; // mapped from SBD
 }
 
 const LookupConfig: React.FC = () => {
@@ -70,11 +72,13 @@ const LookupConfig: React.FC = () => {
 
   // Consolidated Form State
   const [formData, setFormData] = React.useState({
-    code: "",
     sectionId: "",
+    code: "",
     subSection: "",
     types: "",
     maxAmount: "",
+    sbs: "",
+    sbd: "",
   });
 
   const [sectionOptions, setSectionOptions] = React.useState<
@@ -113,6 +117,8 @@ const LookupConfig: React.FC = () => {
           subSection: item.SubSection || "",
           types: item.Types || "",
           maxAmount: item.MaxAmount ? String(item.MaxAmount) : "",
+          sbs: item.SBS ? String(item.SBS) : "",
+          sbd: item.SBD ? String(item.SBD) : "",
         };
       });
       setData(mapped);
@@ -136,19 +142,30 @@ const LookupConfig: React.FC = () => {
     return globalSearchFilter(data, searchTerm);
   }, [data, searchTerm]);
 
+  const isSection80 = React.useMemo(() => {
+    const selectedSection = sectionOptions.find(
+      (o) => o.value === Number(formData.sectionId),
+    );
+    return selectedSection?.label === "Section 80 Deductions";
+  }, [formData.sectionId, sectionOptions]);
+
   const handleExport = () => {
     if (filteredData.length === 0) {
       showToast(toast, "warn", "No Data", "No data available to export");
       return;
     }
     exportToExcel(
-      filteredData.map(({ code, section, subSection, types, maxAmount }) => ({
-        Code: code || "-",
-        Sections: section,
-        "Sub-Sections": subSection || "-",
-        Types: types,
-        "Max Amount": maxAmount || "-",
-      })),
+      filteredData.map(
+        ({ code, section, subSection, types, maxAmount, sbs, sbd }) => ({
+          Code: code || "-",
+          Sections: section,
+          "Sub-Sections": subSection || "-",
+          Types: types,
+          "Max Amount": maxAmount || "-",
+          SBS: sbs || "-",
+          SBD: sbd || "-",
+        }),
+      ),
       "Lookup_Configuration",
     );
     setShowDownloadPopup(true);
@@ -264,7 +281,14 @@ const LookupConfig: React.FC = () => {
 
   // ─── Import Confirm Handler ──────────────────────────────────────────────────
 
-  const REQUIRED_IMPORT_COLS = ["sections", "types", "code"];
+  const REQUIRED_IMPORT_COLS = [
+    "sections",
+    "types",
+    "code",
+    "sbs",
+    "sbd",
+    "max amount",
+  ];
 
   const handleConfirmImport = async () => {
     if (!importFile) {
@@ -325,7 +349,10 @@ const LookupConfig: React.FC = () => {
       // 4. Validate each row and map to payload
       interface IImportRow {
         code: string;
+        sbs: string;
+        sbd: string;
         sectionId: number;
+        sectionLabel: string;
         subSection: string;
         types: string;
         maxAmount: string;
@@ -344,6 +371,8 @@ const LookupConfig: React.FC = () => {
         const subSection = getCol(row, "sub-sections");
         const types = getCol(row, "types");
         const code = getCol(row, "code");
+        const sbsRaw = getCol(row, "sbs");
+        const sbdRaw = getCol(row, "sbd");
         const maxAmount = getCol(row, "max amount");
 
         if (!sectionLabel) {
@@ -354,24 +383,192 @@ const LookupConfig: React.FC = () => {
           rowErrors.push(`Row ${rowNum}: Types is required.`);
           return;
         }
-        if (!code) {
-          rowErrors.push(`Row ${rowNum}: Code is required.`);
-          return;
-        }
+
         // Validate Sections value against Section Config options
         const matched = currentSectionOptions.find(
           (o) => o.label.toLowerCase() === sectionLabel.toLowerCase(),
         );
         if (!matched) {
           rowErrors.push(
-            `Row ${rowNum}: Section "${sectionLabel}" not found in Section Config.`,
+            `Row ${rowNum}: Section "${sectionLabel}" not found in Section Config`,
           );
           return;
         }
 
+        const isSection80Import = matched.label === "Section 80 Deductions";
+
+        if (isSection80Import) {
+          // ── Section 80 Deductions: validate SBS and SBD instead of Code ──
+          if (!sbsRaw) {
+            rowErrors.push(
+              `Row ${rowNum}: SBS is required for Section 80 Deductions.`,
+            );
+            return;
+          }
+          if (isNaN(Number(sbsRaw))) {
+            rowErrors.push(`Row ${rowNum}: SBS must be a number.`);
+            return;
+          }
+          if (!sbdRaw) {
+            rowErrors.push(
+              `Row ${rowNum}: SBD is required for Section 80 Deductions.`,
+            );
+            return;
+          }
+          if (isNaN(Number(sbdRaw))) {
+            rowErrors.push(`Row ${rowNum}: SBD must be a number.`);
+            return;
+          }
+
+          // Check SBS+SBD combination against already-saved data
+          const sbsComboInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.sbs === sbsRaw &&
+              item.sbd === sbdRaw,
+          );
+          if (sbsComboInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — SBS "${sbsRaw}" and SBD "${sbdRaw}" combination already exists in the system`,
+            );
+            return;
+          }
+
+          // Check SBS+SBD combination for duplicates within the file itself
+          const sbsComboInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.sbs === sbsRaw &&
+              r.sbd === sbdRaw,
+          );
+          if (sbsComboInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — SBS "${sbsRaw}" and SBD "${sbdRaw}" combination appears more than once`,
+            );
+            return;
+          }
+        } else {
+          // ── Standard sections: validate Code as before ──
+          if (!code) {
+            rowErrors.push(`Row ${rowNum}: Code is required.`);
+            return;
+          }
+
+          // Check Code against already-saved data
+          const codeExistsInData = data.some(
+            (item) => item.code.trim().toLowerCase() === code.toLowerCase(),
+          );
+          if (codeExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Code "${code}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check Code for duplicates within the file itself
+          const codeExistsInFile = validRows.some(
+            (r) => r.code.toLowerCase() === code.toLowerCase(),
+          );
+          if (codeExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate Code "${code}" appears more than once`,
+            );
+            return;
+          }
+
+          // Check combination against already-saved data
+          const comboExistsInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.subSection.trim().toLowerCase() ===
+                subSection.toLowerCase() &&
+              item.types.trim().toLowerCase() === types.toLowerCase() &&
+              item.code.trim().toLowerCase() === code.toLowerCase(),
+          );
+          if (comboExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — Section "${sectionLabel}", Sub-Section "${subSection}", Type "${types}", Code "${code}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check combination for duplicates within the file itself
+          const comboExistsInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.subSection.toLowerCase() === subSection.toLowerCase() &&
+              r.types.toLowerCase() === types.toLowerCase() &&
+              r.code.toLowerCase() === code.toLowerCase(),
+          );
+          if (comboExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}", Sub-Section "${subSection}", Type "${types}", Code "${code}" appears more than once`,
+            );
+            return;
+          }
+
+          // Check Section, Sub-Section, and Types combination against already-saved data
+          const sectionSubSectionTypeExistsInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.subSection.trim().toLowerCase() ===
+                subSection.toLowerCase() &&
+              item.types.trim().toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionSubSectionTypeExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — Section "${sectionLabel}", Sub-Section "${subSection}", and Type "${types}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check Section, Sub-Section, and Types combination for duplicates within the file itself
+          const sectionSubSectionTypeExistsInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.subSection.toLowerCase() === subSection.toLowerCase() &&
+              r.types.toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionSubSectionTypeExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}", Sub-Section "${subSection}", and Type "${types}" appears more than once`,
+            );
+            return;
+          }
+
+          // Check Section and Types combination against already-saved data
+          const sectionTypeExistsInData = data.some(
+            (item) =>
+              Number(item.sectionId) === matched.value &&
+              item.types.trim().toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionTypeExistsInData) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate — Section "${sectionLabel}" and Type "${types}" already exists in the system`,
+            );
+            return;
+          }
+
+          // Check Section and Types combination for duplicates within the file itself
+          const sectionTypeExistsInFile = validRows.some(
+            (r) =>
+              r.sectionId === matched.value &&
+              r.types.toLowerCase() === types.toLowerCase(),
+          );
+          if (sectionTypeExistsInFile) {
+            rowErrors.push(
+              `Row ${rowNum}: Duplicate within file — Section "${sectionLabel}" and Type "${types}" appears more than once`,
+            );
+            return;
+          }
+        }
+
         validRows.push({
-          code,
+          code: isSection80Import ? "" : code,
+          sbs: sbsRaw,
+          sbd: sbdRaw,
           sectionId: matched.value,
+          sectionLabel: matched.label,
           subSection,
           types,
           maxAmount,
@@ -379,69 +576,42 @@ const LookupConfig: React.FC = () => {
         });
       });
 
-      if (rowErrors.length > 0 && validRows.length === 0) {
+      if (rowErrors.length > 0) {
         showToast(
           toast,
           "error",
-          "Validation Failed",
-          `${rowErrors.length} error(s) found. No records imported. First error: ${rowErrors[0]}`,
+          "Import Rejected",
+          `${rowErrors.length} issue(s) found — no records were imported. First issue: ${rowErrors[0]}`,
         );
         setLoader(false);
         return;
       }
 
-      if (rowErrors.length > 0) {
-        showToast(
-          toast,
-          "warn",
-          "Partial Validation",
-          `${rowErrors.length} row(s) skipped. First: ${rowErrors[0]}`,
-        );
-      }
-
-      // 5. Upsert each valid row
+      // 5. Add all rows (no duplicates at this point)
       let addedCount = 0;
-      let updatedCount = 0;
 
       for (const row of validRows) {
-        const existingItem = data.find(
-          (item) =>
-            Number(item.sectionId) === row.sectionId &&
-            item.subSection.trim().toLowerCase() ===
-              row.subSection.toLowerCase() &&
-            item.types.trim().toLowerCase() === row.types.toLowerCase(),
-        );
-
-        const payload = {
-          Code: row.code,
+        const isSection80Row = row.sectionLabel === "Section 80 Deductions";
+        const payload: any = {
           SectionId: row.sectionId,
           SubSection: row.subSection,
           Types: row.types,
           MaxAmount: row.maxAmount,
+          Code: isSection80Row ? "" : row.code,
+          SBS: isSection80Row && row.sbs ? Number(row.sbs) : null,
+          SBD: isSection80Row && row.sbd ? Number(row.sbd) : null,
         };
 
-        if (existingItem) {
-          await updateListItem(
-            LIST_NAMES.LOOKUP_CONFIG,
-            existingItem.id,
-            payload,
-          );
-          updatedCount++;
-        } else {
-          await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
-          addedCount++;
-        }
+        await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
+        addedCount++;
       }
 
       // 6. Success feedback & refresh
-      const summary: string[] = [];
-      if (addedCount > 0) summary.push(`${addedCount} added`);
-      if (updatedCount > 0) summary.push(`${updatedCount} updated`);
       showToast(
         toast,
         "success",
         "Import Successful",
-        summary.join(", ") + " successfully.",
+        `${addedCount} record(s) added successfully.`,
       );
 
       setShowImportPopup(false);
@@ -464,6 +634,8 @@ const LookupConfig: React.FC = () => {
       subSection: "",
       types: "",
       maxAmount: "",
+      sbs: "",
+      sbd: "",
     });
     setDialog({ type: "ADD", id: null });
   };
@@ -475,6 +647,8 @@ const LookupConfig: React.FC = () => {
       subSection: row.subSection,
       types: row.types,
       maxAmount: row.maxAmount,
+      sbs: row.sbs,
+      sbd: row.sbd,
     });
     setDialog({ type: "EDIT", id: row.id });
   };
@@ -486,27 +660,46 @@ const LookupConfig: React.FC = () => {
   // ─── Form Actions ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    const existingCodes = data
-      .filter((item) => item.id !== dialog.id)
-      .map((item) => item.code);
-
     // Validate
-
     const sectionErr = validateField(formData.sectionId, [
       required("Section is required"),
     ]);
     const typesErr = validateField(formData.types, [
       required("Types is required"),
     ]);
-    const codeErr = validateField(formData.code, [
-      required("Code is required"),
-      isUnique(existingCodes, "This code already exists"),
-    ]);
-    // const maxAmtErr = validateField(formData.maxAmount, [
-    //   required("Max Amount is required"),
-    // ]);
+    const existingCodes = data
+      .filter((item) => !(dialog.type === "EDIT" && item.id === dialog.id))
+      .map((item) => item.code.toLowerCase());
+    const codeErr = !isSection80
+      ? validateField(formData.code.toLowerCase(), [
+          required("Code is required"),
+          isUnique(existingCodes, "This code already exists"),
+        ])
+      : "";
 
-    // Validate uniqueness of the combination
+    // Specific validation for Section 80 Deductions (SBS/SBD combination)
+    let sbsSbdErr = "";
+    if (isSection80) {
+      if (!formData.sbs) {
+        sbsSbdErr = "SBS is required";
+      } else if (!formData.sbd) {
+        sbsSbdErr = "SBD is required";
+      } else {
+        const comboDuplicate = data.some((item) => {
+          if (dialog.type === "EDIT" && item.id === dialog.id) return false;
+          return (
+            item.sectionId === formData.sectionId &&
+            item.sbs === formData.sbs &&
+            item.sbd === formData.sbd
+          );
+        });
+        if (comboDuplicate) {
+          sbsSbdErr = "Duplicate SBS and SBD combination is not allowed.";
+        }
+      }
+    }
+
+    // Validate uniqueness of the Section + Sub-Section + Type combination
     let duplicateErr = "";
     const isDuplicate = data.some((item) => {
       if (dialog.type === "EDIT" && item.id === dialog.id) return false;
@@ -520,12 +713,14 @@ const LookupConfig: React.FC = () => {
 
     if (isDuplicate) {
       duplicateErr =
-        "This combination of Section, Sub-Section, and Type already exists.";
+        "This combination of Section, Sub-Section and Type already exists.";
     }
 
-    if (codeErr || sectionErr || typesErr || duplicateErr) {
-      const errorMsg = codeErr || duplicateErr || sectionErr || typesErr;
-      showToast(toast, "warn", "Validation Error", errorMsg);
+    const finalErr =
+      sectionErr || typesErr || codeErr || duplicateErr || sbsSbdErr;
+
+    if (finalErr) {
+      showToast(toast, "warn", "Validation Error", finalErr);
       return;
     }
 
@@ -534,20 +729,22 @@ const LookupConfig: React.FC = () => {
       // const selectedSection = sectionOptions.find(
       //   (o) => o.value === Number(formData.sectionId),
       // );
-      const payload = {
-        Code: formData.code.trim(),
+      const payload: any = {
         SectionId: Number(formData.sectionId),
         SubSection: formData.subSection.trim(),
         Types: formData.types.trim(),
+        Code: isSection80 ? "" : formData.code.trim(),
         MaxAmount: formData.maxAmount.trim(),
+        SBS: isSection80 ? Number(formData.sbs) : null,
+        SBD: isSection80 ? Number(formData.sbd) : null,
       };
 
       if (dialog.type === "EDIT" && dialog.id) {
         await updateListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id, payload);
-        showToast(toast, "success", "Saved", "Item updated successfully.");
+        showToast(toast, "success", "Saved", "Record updated successfully.");
       } else {
         await addListItem(LIST_NAMES.LOOKUP_CONFIG, payload);
-        showToast(toast, "success", "Saved", "Item added successfully.");
+        showToast(toast, "success", "Saved", "Record added successfully.");
       }
 
       setDialog({ type: null, id: null });
@@ -565,7 +762,7 @@ const LookupConfig: React.FC = () => {
     setLoader(true);
     try {
       await deleteListItem(LIST_NAMES.LOOKUP_CONFIG, dialog.id);
-      showToast(toast, "success", "Deleted", "Item deleted successfully.");
+      showToast(toast, "success", "Deleted", "Record deleted successfully.");
       setDialog({ type: null, id: null });
       await init();
     } catch (error) {
@@ -579,7 +776,7 @@ const LookupConfig: React.FC = () => {
 
   const actionTemplate = (rowData: ILookupData) => {
     return (
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div className={styles.actionCell}>
         <IconButton
           variant="edit"
           icon="pi pi-pencil"
@@ -597,16 +794,18 @@ const LookupConfig: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "section", header: "Sections", style: { width: "20%" } },
+    { field: "section", header: "Sections", style: { width: "25%" } },
     {
       field: "subSection",
       header: "Sub-Sections",
       body: (rowData: ILookupData) => {
         return <span>{rowData.subSection || "-"}</span>;
       },
-      style: { width: "20%" },
+      style: { width: "25%" },
     },
-    { field: "types", header: "Types", style: { width: "20%" } },
+    { field: "types", header: "Types", style: { width: "25%" } },
+    { field: "sbs", header: "SBS", style: { width: "10%" } },
+    { field: "sbd", header: "SBD", style: { width: "10%" } },
     { field: "code", header: "Code", style: { width: "10%" } },
     {
       field: "maxAmount",
@@ -695,7 +894,16 @@ const LookupConfig: React.FC = () => {
             value={formData.sectionId ? Number(formData.sectionId) : ""}
             options={sectionOptions}
             onChange={(e) =>
-              setFormData((p) => ({ ...p, sectionId: String(e.value) }))
+              setFormData((p) => ({
+                ...p,
+                sbs: "",
+                sbd: "",
+                sectionId: String(e.value),
+                subSection: "",
+                types: "",
+                maxAmount: "",
+                code: "",
+              }))
             }
             required
             className={styles.inputField}
@@ -728,17 +936,50 @@ const LookupConfig: React.FC = () => {
             }
             className={styles.inputField}
           />
-          <InputField
-            id="code"
-            label="Code"
-            placeholder="Enter code"
-            value={formData.code}
-            onChange={(e) =>
-              setFormData((p) => ({ ...p, code: e.target.value }))
-            }
-            required
-            className={styles.inputField}
-          />
+          {!isSection80 ? (
+            <InputField
+              id="code"
+              label="Code"
+              placeholder="Enter code"
+              value={formData.code}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, code: e.target.value }))
+              }
+              required
+              className={styles.inputField}
+            />
+          ) : (
+            <>
+              <InputField
+                id="sbs"
+                label="SBS"
+                placeholder="Enter SBS"
+                value={formData.sbs}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    sbs: e.target.value.replace(/[^0-9]/g, ""),
+                  }))
+                }
+                required
+                className={styles.inputField}
+              />
+              <InputField
+                id="sbd"
+                label="SBD"
+                placeholder="Enter SBD"
+                value={formData.sbd}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    sbd: e.target.value.replace(/[^0-9]/g, ""),
+                  }))
+                }
+                required
+                className={styles.inputField}
+              />
+            </>
+          )}
           <InputField
             id="maxAmount"
             label="Max Amount"
@@ -764,7 +1005,7 @@ const LookupConfig: React.FC = () => {
           void handleDelete();
         }}
         actionType="Delete"
-        message={`Are you sure you want to delete\n this item?`}
+        message={`Are you sure you want to delete\n this Record?`}
         iconFlag={false}
       />
 

@@ -68,6 +68,7 @@
   margin: 0px 0px 20px 0px;
   position: relative;
   padding: 0 20px;
+  overflow: auto;
 }
 
 .stepperLine {
@@ -88,7 +89,7 @@
   position: relative;
   z-index: 1;
   cursor: pointer;
-  flex: 1;
+  // flex: 1;
   min-width: 100px;
 
   &.active {

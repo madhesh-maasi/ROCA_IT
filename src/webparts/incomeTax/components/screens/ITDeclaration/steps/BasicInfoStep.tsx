@@ -58,9 +58,7 @@ const BasicInfoStep: React.FC<IBasicInfoStepProps> = ({
           <div className={styles.readonlyValue}>{employeeData.mobile}</div>
         </div> */}
         <div className={styles.formGroup}>
-          <label>
-            Mobile Number <span>*</span>
-          </label>
+          <label>Mobile Number <span>*</span></label>
           <InputField
             id="basic-info-mobile"
             value={mobile}

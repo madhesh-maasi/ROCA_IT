@@ -13,6 +13,7 @@ import "@pnp/sp/folders";
 import { handleError } from "./errorUtils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { removeTimestamp } from "./functions";
 
 // ─── Singleton ────────────────────────────────────────────────────────────────
 
@@ -724,11 +725,18 @@ export const downloadAttachmentsAsZip = async (
           .getBlob();
 
         const segments = (doc.FileRef as string).split("/").filter(Boolean);
-        const folderName =
+        const rawFolder =
           segments.length >= 2 ? segments[segments.length - 2] : "Documents";
 
+        // All Housing Loan sub-folders (Self, LetOut, Others) belong in one folder
+        const folderName = rawFolder.startsWith("Housing_Loan_Repayment")
+          ? "Housing Loan Repayment"
+          : rawFolder;
+
         // Place the file inside its folder inside the ZIP
-        zip.folder(folderName)!.file(doc.FileLeafRef, fileBlob);
+        zip
+          .folder(folderName)!
+          .file(removeTimestamp(doc.FileLeafRef), fileBlob);
       }),
     );
 
@@ -763,10 +771,11 @@ export const getListItems = async (
     const filterQuery = extraFilter
       ? `IsDelete ne 1 and (${extraFilter})`
       : "IsDelete ne 1";
+    const orderByField = orderBy || "ID";
     return await sp.web.lists
       .getByTitle(listName)
       .items.filter(filterQuery)
-      .orderBy(orderBy, ascending)
+      .orderBy(orderByField, ascending)
       .top(5000)();
   } catch (err) {
     await handleError(err, `Fetching items from ${listName}`);

@@ -9,6 +9,7 @@ import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicke
 import styles from "../ITDeclaration.module.scss";
 import { panFormatter } from "../../../../../../common/utils/validationUtils";
 import RequiredSympol from "../../../../../../common/components/RequiredSympol/RequiredSympol";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface IHousingLoanData {
   propertyType: "None" | "Self Occupied" | "Let Out Property";
@@ -34,9 +35,17 @@ interface IHousingLoanStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onDeleteAttachment?: (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => Promise<void>;
   onOthersUpload?: (key: string, file: File) => Promise<void>;
-  onOthersDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onOthersDeleteAttachment?: (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => Promise<void>;
 }
 
 const UPLOAD_KEY_SELF = "housing-self";
@@ -123,9 +132,9 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                 whiteSpace: "nowrap",
                 maxWidth: "180px",
               }}
-              title={att.FileLeafRef}
+              title={removeTimestamp(att.FileLeafRef)}
             >
-              {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+              {removeTimestamp(att.FileLeafRef)}
             </span>
             {!readOnly && onDeleteAttachment && (
               <i
@@ -158,8 +167,8 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
   const handlePropertyTypeChange = async () => {
     if (data.attachments && data.attachments.length > 0 && onDeleteAttachment) {
       for (const att of data.attachments) {
-        await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id);
-        await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id);
+        await onDeleteAttachment(UPLOAD_KEY_SELF, att.Id, true);
+        await onDeleteAttachment(UPLOAD_KEY_LETOUT, att.Id, true);
       }
     }
     if (
@@ -168,7 +177,7 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
       onOthersDeleteAttachment
     ) {
       for (const att of data.othersAttachments) {
-        await onOthersDeleteAttachment(UPLOAD_KEY_OTHERS, att.Id);
+        await onOthersDeleteAttachment(UPLOAD_KEY_OTHERS, att.Id, true);
       }
     }
   };
@@ -334,15 +343,18 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                   <span style={{ color: "red" }}>*</span>
                 ) : null}
               </label>
-              <InputField
-                id="hl-lender-addr"
-                value={data.lenderAddress}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onChange("lenderAddress", e.target.value)
-                }
-                placeholder="Enter address"
-                disabled={readOnly}
-              />
+              <div title={readOnly ? data.lenderAddress : ""}>
+                <InputField
+                  id="hl-lender-addr"
+                  value={data.lenderAddress}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onChange("lenderAddress", e.target.value)
+                  }
+                  placeholder="Enter address"
+                  disabled={readOnly}
+                  maxLength={120}
+                />
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label>
@@ -485,7 +497,10 @@ const HousingLoanStep: React.FC<IHousingLoanStepProps> = ({
                           whiteSpace: "nowrap",
                           maxWidth: "180px",
                         }}
-                        title={att.FileLeafRef}
+                        title={att.FileLeafRef.replace(
+                          /_\d{14}(\.pdf)$/i,
+                          "$1",
+                        )}
                       >
                         {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
                       </span>

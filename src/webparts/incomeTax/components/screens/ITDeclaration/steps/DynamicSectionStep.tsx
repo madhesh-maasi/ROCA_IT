@@ -2,6 +2,7 @@ import * as React from "react";
 import { InputField } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface IDynamicItem {
   id: number;
@@ -172,7 +173,7 @@ const DynamicSectionStep: React.FC<IDynamicSectionStepProps> = ({
                                   whiteSpace: "nowrap",
                                   maxWidth: "100px",
                                 }}
-                                title={att.FileLeafRef}
+                                title={removeTimestamp(att.FileLeafRef)}
                                 onClick={() => {
                                   if (att.FileRef) {
                                     window.open(
@@ -183,12 +184,7 @@ const DynamicSectionStep: React.FC<IDynamicSectionStepProps> = ({
                                   }
                                 }}
                               >
-                                {att.FileLeafRef
-                                  ? att.FileLeafRef.replace(
-                                      /_\d{14}(\.pdf)$/i,
-                                      "$1",
-                                    )
-                                  : ""}
+                                {removeTimestamp(att.FileLeafRef)}
                               </span>
                               {!readOnly && onDeleteAttachment && (
                                 <i
