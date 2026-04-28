@@ -62,25 +62,35 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
       <div className={styles.summaryGrid} style={{ marginBottom: "10px" }}>
         <div className={styles.formGroup}>
           <label>Financial Year</label>
-          <div className={styles.readonlyValue}>{employeeInfo.fy}</div>
+          <div className={styles.readonlyValue} style={{ color: "#000" }}>
+            {employeeInfo.fy}
+          </div>
         </div>
         <div className={styles.formGroup}>
           <label>Employee Code</label>
-          <div className={styles.readonlyValue}>{employeeInfo.code}</div>
+          <div className={styles.readonlyValue} style={{ color: "#000" }}>
+            {employeeInfo.code}
+          </div>
         </div>
         <div className={styles.formGroup}>
           <label>Employee name</label>
-          <div className={styles.readonlyValue} title={employeeInfo.name}>
+          <div
+            className={styles.readonlyValue}
+            style={{ color: "#000" }}
+            title={employeeInfo.name}
+          >
             {employeeInfo.name}
           </div>
         </div>
         <div className={styles.formGroup}>
           <label>PAN</label>
-          <div className={styles.readonlyValue}>{employeeInfo.pan || "-"}</div>
+          <div className={styles.readonlyValue} style={{ color: "#000" }}>
+            {employeeInfo.pan || "-"}
+          </div>
         </div>
         <div className={styles.formGroup}>
           <label>Date of Joining</label>
-          <div className={styles.readonlyValue}>
+          <div className={styles.readonlyValue} style={{ color: "#000" }}>
             {employeeInfo.doj
               ? moment(employeeInfo.doj).format("DD/MM/YYYY")
               : "-"}
@@ -232,11 +242,14 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
               }
               placeholder="Enter place"
               disabled={readOnly}
+              style={{ color: "#000" }}
             />
           </div>
           <div className={styles.formGroup}>
             <label>Date</label>
-            <div className={styles.readonlyValue}>{declaration.date}</div>
+            <div className={styles.readonlyValue} style={{ color: "#000" }}>
+              {declaration.date}
+            </div>
           </div>
         </div>
       </div>
@@ -298,8 +311,8 @@ const SummaryStep: React.FC<ISummaryStepProps> = ({
                 borderRadius: "12px",
                 border: "1px solid #e2e8f0",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.7 : 1,
               }}
               placeholder="Enter here"

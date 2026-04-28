@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   InputField,
   AppRadioButton,
+  IconButton,
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
@@ -58,6 +59,8 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
   const activeLandlordsWithIdx = landlords.map((ll, idx) => ({ ll, idx }));
   // .filter(({ ll }) => !ll.isDeleted);
   const activeCount = landlords?.filter((l) => !l.isDeleted).length;
+
+  const landlordPanMandatory = rentDetails?.some((l) => Number(l.rent) > 8333);
 
   const handleFilesPicked = async (key: string, files: File[]) => {
     const file = files[0];
@@ -187,7 +190,9 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>PAN of Landlord</label>
+                  <label>
+                    PAN of Landlord {landlordPanMandatory && <span>*</span>}
+                  </label>
                   <InputField
                     id={`ll-pan-${idx}`}
                     value={ll.pan}
@@ -291,15 +296,16 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                       </div>
                     ))}
                   </div>
-                  {!readOnly && activeCount > 1 && (
+                  {!readOnly && (
                     <div style={{ paddingTop: "5px" }}>
-                      <i
-                        className="pi pi-trash"
+                      <IconButton
+                        icon="pi pi-trash"
                         style={{
                           color: "#e11d48",
-                          cursor: "pointer",
+                          cursor: activeCount == 1 ? "not-allowed" : "pointer",
                           fontSize: "16px",
                         }}
+                        disabled={activeCount == 1}
                         onClick={() => onDeleteLandlord(idx)}
                       />
                     </div>
@@ -323,8 +329,8 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                 padding: "16px",
                 borderRadius: "12px",
                 resize: "none",
+                overflowY: "auto",
                 fontSize: "14px",
-                pointerEvents: status === "Approved" ? "none" : "auto",
                 opacity: status === "Approved" ? 0.8 : 1,
                 backgroundColor: "#fff",
               }}

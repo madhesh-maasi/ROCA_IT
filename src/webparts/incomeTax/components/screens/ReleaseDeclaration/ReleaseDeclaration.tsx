@@ -128,6 +128,11 @@ const ReleaseDeclaration: React.FC = () => {
               : "-",
           };
         });
+      // Always store both planned and actual so duplicate checks work for both types
+      // setReleasedList([
+      //   ...processRecords(planned, "Planned"),
+      //   ...processRecords(actual, "Actual"),
+      // ]);
       if (actual.length > 0) {
         setReleasedList([...processRecords(actual, "Actual")]);
       } else {
@@ -300,6 +305,7 @@ const ReleaseDeclaration: React.FC = () => {
     }
 
     setIsLoading(true);
+    await new Promise<void>((resolve) => setTimeout(resolve));
     try {
       const sp = getSP();
       let itemsToRelease: any[] = [];
@@ -322,62 +328,69 @@ const ReleaseDeclaration: React.FC = () => {
             DeclarationEndDate: new Date(
               new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
             ),
+            MobileNumber: emp.PhoneNo?.toString(),
             IsDelete: false,
           }));
       } else if (formData.ReleaseType === "Release Selected") {
-        targetEmails.forEach((email: string) => {
-          const matchedEmp = employeeMaster.find((e) => e.Email === email);
-          itemsToRelease.push({
-            Title: "", // Will be generated before saving
-            EmployeeName: matchedEmp
-              ? matchedEmp.Title || matchedEmp.Name
-              : email,
-            EmployeeCode: matchedEmp ? matchedEmp.EmployeeId : "",
-            EmployeeEmail: matchedEmp ? matchedEmp.Email : "",
-            Status: "Released",
-            FinancialYear: _financialYear,
-            DeclarationType: formData.DeclarationType,
-            DeclarationEndDate: new Date(
-              new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
-            ),
-            IsDelete: false,
-          });
-        });
+        const endDate = new Date(
+          new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
+        );
+        const baseItem = {
+          Title: "",
+          Status: "Released",
+          FinancialYear: _financialYear,
+          DeclarationType: formData.DeclarationType,
+          DeclarationEndDate: endDate,
+          IsDelete: false,
+        };
 
-        excelEmployees
-          .filter((emp: IEmployee) =>
-            emp.EmployeeId?.toString().startsWith("9"),
-          )
-          .forEach((row) => {
-            const curEmp = employeeMaster.find(
-              (emp) => emp.EmployeeId === row.EmployeeID?.toString(),
+        if (excelEmployees.length > 0) {
+          // Excel upload is the active source — ignore people picker
+          excelEmployees
+            .filter((row: any) => row.EmployeeID?.toString().startsWith("9"))
+            .forEach((row) => {
+              const curEmp = employeeMaster.find(
+                (emp) => emp.EmployeeId === row.EmployeeID?.toString(),
+              );
+
+              itemsToRelease.push({
+                ...baseItem,
+                EmployeeName: curEmp ? curEmp.Title || curEmp.Name : row.Title,
+                EmployeeCode: curEmp ? curEmp.EmployeeId : row.EmployeeID,
+                EmployeeEmail: curEmp ? curEmp.Email : row.Email,
+                MobileNumber: curEmp?.PhoneNo?.toString(),
+              });
+            });
+        } else {
+          // People picker is the active source
+          targetEmails.forEach((email: string) => {
+            const matchedEmp = employeeMaster.find(
+              (e) => e.Email?.toLowerCase() === email?.toLowerCase(),
             );
             itemsToRelease.push({
-              Title: "", // Will be generated before saving
-              EmployeeName: curEmp ? curEmp.Title || curEmp.Name : row.Title,
-              EmployeeCode: curEmp ? curEmp.EmployeeId : row.EmployeeID,
-              EmployeeEmail: curEmp ? curEmp.Email : row.Email,
-              Status: "Released",
-              FinancialYear: _financialYear,
-              DeclarationType: formData.DeclarationType,
-              DeclarationEndDate: new Date(
-                new Date(formData.OnOrBefore!).setHours(23, 59, 59, 999),
-              ),
-              IsDelete: false,
+              ...baseItem,
+              EmployeeName: matchedEmp
+                ? matchedEmp.Title || matchedEmp.Name
+                : email,
+              EmployeeCode: matchedEmp ? matchedEmp.EmployeeId : "",
+              EmployeeEmail: matchedEmp ? matchedEmp.Email : "",
+              MobileNumber: matchedEmp?.PhoneNo?.toString(),
             });
           });
-
-        // Deduplicate itemsToRelease by EmployeeCode (in case of double selection from PP and Excel)
-        const uniqueItems = new Map();
-        itemsToRelease.forEach((item) => {
-          if (item.EmployeeCode && !uniqueItems.has(item.EmployeeCode)) {
-            uniqueItems.set(item.EmployeeCode, item);
-          }
-        });
-        itemsToRelease = Array.from(uniqueItems.values());
+        }
       }
 
-      // ─── Actual Declaration: validate approved planned declarations ────────────
+      if (itemsToRelease.length === 0) {
+        showToast(
+          toast,
+          "warn",
+          "No Employees",
+          "No valid employees found to release.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
       if (isActual) {
         // Fetch all planned declarations for the current FY
         const plannedRecords = await sp.web.lists
@@ -416,8 +429,8 @@ const ReleaseDeclaration: React.FC = () => {
           showToast(
             toast,
             "warn",
-            "Duplicate",
-            `Selected employees already have an Actual declaration for FY ${_financialYear}.`,
+            "Already Existing",
+            `Selected employee declarations already exist`,
           );
           setIsLoading(false);
           return;
@@ -445,9 +458,7 @@ const ReleaseDeclaration: React.FC = () => {
           toast,
           "success",
           "Success",
-          skippedActualCount > 0
-            ? `Released ${actualItems.length} Actual declarations. Skipped ${skippedActualCount} duplicates.`
-            : `Released ${actualItems.length} Actual Declaration(s) successfully.`,
+          `Declaration Released successfully`,
         );
 
         // Send release email notifications
@@ -484,20 +495,23 @@ const ReleaseDeclaration: React.FC = () => {
         await fetchReleasedData();
         return;
       }
+      // Fresh fetch from SP to catch duplicates added via upload, employee selection, or "Release All"
+      const existingPlannedRecords = await sp.web.lists
+        .getByTitle(LIST_NAMES.PLANNED_DECLARATION)
+        .items.select("EmployeeCode")
+        .filter(`FinancialYear eq '${_financialYear}' and IsDelete eq false`)();
 
-      // ─── Planned Declaration: existing duplicate-check logic ──────────────────
       const existingCodes = new Set(
-        releasedList
-          .filter(
-            (r) =>
-              r.declarationType === "Planned" &&
-              r.financialYear === _financialYear,
-          )
-          .map((r: any) => r.employeeId),
+        existingPlannedRecords
+          .map((r: any) => r.EmployeeCode as string)
+          .filter(Boolean),
       );
 
       const finalItems = itemsToRelease.filter(
-        (item) => item.EmployeeCode && !existingCodes.has(item.EmployeeCode),
+        (item) =>
+          employeeMaster.some((emp) => emp.EmployeeId === item.EmployeeCode) &&
+          item.EmployeeCode.startsWith("9") &&
+          !existingCodes.has(item.EmployeeCode),
       );
 
       const skippedCount = itemsToRelease.length - finalItems.length;
@@ -506,10 +520,8 @@ const ReleaseDeclaration: React.FC = () => {
         showToast(
           toast,
           "warn",
-          "Duplicate",
-          skippedCount > 0
-            ? `Selected employees already have a declaration for FY ${_financialYear}.`
-            : "No valid employees to release.",
+          "Already Existing",
+          `Selected employee declarations already exist`,
         );
         setIsLoading(false);
         return;
@@ -535,9 +547,7 @@ const ReleaseDeclaration: React.FC = () => {
         toast,
         "success",
         "Success",
-        skippedCount > 0
-          ? `Released ${finalItems.length} declarations. Skipped ${skippedCount} duplicates.`
-          : `Successfully released ${finalItems.length} declarations.`,
+        `Declaration Released successfully`,
       );
 
       // Send release email notifications
@@ -649,7 +659,6 @@ const ReleaseDeclaration: React.FC = () => {
       new Set(filteredByYear.map((r) => r.declarationType)),
     ).filter(Boolean);
 
-    // If only one type exists for a specific year (not "All"), we won't show the dropdown
     if (
       selectedFY !== "All" &&
       selectedFY !== _financialYear &&
@@ -899,25 +908,34 @@ const ReleaseDeclaration: React.FC = () => {
                   <span
                     className={styles.chipRemove}
                     onClick={() => removeEmployee(emp.EmployeeId || "", false)}
-                  >
-                    ×
-                  </span>
+                  ></span>
                 </div>
               );
             })}
-            {excelEmployees.map((emp, idx) => (
-              <div key={`excel-${idx}`} className={styles.chip}>
-                <span className={styles.chipLabel}>
-                  {emp.Title} ({emp.EmployeeID})
-                </span>
-                <span
-                  className={styles.chipRemove}
-                  onClick={() => removeEmployee(emp.EmployeeID, true)}
-                >
-                  ×
-                </span>
-              </div>
-            ))}
+            {excelEmployees
+              .filter((emp) => emp.EmployeeID?.toString().startsWith("9"))
+              .map((emp, idx) => {
+                const matchedEmp = employeeMaster.find(
+                  (e) => e.EmployeeId === emp.EmployeeID?.toString(),
+                );
+                const displayName = matchedEmp
+                  ? matchedEmp.Title || matchedEmp.Name
+                  : "";
+                if (!matchedEmp) return null;
+                return (
+                  <div key={`excel-${idx}`} className={styles.chip}>
+                    <span className={styles.chipLabel}>
+                      {displayName} ({emp.EmployeeID})
+                    </span>
+                    <span
+                      className={styles.chipRemove}
+                      onClick={() => removeEmployee(emp.EmployeeID, true)}
+                    >
+                      ×
+                    </span>
+                  </div>
+                );
+              })}
           </div>
         )}
 
@@ -1066,7 +1084,7 @@ const ReleaseDeclaration: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.tabContent}>
+        <div>
           {activeIndex === 0 && (
             <AppDataTable
               columns={empColumns}

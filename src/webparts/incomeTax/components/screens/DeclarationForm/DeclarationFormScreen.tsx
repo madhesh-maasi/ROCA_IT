@@ -132,7 +132,9 @@ const DeclarationFormScreen: React.FC = () => {
             officialEmailId: empEmail || "-",
             mobileNumber: mainItem.MobileNumber || "-",
             financialYear: mainItem.FinancialYear || curFinanicalYear,
-            dateOfJoining: employee?.DOJ || "-",
+            dateOfJoining: employee?.DOJ
+              ? moment(employee.DOJ).format("DD/MM/YYYY")
+              : "-",
             taxRegime: mainItem.TaxRegime || "-",
           },
           declarationSummary: {
@@ -147,7 +149,10 @@ const DeclarationFormScreen: React.FC = () => {
 
         // Pre-fill user details
         setSubmittedUserName(
-          mainItem.SubmittedUserName || employee?.Title || user?.Title || "",
+          mainItem.SubmittedUserName.trim ||
+            employee?.Title ||
+            user?.Title ||
+            "",
         );
         setSubmittedDesignation(
           mainItem.SubmittedDesignation || employee?.Designation || "",
@@ -185,12 +190,16 @@ const DeclarationFormScreen: React.FC = () => {
       setIsSubmitting(false);
       return;
     }
-    if (!submittedUserName || !submittedDesignation || !submittedPlace) {
+    if (
+      !submittedUserName.trim() ||
+      !submittedDesignation.trim() ||
+      !submittedPlace.trim()
+    ) {
       showToast(
         toast,
         "error",
         "Error",
-        `Please provide ${!submittedUserName ? "User name" : !submittedDesignation ? "Designation" : "Place"}`,
+        `Please enter ${!submittedUserName.trim() ? "User name" : !submittedDesignation.trim() ? "Designation" : "Place"}`,
       );
       setIsSubmitting(false);
       return;
