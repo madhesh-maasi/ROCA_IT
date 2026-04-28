@@ -1,5 +1,63 @@
 import * as XLSX from "xlsx-js-style";
 
+export interface ISheetData {
+  sheetName: string;
+  data: any[];
+}
+
+/**
+ * Builds an XLSX workbook from one or more sheets.
+ */
+function buildWorkbook(sheets: ISheetData[]): XLSX.WorkBook {
+  const workbook = XLSX.utils.book_new();
+  for (const { sheetName, data } of sheets) {
+    if (!data || data.length === 0) continue;
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const columns = Object.keys(data[0]).map((key) => {
+      const maxLength = data.reduce((max, row) => {
+        const cellValue = row[key] != null ? row[key].toString() : "";
+        return Math.max(max, cellValue.length);
+      }, key.length);
+      return { wch: Math.min(maxLength + 2, 50) };
+    });
+    worksheet["!cols"] = columns;
+    const headerKeys = Object.keys(data[0]);
+    for (let i = 0; i < headerKeys.length; i++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (worksheet[cellAddress]) {
+        worksheet[cellAddress].s = {
+          fill: { fgColor: { rgb: "307a8a" } },
+          font: { color: { rgb: "FFFFFF" }, bold: true },
+        };
+      }
+    }
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  }
+  return workbook;
+}
+
+/**
+ * Export multiple sheets to an Excel (.xlsx) file (download).
+ */
+export const exportToExcelMultiSheet = (
+  sheets: ISheetData[],
+  fileName: string,
+): void => {
+  const workbook = buildWorkbook(sheets);
+  XLSX.writeFile(workbook, `${fileName}.xlsx`);
+};
+
+/**
+ * Generate base64-encoded Excel content from multiple sheets (for email attachment).
+ */
+export const generateExcelBase64MultiSheet = (
+  sheets: ISheetData[],
+  fileName: string,
+): string => {
+  const workbook = buildWorkbook(sheets);
+  return XLSX.write(workbook, { type: "base64", bookType: "xlsx" });
+};
+
 /**
  * Common utility to export JSON data to an Excel (.xlsx) file.
  *

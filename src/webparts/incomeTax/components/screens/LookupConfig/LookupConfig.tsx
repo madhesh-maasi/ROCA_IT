@@ -26,6 +26,7 @@ import { LIST_NAMES } from "../../../../../common/constants/appConstants";
 import {
   validateField,
   required,
+  isUnique,
 } from "../../../../../common/utils/validationUtils";
 import { globalSearchFilter } from "../../../../../common/utils/functions";
 import AppToast, {
@@ -38,6 +39,7 @@ import { ActionPopup } from "../../../../../common/components";
 
 interface ILookupData {
   id: number;
+  code: string; // mapped from Code
   sectionId: string;
   section: string; // mapped from Title or Lookup
   subSection: string; // mapped from SubSection
@@ -68,6 +70,7 @@ const LookupConfig: React.FC = () => {
 
   // Consolidated Form State
   const [formData, setFormData] = React.useState({
+    code: "",
     sectionId: "",
     subSection: "",
     types: "",
@@ -104,6 +107,7 @@ const LookupConfig: React.FC = () => {
         const matched = options.find((o) => o.value === sid);
         return {
           id: item.Id,
+          code: item.Code || "",
           sectionId: sid ? String(sid) : "",
           section: matched ? matched.label : item.Title || "",
           subSection: item.SubSection || "",
@@ -138,7 +142,8 @@ const LookupConfig: React.FC = () => {
       return;
     }
     exportToExcel(
-      filteredData.map(({ section, subSection, types, maxAmount }) => ({
+      filteredData.map(({ code, section, subSection, types, maxAmount }) => ({
+        Code: code || "-",
         Sections: section,
         "Sub-Sections": subSection || "-",
         Types: types,
@@ -259,7 +264,7 @@ const LookupConfig: React.FC = () => {
 
   // ─── Import Confirm Handler ──────────────────────────────────────────────────
 
-  const REQUIRED_IMPORT_COLS = ["sections", "types"];
+  const REQUIRED_IMPORT_COLS = ["sections", "types", "code"];
 
   const handleConfirmImport = async () => {
     if (!importFile) {
@@ -319,6 +324,7 @@ const LookupConfig: React.FC = () => {
 
       // 4. Validate each row and map to payload
       interface IImportRow {
+        code: string;
         sectionId: number;
         subSection: string;
         types: string;
@@ -337,6 +343,7 @@ const LookupConfig: React.FC = () => {
         const sectionLabel = getCol(row, "sections");
         const subSection = getCol(row, "sub-sections");
         const types = getCol(row, "types");
+        const code = getCol(row, "code");
         const maxAmount = getCol(row, "max amount");
 
         if (!sectionLabel) {
@@ -347,7 +354,10 @@ const LookupConfig: React.FC = () => {
           rowErrors.push(`Row ${rowNum}: Types is required.`);
           return;
         }
-
+        if (!code) {
+          rowErrors.push(`Row ${rowNum}: Code is required.`);
+          return;
+        }
         // Validate Sections value against Section Config options
         const matched = currentSectionOptions.find(
           (o) => o.label.toLowerCase() === sectionLabel.toLowerCase(),
@@ -360,6 +370,7 @@ const LookupConfig: React.FC = () => {
         }
 
         validRows.push({
+          code,
           sectionId: matched.value,
           subSection,
           types,
@@ -402,6 +413,7 @@ const LookupConfig: React.FC = () => {
         );
 
         const payload = {
+          Code: row.code,
           SectionId: row.sectionId,
           SubSection: row.subSection,
           Types: row.types,
@@ -446,12 +458,19 @@ const LookupConfig: React.FC = () => {
   // ─── Dialog Triggers ────────────────────────────────────────────────────────
 
   const openAddPopup = () => {
-    setFormData({ sectionId: "", subSection: "", types: "", maxAmount: "" });
+    setFormData({
+      code: "",
+      sectionId: "",
+      subSection: "",
+      types: "",
+      maxAmount: "",
+    });
     setDialog({ type: "ADD", id: null });
   };
 
   const openEditPopup = (row: ILookupData) => {
     setFormData({
+      code: row.code,
       sectionId: row.sectionId,
       subSection: row.subSection,
       types: row.types,
@@ -467,13 +486,21 @@ const LookupConfig: React.FC = () => {
   // ─── Form Actions ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
+    const existingCodes = data
+      .filter((item) => item.id !== dialog.id)
+      .map((item) => item.code);
+
     // Validate
+
     const sectionErr = validateField(formData.sectionId, [
       required("Section is required"),
     ]);
-    const subSectionErr = ""; // Removed regex validation, filtering handled in onChange
     const typesErr = validateField(formData.types, [
       required("Types is required"),
+    ]);
+    const codeErr = validateField(formData.code, [
+      required("Code is required"),
+      isUnique(existingCodes, "This code already exists"),
     ]);
     // const maxAmtErr = validateField(formData.maxAmount, [
     //   required("Max Amount is required"),
@@ -496,19 +523,8 @@ const LookupConfig: React.FC = () => {
         "This combination of Section, Sub-Section, and Type already exists.";
     }
 
-    if (
-      sectionErr ||
-      // subSectionErr ||
-      typesErr ||
-      // || maxAmtErr
-      duplicateErr
-    ) {
-      const errorMsg =
-        duplicateErr ||
-        sectionErr ||
-        // || subSectionErr
-        typesErr;
-      //  || maxAmtErr;
+    if (codeErr || sectionErr || typesErr || duplicateErr) {
+      const errorMsg = codeErr || duplicateErr || sectionErr || typesErr;
       showToast(toast, "warn", "Validation Error", errorMsg);
       return;
     }
@@ -519,6 +535,7 @@ const LookupConfig: React.FC = () => {
       //   (o) => o.value === Number(formData.sectionId),
       // );
       const payload = {
+        Code: formData.code.trim(),
         SectionId: Number(formData.sectionId),
         SubSection: formData.subSection.trim(),
         Types: formData.types.trim(),
@@ -580,16 +597,17 @@ const LookupConfig: React.FC = () => {
   };
 
   const columns: IColumnDef[] = [
-    { field: "section", header: "Sections", style: { width: "25%" } },
+    { field: "section", header: "Sections", style: { width: "20%" } },
     {
       field: "subSection",
       header: "Sub-Sections",
       body: (rowData: ILookupData) => {
         return <span>{rowData.subSection || "-"}</span>;
       },
-      style: { width: "25%" },
+      style: { width: "20%" },
     },
-    { field: "types", header: "Types", style: { width: "25%" } },
+    { field: "types", header: "Types", style: { width: "20%" } },
+    { field: "code", header: "Code", style: { width: "10%" } },
     {
       field: "maxAmount",
       header: "Max Amount",
@@ -708,6 +726,17 @@ const LookupConfig: React.FC = () => {
                 types: e.target.value.replace(/[^a-zA-Z0-9\s\-().,]/g, ""),
               }))
             }
+            className={styles.inputField}
+          />
+          <InputField
+            id="code"
+            label="Code"
+            placeholder="Enter code"
+            value={formData.code}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, code: e.target.value }))
+            }
+            required
             className={styles.inputField}
           />
           <InputField
