@@ -7,6 +7,7 @@ import {
 } from "../../../../../../CommonInputComponents";
 import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicker";
 import styles from "../ITDeclaration.module.scss";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface ICoTraveller {
   relationship: string;
@@ -42,7 +43,13 @@ interface ILTAStepProps {
   status?: string;
   readOnly?: boolean;
   onUpload?: (key: string, file: File) => Promise<void>;
-  onDeleteAttachment?: (key: string, fileId: number) => Promise<void>;
+  onDeleteAttachment?: (
+    key: string,
+    fileId: number,
+    silent?: boolean,
+  ) => Promise<void>;
+  employeeMaster: any[];
+  usermail: string;
 }
 
 const UPLOAD_KEY = "lta";
@@ -60,6 +67,8 @@ const LTAStep: React.FC<ILTAStepProps> = ({
   readOnly,
   onUpload,
   onDeleteAttachment,
+  employeeMaster,
+  usermail,
 }) => {
   const ltaAttachments = (ltaData.attachments || []).filter(
     (a: any) => !a.isDeleted,
@@ -95,6 +104,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                   (await onDeleteAttachment?.(
                     UPLOAD_KEY,
                     ltaAttachments[0]?.Id,
+                    true,
                   ));
               }
             }}
@@ -114,6 +124,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             placeholder="Select"
             disabled={readOnly}
             required={Number(ltaData.exemptionAmount) > 0}
+            minDate={
+              new Date(
+                employeeMaster.find((e) => e.Email.toLowerCase() === usermail)
+                  ?.DOJ,
+              )
+            }
           />
         </div>
         <div className={styles.formGroup}>
@@ -393,12 +409,12 @@ const LTAStep: React.FC<ILTAStepProps> = ({
                 whiteSpace: "nowrap",
                 maxWidth: "180px",
               }}
-              title={att.FileLeafRef}
+              title={removeTimestamp(att.FileLeafRef)}
               onClick={() => {
                 window.open(att.FileRef, "_blank", "noopener,noreferrer");
               }}
             >
-              {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+              {removeTimestamp(att.FileLeafRef)}
             </span>
             {!readOnly && onDeleteAttachment && (
               <i

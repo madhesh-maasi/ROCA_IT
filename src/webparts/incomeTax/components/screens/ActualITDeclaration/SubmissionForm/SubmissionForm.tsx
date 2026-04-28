@@ -223,7 +223,7 @@ const SubmissionForm: React.FC<ISubmissionFormProps> = ({
         </div>
         <div className={styles.footerRight}>
           <div className={styles.inputField}>
-            <label>User Name:</label>
+            <label style={{ width: 86 }}>User Name:</label>
             {isReadOnly ? (
               <span className={styles.staticValue}>{submittedUserName}</span>
             ) : (

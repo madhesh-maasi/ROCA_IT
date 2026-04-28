@@ -104,14 +104,15 @@ const DeclarationFormScreen: React.FC = () => {
           try {
             const sectionData = JSON.parse(mainItem.SectionDetailsJSON);
             Object.keys(sectionData).forEach((key) => {
-              const total = sectionData[key].reduce(
+              if (key === "__steps") return;
+              const arr = sectionData[key];
+              if (!Array.isArray(arr)) return;
+              const total = arr.reduce(
                 (sum: number, item: any) =>
                   sum + Number(item.declaredAmount || 0),
                 0,
               );
-              if (total > 0) {
-                dynamicTotals[key] = total.toLocaleString();
-              }
+              dynamicTotals[key] = total.toLocaleString();
             });
           } catch (e) {}
         }
@@ -149,10 +150,7 @@ const DeclarationFormScreen: React.FC = () => {
 
         // Pre-fill user details
         setSubmittedUserName(
-          mainItem.SubmittedUserName.trim ||
-            employee?.Title ||
-            user?.Title ||
-            "",
+          mainItem.SubmittedUserName || employee?.Title || user?.Title || "",
         );
         setSubmittedDesignation(
           mainItem.SubmittedDesignation || employee?.Designation || "",
@@ -199,7 +197,7 @@ const DeclarationFormScreen: React.FC = () => {
         toast,
         "error",
         "Error",
-        `Please enter ${!submittedUserName.trim() ? "User name" : !submittedDesignation.trim() ? "Designation" : "Place"}`,
+        `Please provide ${!submittedUserName.trim() ? "User name" : !submittedDesignation.trim() ? "Designation" : "Place"}`,
       );
       setIsSubmitting(false);
       return;
@@ -230,9 +228,16 @@ const DeclarationFormScreen: React.FC = () => {
         SubmissionDate: moment().format("DD/MM/YYYY HH:mm"),
         DeclarationIsAgreed: true,
       });
+      showToast(
+        toast,
+        "success",
+        "Success",
+        "Declaration form submitted successfully",
+      );
       navigate("/submittedDeclarations", { state: { tab: "Actual" } });
     } catch (error) {
       console.error("Error updating status", error);
+      showToast(toast, "error", "Error", "Error updating status");
     } finally {
       setIsSubmitting(false);
     }

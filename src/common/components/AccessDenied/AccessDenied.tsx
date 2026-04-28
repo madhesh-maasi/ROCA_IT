@@ -60,46 +60,9 @@ const AccessDenied: React.FC<IAccessDeniedProps> = ({ routeKey, role }) => {
 
         {/* Body message */}
         <p className={styles.message}>
-          {routeKey ? (
-            <>
-              The page <strong>{routeKey}</strong> is restricted
-              {/* {role ? (
-                <>
-                  {" "}
-                  and cannot be accessed with the <strong>{role}</strong> role.
-                </>
-              ) : (
-                "."
-              )} */}
-            </>
-          ) : (
-            "This page is restricted and cannot be accessed with your current role."
-          )}
+          This page is restricted and cannot be accessed with your current role
           <br />
-          {/* Please contact your administrator if you believe this is a mistake. */}
         </p>
-
-        {/* Back button */}
-        {/* <button
-          id="access-denied-back-btn"
-          className={styles.backButton}
-          onClick={handleBack}
-          type="button"
-        >
-          <svg
-            className={styles.backArrow}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M19 12H5M12 5l-7 7 7 7" />
-          </svg>
-          Go Back
-        </button> */}
       </div>
     </div>
   );

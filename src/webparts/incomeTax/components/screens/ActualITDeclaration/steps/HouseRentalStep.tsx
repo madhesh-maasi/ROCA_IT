@@ -8,6 +8,7 @@ import { AppFilePicker } from "../../../../../../CommonInputComponents/FilePicke
 import styles from "../ITDeclaration.module.scss";
 
 import { panFormatter } from "../../../../../../common/utils/validationUtils";
+import { removeTimestamp } from "../../../../../../common/utils/functions";
 
 interface IRentRow {
   month: string;
@@ -207,15 +208,18 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                   <label>
                     Tenant's Address <span>*</span>
                   </label>
-                  <InputField
-                    id={`ll-addr-${idx}`}
-                    value={ll.address}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      onLandlordChange(idx, "address", e.target.value)
-                    }
-                    placeholder="Enter Address"
-                    disabled={readOnly}
-                  />
+                  <div title={readOnly ? ll.address : ""}>
+                    <InputField
+                      id={`ll-addr-${idx}`}
+                      value={ll.address}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onLandlordChange(idx, "address", e.target.value)
+                      }
+                      placeholder="Enter Address"
+                      disabled={readOnly}
+                      maxLength={120}
+                    />
+                  </div>
                 </div>
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "24px" }}
@@ -267,7 +271,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                             whiteSpace: "nowrap",
                             maxWidth: "180px",
                           }}
-                          title={att.FileLeafRef}
+                          title={removeTimestamp(att.FileLeafRef)}
                           onClick={() => {
                             window.open(
                               att.FileRef,
@@ -276,7 +280,7 @@ const HouseRentalStep: React.FC<IHouseRentalStepProps> = ({
                             );
                           }}
                         >
-                          {att.FileLeafRef.replace(/_\d{14}(\.pdf)$/i, "$1")}
+                          {removeTimestamp(att.FileLeafRef)}
                         </span>
                         {!readOnly && onDeleteAttachment && (
                           <i

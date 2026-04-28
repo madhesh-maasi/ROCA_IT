@@ -31,3 +31,10 @@
 .inputField label {
   font-weight: 500 !important;
 }
+.actionCell {
+  display: flex;
+  align-items: center;
+  i {
+    font-size: 13px !important;
+  }
+}

@@ -98,21 +98,21 @@ const SubmittedDeclarations: React.FC = () => {
   const location = useLocation();
   const userEmail = useAppSelector(selectUserDetails)?.Email;
 
-  const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual">(() => {
-    const queryParams = new URLSearchParams(location.search);
-    let tabParam = queryParams.get("tab");
+  const [activeTab, setActiveTab] = React.useState<"Planned" | "Actual" | "">(
+    () => {
+      const queryParams = new URLSearchParams(location.search);
+      let tabParam = queryParams.get("tab");
+      if (!tabParam) {
+        const windowParams = new URLSearchParams(window.location.search);
+        tabParam = windowParams.get("tab");
+      }
 
-    // If not found in hash-search, check main window search (SPFx/SharePoint often move params here)
-    if (!tabParam) {
-      const windowParams = new URLSearchParams(window.location.search);
-      tabParam = windowParams.get("tab");
-    }
-
-    if (tabParam === "Planned" || tabParam === "Actual") {
-      return tabParam as "Planned" | "Actual";
-    }
-    return location.state?.tab || "Planned";
-  });
+      if (tabParam === "Planned" || tabParam === "Actual") {
+        return tabParam as "Planned" | "Actual";
+      }
+      return location.state?.tab || "";
+    },
+  );
   const [search, setSearch] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [fy, setFy] = React.useState(curFinanicalYear);
@@ -148,11 +148,11 @@ const SubmittedDeclarations: React.FC = () => {
             .orderBy("Id", false)
             .top(5000)(),
         ]);
-        if (actualItems.length > 0) {
-          setActiveTab("Actual");
-        } else {
-          setActiveTab("Planned");
-        }
+        setActiveTab((prev) => {
+          if (prev) return prev;
+          return actualItems.length > 0 ? "Actual" : "Planned";
+        });
+
         setPlannedRows(plannedItems.map(mapRow));
         setActualRows(actualItems.map(mapRow));
       } catch (err) {
@@ -219,6 +219,7 @@ const SubmittedDeclarations: React.FC = () => {
 
           {/* DataTable */}
           <AppDataTable
+            key={activeTab}
             data={tableData}
             columns={COLUMNS}
             globalFilter={search}

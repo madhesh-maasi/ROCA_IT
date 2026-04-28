@@ -137,10 +137,10 @@ export const deploymentConfig = (_siteUrl: string): string => {
   if (window.location.origin == "https://chandrudemo.sharepoint.com") {
     _rocaSiteUrl = "https://chandrudemo.sharepoint.com/sites/Roca";
   } else if (window.location.origin == "https://rocasanitario.sharepoint.com") {
-    if ((_siteUrl || "").toLowerCase().includes("rinit")) {
-      _rocaSiteUrl = "https://rocasanitario.sharepoint.com/sites/RBPPLWOW";
-    } else {
+    if ((_siteUrl || "").toLowerCase().includes("rinitdev")) {
       _rocaSiteUrl = "https://rocasanitario.sharepoint.com/sites/RINMASTERDEV";
+    } else if ((_siteUrl || "").toLowerCase().includes("rinit")) {
+      _rocaSiteUrl = "https://rocasanitario.sharepoint.com/sites/RBPPLWOW";
     }
   }
   return _rocaSiteUrl;

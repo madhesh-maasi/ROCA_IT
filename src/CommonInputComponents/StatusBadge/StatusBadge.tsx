@@ -10,7 +10,7 @@ export type StatusVariant =
   | "pending"
   | "draft"
   | "completed"
-  | "not_submitted"
+  | "not submitted"
   | "released";
 
 const STATUS_CONFIG: Record<
@@ -49,7 +49,7 @@ const STATUS_CONFIG: Record<
     icon: "pi pi-check-circle",
     colorClass: styles.released,
   },
-  not_submitted: {
+  "not submitted": {
     label: "Not Submitted",
     icon: "pi pi-times-circle",
     colorClass: styles.notSubmitted,

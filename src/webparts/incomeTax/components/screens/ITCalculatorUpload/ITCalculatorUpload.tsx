@@ -133,7 +133,7 @@ const ITCalculatorUpload: React.FC = () => {
         toast,
         "success",
         "Added",
-        "IT Computation file successfully added",
+        "IT Computation file added successfully ",
       );
       void loadFiles();
     } catch (err) {
@@ -210,7 +210,12 @@ const ITCalculatorUpload: React.FC = () => {
     try {
       setIsLoading(true);
       await deleteItem(LIST_NAMES.IT_CALCULATOR, fileToDelete.ID);
-      showToast(toast, "success", "Deleted", "File deleted successfully");
+      showToast(
+        toast,
+        "success",
+        "Deleted",
+        "IT Computation file deleted successfully",
+      );
       setShowDeletePopup(false);
       void loadFiles();
     } catch (err) {
@@ -273,7 +278,12 @@ const ITCalculatorUpload: React.FC = () => {
             title="Download"
             onClick={() => {
               window.open(rowData.FileRef, "_blank");
-              showToast(toast, "success", "Downloaded", "IT Computation file downloaded successfully.");
+              showToast(
+                toast,
+                "success",
+                "Downloaded",
+                "IT Computation file downloaded successfully.",
+              );
             }}
           />
           {rowData.FinanceYear == curFinanicalYear && (
@@ -356,6 +366,7 @@ const ITCalculatorUpload: React.FC = () => {
 
       <div className={styles.tableCard}>
         <AppDataTable
+          key={activeTab}
           columns={columns}
           data={filteredData}
           globalFilter={searchTerm}
@@ -445,7 +456,8 @@ const ITCalculatorUpload: React.FC = () => {
         onHide={() => setShowDeletePopup(false)}
         onConfirm={handleConfirmDelete}
         actionType="Delete"
-        title="Delete Computation"
+        title="IT Computation"
+        message="Are you sure you want to delete this IT Computation?"
       />
     </div>
   );

@@ -12,9 +12,11 @@ function getCurrentFinancialYear(): string {
 }
 export const curFinanicalYear: string = getCurrentFinancialYear();
 
-export function getFYOptions(data: any[] = []): { label: string; value: string }[] {
+export function getFYOptions(
+  data: any[] = [],
+): { label: string; value: string }[] {
   const years = new Set<string>();
-  
+
   // Always include the current financial year
   years.add(curFinanicalYear);
 
@@ -58,4 +60,15 @@ export function globalSearchFilter<T>(
       return String(value).toLowerCase().includes(lowerSearch);
     });
   });
+}
+export function removeTimestamp(fileName: string) {
+  // Split extension
+  const lastDotIndex = fileName.lastIndexOf(".");
+  const name = fileName.substring(0, lastDotIndex);
+  const extension = fileName.substring(lastDotIndex);
+
+  // Remove timestamp (underscore + numbers at the end)
+  const cleanedName = name.replace(/_\d+$/, "");
+
+  return cleanedName + extension;
 }
