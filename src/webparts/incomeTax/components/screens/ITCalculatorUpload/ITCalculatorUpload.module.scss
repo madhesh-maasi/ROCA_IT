@@ -262,3 +262,56 @@
     }
   }
 }
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 768px) {
+  .headerToolbar {
+    .tabToggle {
+      width: 100%;
+
+      .tabBtn {
+        flex: 1;
+        text-align: center;
+      }
+    }
+
+    .actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+
+  .tableCard {
+    overflow-x: auto;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .headerToolbar .actions {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+
+    > div {
+      flex: 1;
+      min-width: 0;
+
+      :global(.p-input-icon-left),
+      :global(.p-inputtext) {
+        width: 100%;
+      }
+    }
+
+    > :global(.p-button),
+    > button {
+      flex: 0 0 auto;
+      min-width: 100px;
+      justify-content: center;
+      padding: 8px 12px;
+    }
+  }
+}

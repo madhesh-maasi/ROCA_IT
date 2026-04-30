@@ -476,11 +476,14 @@ const EmployeeDeclarations: React.FC = () => {
       </div>
       <div
         className={styles.rightSide}
-        style={{ width: "100%", justifyContent: "flex-end", marginBottom: 10 }}
+        style={{ justifyContent: "flex-end", marginBottom: 10 }}
       >
-        <SearchInput value={search} onChange={(val) => setSearch(val)} />
+        <div className={styles.searchBlock}>
+          <SearchInput value={search} onChange={(val) => setSearch(val)} />
+        </div>
+
         <div className={styles.filters}>
-          <div style={{ width: "130px" }}>
+          <div className={styles.filterItem}>
             <AppDropdown
               value={selectedRegime}
               onChange={(e) => setSelectedRegime(e.value)}
@@ -492,7 +495,7 @@ const EmployeeDeclarations: React.FC = () => {
               placeholder="Tax Regime"
             />
           </div>
-          <div style={{ width: "175px" }}>
+          <div className={styles.filterItem}>
             <AppDropdown
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.value)}
@@ -506,20 +509,23 @@ const EmployeeDeclarations: React.FC = () => {
             options={fyOptions}
           />
         </div>
-        <ActionButton
-          variant="export"
-          icon="pi pi-download"
-          label="Export"
-          onClick={handleExport}
-        />
-        {selectedRows.length > 0 && !isProcessing && (
+
+        <div className={styles.btnGroup}>
           <ActionButton
             variant="export"
-            icon="pi pi-check"
-            label={`Approve`}
-            onClick={handleBulkApprove}
+            icon="pi pi-download"
+            label="Export"
+            onClick={handleExport}
           />
-        )}
+          {selectedRows.length > 0 && !isProcessing && (
+            <ActionButton
+              variant="export"
+              icon="pi pi-check"
+              label="Approve"
+              onClick={handleBulkApprove}
+            />
+          )}
+        </div>
       </div>
 
       <AppDataTable

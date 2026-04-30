@@ -11,6 +11,8 @@
 
   @media print {
     padding: 0;
+    margin: 0;
+    max-width: none;
     border: none;
     box-shadow: none;
   }
@@ -230,4 +232,89 @@
   color: #333;
   font-weight: 600;
   min-width: 150px;
+}
+// ── Mobile Overrides ──────────────────────────────────────────────────────
+@media (max-width: 480px) {
+  .container {
+    padding: 15px;
+    border: none;
+    box-shadow: none;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 15px;
+
+    .logos {
+      justify-content: center;
+      gap: 10px;
+
+      img {
+        height: 35px;
+      }
+    }
+
+    .title {
+      text-align: center;
+      h1 {
+        font-size: 14px;
+      }
+      h2 {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .table {
+    td,
+    th {
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+
+    .labelColumn {
+      width: 45%;
+    }
+    .valueColumn {
+      width: 55%;
+    }
+  }
+
+  .agreementSection {
+    .checkboxContainer {
+      font-size: 12px;
+    }
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    margin-top: 30px;
+
+    .footerLeft,
+    .footerRight {
+      width: 100% !important;
+      align-items: flex-start !important;
+    }
+  }
+
+  .inputField {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+
+    label {
+      font-size: 11px;
+    }
+
+    .signatureInput,
+    .staticValue {
+      width: 100%;
+      min-width: unset;
+      font-size: 13px;
+    }
+  }
 }

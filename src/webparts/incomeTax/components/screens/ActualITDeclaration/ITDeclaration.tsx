@@ -2219,27 +2219,26 @@ const ITDeclaration: React.FC = () => {
               boxShadow: "none",
             }}
           />
-          <div style={{ display: "flex", gap: "12px" }}>
-            {activeStep !== "Home" && (
-              <ActionButton
-                variant="continue"
-                label="Previous"
-                onClick={async () => {
-                  const idx = steps.findIndex((s) => s.key === activeStep);
-                  if (idx > 0) {
-                    const prevStep = steps[idx - 1].key;
-                    await handleSaveStep(prevStep);
-                    setActiveStep(prevStep);
-                    setIsEditMode(false);
-                  }
-                }}
-                style={{
-                  background: "white",
-                  color: "#307a8a",
-                  border: "1px solid #307a8a",
-                }}
-              />
-            )}
+          {activeStep !== "Home" && (
+            <ActionButton
+              variant="continue"
+              label="Previous"
+              onClick={async () => {
+                const idx = steps.findIndex((s) => s.key === activeStep);
+                if (idx > 0) {
+                  const prevStep = steps[idx - 1].key;
+                  await handleSaveStep(prevStep);
+                  setActiveStep(prevStep);
+                  setIsEditMode(false);
+                }
+              }}
+              style={{
+                background: "white",
+                color: "#307a8a",
+                border: "1px solid #307a8a",
+              }}
+            />
+          )}
             {/* Workflow Buttons */}
             {isAdmin &&
               status === "Submitted" &&
@@ -2419,7 +2418,6 @@ const ITDeclaration: React.FC = () => {
                   loading={isLoading}
                 />
               )}
-          </div>
         </div>
       )}
     </div>

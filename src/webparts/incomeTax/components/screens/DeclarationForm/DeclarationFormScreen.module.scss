@@ -11,7 +11,6 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid #e2e8f0;
-    // padding-bottom: 20px;
 
     h2 {
       margin: 0;
@@ -22,11 +21,10 @@
 
   .formContainer {
     background: white;
-    // padding: 40px;
     border-radius: 12px;
-    // box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     flex: 1;
     overflow-y: auto;
+    overflow-x: auto; // Handle horizontal overflow for tables
   }
 
   .footer {
@@ -57,5 +55,63 @@
     padding: 0;
     box-shadow: none;
     border-radius: 0;
+  }
+}
+
+// ── Responsive overrides ────────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 768px) {
+  .screen {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .screen .header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .screen {
+    padding: 10px;
+    gap: 10px;
+    min-height: calc(100dvh - 80px);
+  }
+
+  .screen .header h2 {
+    font-size: 14px;
+  }
+
+  .screen .footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-top: 16px;
+
+    button {
+      width: 100% !important;
+      min-width: unset !important;
+      padding: 8px 4px !important;
+      font-size: 13px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      gap: 8px !important;
+      height: 42px !important;
+
+      :global(.p-button-icon) {
+        margin: 0 !important; 
+        position: static !important;
+      }
+
+      :global(.p-button-label) {
+        flex: none !important;
+        width: auto !important;
+        margin: 0 !important;
+      }
+    }
   }
 }

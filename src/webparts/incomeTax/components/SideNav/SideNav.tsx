@@ -57,6 +57,28 @@ const canSee = (role: AppRole, allowedRoles?: AppRole[]): boolean => {
   return allowedRoles.includes(role);
 };
 
+// ─── Custom media query hook ──────────────────────────────────────────────────
+
+const useMediaQuery = (query: string): boolean => {
+  const [matches, setMatches] = React.useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent): void => setMatches(e.matches);
+    mql.addEventListener("change", handler);
+    setMatches(mql.matches);
+    return () => mql.removeEventListener("change", handler);
+  }, [query]);
+
+  return matches;
+};
+
 // ─── Accordion sub-list ───────────────────────────────────────────────────────
 
 interface IAccordionListProps {
@@ -94,15 +116,34 @@ const AccordionList: React.FC<IAccordionListProps> = ({ open, children }) => {
 export interface ISideNavProps {
   role: AppRole;
   activeKey: string;
+  /** Mobile overlay: controlled by Dashboard */
+  isMobileOpen?: boolean;
+  onClose?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
+const SideNav: React.FC<ISideNavProps> = ({ role, activeKey, isMobileOpen, onClose }) => {
   const navigate = useNavigate();
   const user = useAppSelector(selectUserDetails);
 
-  const [collapsed, setCollapsed] = React.useState(false);
+  // Detect breakpoints
+  const isTablet = useMediaQuery("(max-width: 768px) and (min-width: 481px)");
+  const isMobile = useMediaQuery("(max-width: 480px)");
+
+  // On tablet, default to collapsed; on desktop, start expanded
+  const [collapsed, setCollapsed] = React.useState<boolean>(isTablet);
+
+  // Sync collapsed state when breakpoint changes
+  React.useEffect(() => {
+    if (isTablet) {
+      setCollapsed(true);
+    } else if (!isMobile) {
+      // Laptop / desktop — restore expanded
+      setCollapsed(false);
+    }
+  }, [isTablet, isMobile]);
+
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     itDeclaration: true,
     administration: true,
@@ -117,6 +158,96 @@ const SideNav: React.FC<ISideNavProps> = ({ role, activeKey }) => {
   };
 
   const visibleGroups = NAV_GROUPS.filter((g) => canSee(role, g.allowedRoles));
+
+  // ── On mobile: render overlay drawer ──────────────────────────────────────
+  if (isMobile) {
+    return (
+      <>
+        {/* Backdrop */}
+        {isMobileOpen && (
+          <div
+            className={styles.backdrop}
+            onClick={onClose}
+            aria-hidden="true"
+          />
+        )}
+        {/* Drawer */}
+        <nav
+          className={`${styles.sideNav} ${styles.mobileDrawer} ${isMobileOpen ? styles.mobileDrawerOpen : ""}`}
+          id="sideNav"
+          aria-hidden={!isMobileOpen}
+        >
+          <ul className={styles.navList}>
+            {visibleGroups.map((group) => {
+              const groupIcon =
+                ICON_MAP[group.icon as keyof typeof ICON_MAP] ?? FileEditIcon;
+              const visibleItems = group.items.filter((item) =>
+                canSee(role, item.allowedRoles),
+              );
+              const isOpen = openGroups[group.key];
+              const hasActiveChild = visibleItems.some(
+                (item) => activeKey === item.key,
+              );
+
+              return (
+                <li key={group.key}>
+                  <div
+                    className={`${styles.groupHeader} ${hasActiveChild ? styles.groupHeaderActive : ""}`}
+                    onClick={() => toggleGroup(group.key)}
+                  >
+                    <HugeiconsIcon
+                      icon={groupIcon}
+                      size={ICON_SIZE}
+                      strokeWidth={1.8}
+                      className={styles.groupIcon}
+                    />
+                    <span className={styles.groupLabel}>{group.label}</span>
+                    <span
+                      className={`${styles.chevron} ${isOpen ? styles.chevronOpen : styles.chevronClosed}`}
+                    >
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        size={14}
+                        strokeWidth={2}
+                      />
+                    </span>
+                  </div>
+                  <AccordionList open={isOpen}>
+                    {visibleItems.map((item) => {
+                      const itemIcon =
+                        ICON_MAP[item.icon as keyof typeof ICON_MAP] ??
+                        Invoice03Icon;
+                      const isActive = activeKey === item.key;
+                      return (
+                        <li
+                          key={item.key}
+                          className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+                          onClick={() => {
+                            navigate("/" + item.key);
+                            if (onClose) onClose();
+                          }}
+                        >
+                          <HugeiconsIcon
+                            icon={itemIcon}
+                            size={ICON_SIZE_SM}
+                            strokeWidth={isActive ? 2 : 1.6}
+                            className={styles.itemIcon}
+                          />
+                          <span className={styles.navItemText} title={item.label}>
+                            {item.label}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </AccordionList>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </>
+    );
+  }
 
   // ── Collapsed mode: flat list of all child item icons ─────────────────────
   if (collapsed) {

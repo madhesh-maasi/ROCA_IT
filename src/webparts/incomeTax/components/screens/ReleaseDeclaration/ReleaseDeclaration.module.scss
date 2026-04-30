@@ -290,3 +290,164 @@
     }
   }
 }
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Laptop
+@media (max-width: 1024px) {
+  .formCard .formRow {
+    gap: 40px;
+  }
+}
+
+// Tablet
+@media (max-width: 768px) {
+  .screen {
+    padding: 16px;
+  }
+
+  .formCard {
+    padding: 10px 14px;
+    gap: 16px;
+
+    .formRow {
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .calendarCol {
+      max-width: 100%;
+    }
+
+    .selectionRow .selectionControls {
+      flex-wrap: wrap;
+
+      .peoplePickerWrapper {
+        max-width: 100%;
+        width: 100%;
+      }
+    }
+  }
+
+  .searchToolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+
+    .rightActions {
+      width: 100%;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+
+  .tabsCard .tabToggle {
+    width: 100%;
+
+    .tabBtn {
+      flex: 1;
+      text-align: center;
+    }
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .screen {
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .formCard {
+    padding: 10px;
+
+    .radioGroup {
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .selectionRow .selectionControls {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .actionsRow {
+      :global(.p-button) {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  .searchToolbar {
+    width: 100%;
+    
+    .rightActions {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+
+      > div:first-child {
+        flex: 1;
+        min-width: 0;
+
+        > div {
+          max-width: none !important;
+        }
+
+        :global(.p-input-icon-left), :global(.p-inputtext) {
+          width: 100%;
+        }
+
+        &:nth-last-child(3) {
+          width: 100%;
+          flex: none;
+        }
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+
+        &:nth-child(3) {
+          flex: 1;
+        }
+
+        &:nth-child(2) {
+          flex: 0 0 auto;
+          min-width: 100px;
+        }
+
+        :global(.p-button), button {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    }
+  }
+
+  .filters {
+    display: flex;
+    flex-direction: row;
+    flex: 2;
+    gap: 8px;
+    width: auto;
+
+    > div {
+      flex: 1;
+      width: 100% !important;
+      min-width: 0;
+    }
+  }
+
+  .filters :global {
+    .p-dropdown {
+      width: 100% !important;
+    }
+  }
+}

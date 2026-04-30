@@ -16,6 +16,7 @@ import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
   fetchEmployeeMaster,
   selectEmployees,
+  selectEmployeesLoading,
 } from "../../../../../store/slices/employeeSlice";
 import {
   getListItems,
@@ -46,6 +47,7 @@ const ReleaseExtension: React.FC = () => {
   const dispatch = useAppDispatch();
   const toast = React.useRef<PrimeToast>(null);
   const employeeMaster = useAppSelector(selectEmployees);
+  const isEmployeesLoading = useAppSelector(selectEmployeesLoading);
   const user = useAppSelector(selectUserDetails);
 
   // UI State
@@ -82,10 +84,6 @@ const ReleaseExtension: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  React.useEffect(() => {
-    void dispatch(fetchEmployeeMaster());
-  }, []);
 
   React.useEffect(() => {
     void fetchData();
@@ -211,7 +209,7 @@ const ReleaseExtension: React.FC = () => {
   return (
     <div className={styles.screen}>
       <AppToast toastRef={toast} />
-      {isLoading && <Loader label={loadingLabel} />}
+      {(isLoading || isEmployeesLoading) && <Loader label={loadingLabel} />}
 
       <div className={styles.titleBlock}>
         <h2>Release Extension</h2>

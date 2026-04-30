@@ -51,9 +51,14 @@ const COLUMNS: IColumnDef[] = [
       <span className={styles.reqID}>{row.requestId}</span>
     ),
     sortable: false,
+    style: { minWidth: "180px" },
   },
   { field: "financialYear", header: "Financial Year", sortable: false },
-  { field: "regimeType", header: "Regime Type", sortable: false },
+  {
+    field: "regimeType",
+    header: "Regime Type",
+    sortable: false,
+  },
   { field: "dateOfSubmission", header: "Date of Submission", sortable: false },
   {
     field: "declarationEndDate",
@@ -226,7 +231,10 @@ const SubmittedDeclarations: React.FC = () => {
             emptyMessage={`No ${activeTab} declarations found for FY ${fy}.`}
             onRowClick={(row: any) => {
               const today = new Date().toISOString().split(".")[0] + "Z";
-              if (today > row.data.declarationEndDate) {
+              if (
+                today > row.data.declarationEndDate &&
+                row.data.status.toLowerCase() !== "approved"
+              ) {
                 showToast(
                   toast,
                   "error",

@@ -40,6 +40,22 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
   const dispatch = useAppDispatch();
   const location = useLocation();
 
+  // ── Mobile nav state ────────────────────────────────────────────────────────
+  const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false);
+
+  const toggleMobileNav = React.useCallback(() => {
+    setIsMobileNavOpen((prev) => !prev);
+  }, []);
+
+  const closeMobileNav = React.useCallback(() => {
+    setIsMobileNavOpen(false);
+  }, []);
+
+  // Close mobile nav on every route change
+  React.useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [location.pathname]);
+
   const activeScreen = React.useMemo(() => {
     const path = location.pathname.replace(/^\//, "");
     if (path === "itDeclaration" || path === "actualItDeclaration") {
@@ -230,9 +246,16 @@ const Dashboard: React.FC<IDashboardProps> = ({ role }) => {
 
   return (
     <div className={styles.dashboard}>
-      <AppHeader />
+      <AppHeader onMenuToggle={toggleMobileNav} isMobileNavOpen={isMobileNavOpen} />
       <div className={styles.body}>
-        {hasAccess && <SideNav role={role} activeKey={activeScreen} />}
+        {hasAccess && (
+          <SideNav
+            role={role}
+            activeKey={activeScreen}
+            isMobileOpen={isMobileNavOpen}
+            onClose={closeMobileNav}
+          />
+        )}
         <main className={styles.content} id="mainContent">
           {renderDashboardContent()}
         </main>

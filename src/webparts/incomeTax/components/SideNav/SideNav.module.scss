@@ -1,7 +1,6 @@
 .sideNav {
   width: 270px;
   min-width: 270px;
-  // background: #ffffff;
   background-color: #307a8a;
   border-right: 1px solid #e8eaf0;
   display: flex;
@@ -148,7 +147,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  // padding: 0 0 4px;
 }
 
 // ── Nav item ──────────────────────────────────────────────────────
@@ -165,7 +163,6 @@
   transition:
     background 0.15s,
     color 0.15s;
-  border-radius: 0;
   margin: 2px 8px;
   border-radius: 8px;
   &:hover {
@@ -179,7 +176,6 @@
 }
 
 .navItemActive {
-  // background: #307a8a !important;
   background: #fff;
   color: #307a8a !important;
   border-radius: 8px;
@@ -187,7 +183,6 @@
   padding-left: 30px;
 
   .itemIcon {
-    // color: #ffffff !important;
     color: #307a8a;
   }
 }
@@ -243,17 +238,65 @@
 }
 
 .collapsedItemActive {
-  // background: #307a8a !important;
   background: #fff;
 
   .itemIcon {
-    // color: #ffffff !important;
     color: #307a8a;
   }
 
   &:hover {
-    // background: #307a8a !important;
     background: #fff;
     transform: scale(1.08);
+  }
+}
+
+// ── Mobile overlay drawer ─────────────────────────────────────────
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 199;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobileDrawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 280px;
+  min-width: 280px;
+  z-index: 200;
+  margin-top: 0;
+  border-radius: 0 12px 12px 0;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+
+  .navList {
+    padding-top: 16px;
+  }
+}
+
+.mobileDrawerOpen {
+  transform: translateX(0);
+}
+
+// ── Tablet responsive: auto-collapse at ≤768px handled in JS ──────
+// No extra SCSS needed since the JS useMediaQuery hook handles it.
+
+// ── Laptop tweak ──────────────────────────────────────────────────
+@media (max-width: 1024px) and (min-width: 769px) {
+  .sideNav:not(.sideNavCollapsed) {
+    width: 240px;
+    min-width: 240px;
   }
 }

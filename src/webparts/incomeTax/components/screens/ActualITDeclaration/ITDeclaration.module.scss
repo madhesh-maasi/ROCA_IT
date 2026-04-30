@@ -68,7 +68,17 @@
   margin: 0px 0px 20px 0px;
   position: relative;
   padding: 0 20px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+
+  &::-webkit-scrollbar {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+  }
 }
 
 .stepperLine {
@@ -148,22 +158,22 @@
 
 .stepGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 .homeGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 .basicInfoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(20%, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18%, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
 }
 
@@ -381,12 +391,15 @@
 
 .footerActions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+  gap: 12px;
   padding: 20px 10px;
-  // border-top: 1px solid #e2e8f0;
-  // background: white;
   z-index: 10;
+
+  > :first-child {
+    margin-right: auto;
+  }
 }
 
 .stepHeader {
@@ -404,5 +417,274 @@
     flex: 1;
     height: 1px;
     background-color: #cbd5e1;
+  }
+}
+
+// ── Mobile Responsive Overrides ──────────────────────────────────────────
+@media (max-width: 480px) {
+  .stepGrid,
+  .homeGrid,
+  .basicInfoGrid,
+  .summaryGrid,
+  .landlordGrid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .contentWrapper {
+    padding: 0px 4px;
+  }
+
+  .header h1 {
+    font-size: 16px;
+  }
+
+  .declarationTag {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .metaInfo {
+    gap: 12px;
+    flex-wrap: wrap !important;
+    .infoBox span {
+      font-size: 13px;
+    }
+  }
+
+  .footerActions {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    padding: 16px 10px !important;
+
+    button {
+      width: 100% !important;
+      min-width: unset !important;
+      margin: 0 !important;
+      height: 42px;
+      padding: 0 8px !important;
+      font-size: 14px !important;
+      justify-content: center;
+      display: flex;
+      align-items: center;
+    }
+
+    // Ensure 2 buttons per row
+    > button,
+    > div button {
+      grid-column: auto;
+    }
+  }
+
+  :global(.p-toast) {
+    width: 92vw !important;
+    left: 4vw !important;
+    right: 4vw !important;
+  }
+
+  .noteBox {
+    width: 100%;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  .stepperContainer {
+    justify-content: flex-start;
+    padding: 15px 10px 5px 10px;
+    overflow-x: auto;
+    gap: 0;
+  }
+
+  .stepperLine {
+    display: none;
+  }
+
+  .stepItem {
+    flex: 1;
+    min-width: 85px;
+    max-width: 120px;
+    position: relative;
+    z-index: 1;
+
+    &:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      width: 100%;
+      border-top: 1px dashed #cbd5e1;
+      z-index: 1;
+    }
+  }
+
+  .iconCircle {
+    position: relative;
+    z-index: 2;
+  }
+
+  .stepLabel {
+    font-size: 11px;
+    max-width: 100%;
+    padding: 0 4px;
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .houseRentalTable {
+    width: 100%;
+    min-width: 560px;
+
+    th,
+    td {
+      padding: 6px 10px;
+    }
+  }
+
+  // Dynamic Section table — neat table layout on mobile
+  .customTable {
+    min-width: 800px;
+    width: 100%;
+    table-layout: fixed;
+
+    thead {
+      display: table-header-group;
+    }
+
+    th {
+      padding: 10px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e293b;
+      white-space: nowrap;
+      word-break: normal;
+      vertical-align: bottom;
+    }
+
+    td {
+      padding: 8px;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    // ── 5 columns: Section | Type | Max Amount | Amount | Attachments ──
+    th:nth-child(1):nth-last-child(5),
+    td:nth-child(1):nth-last-child(5) {
+      width: 10%;
+    }
+
+    th:nth-child(2):nth-last-child(4),
+    td:nth-child(2):nth-last-child(4) {
+      width: 25%;
+    }
+
+    th:nth-child(3):nth-last-child(3),
+    td:nth-child(3):nth-last-child(3) {
+      width: 18%;
+    }
+
+    th:nth-child(4):nth-last-child(2),
+    td:nth-child(4):nth-last-child(2) {
+      width: 18%;
+    }
+
+    th:nth-child(5):nth-last-child(1),
+    td:nth-child(5):nth-last-child(1) {
+      width: 29%;
+    }
+
+    // ── 4 columns: Type | Max Amount | Amount | Attachments ──
+    th:nth-child(1):nth-last-child(4),
+    td:nth-child(1):nth-last-child(4) {
+      width: 30%;
+    }
+
+    th:nth-child(2):nth-last-child(3),
+    td:nth-child(2):nth-last-child(3) {
+      width: 20%;
+    }
+
+    th:nth-child(3):nth-last-child(2),
+    td:nth-child(3):nth-last-child(2) {
+      width: 20%;
+    }
+
+    th:nth-child(4):nth-last-child(1),
+    td:nth-child(4):nth-last-child(1) {
+      width: 30%;
+    }
+
+    // ── 3 columns: Type | Max Amount | Amount (no attachment) ──
+    th:nth-child(1):nth-last-child(3),
+    td:nth-child(1):nth-last-child(3) {
+      width: 40%;
+    }
+
+    th:nth-child(2):nth-last-child(2),
+    td:nth-child(2):nth-last-child(2) {
+      width: 28%;
+    }
+
+    th:nth-child(3):nth-last-child(1),
+    td:nth-child(3):nth-last-child(1) {
+      width: 32%;
+    }
+  }
+
+  .houseRentalTable {
+    min-width: 650px;
+    width: 100%;
+    table-layout: fixed;
+
+    th,
+    td {
+      &:nth-child(1) {
+        width: 12%;
+      }
+      &:nth-child(2) {
+        width: 35%;
+      }
+      &:nth-child(3) {
+        width: 28%;
+      }
+      &:nth-child(4) {
+        width: 25%;
+      }
+    }
+
+    th {
+      white-space: nowrap;
+    }
+  }
+
+  .coTravellerTable {
+    min-width: 650px;
+    table-layout: fixed;
+
+    th,
+    td {
+      &:nth-child(1) {
+        width: 28%;
+      }
+      &:nth-child(2) {
+        width: 38%;
+      }
+      &:nth-child(3) {
+        width: 34%;
+      }
+    }
+  }
+
+  .formGroup > div[style*="display: flex"],
+  .formGroup > div[style*="display:flex"] {
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+  }
+
+  .header {
+    flex-direction: unset;
   }
 }

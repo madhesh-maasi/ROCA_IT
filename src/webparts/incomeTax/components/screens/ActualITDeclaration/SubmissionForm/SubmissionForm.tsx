@@ -55,7 +55,7 @@ const SubmissionForm: React.FC<ISubmissionFormProps> = ({
   isReadOnly = false,
 }) => {
   return (
-    <div className={styles.container}>
+    <div className={styles.container} id="submission-form-main">
       <header className={styles.header}>
         <div className={styles.logos}>
           <img src={rocaLogo} alt="Roca Logo" />

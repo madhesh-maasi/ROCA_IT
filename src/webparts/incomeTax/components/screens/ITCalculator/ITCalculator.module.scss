@@ -46,3 +46,23 @@
     background: #3942a1;
   }
 }
+
+/* Tablet */
+@media (max-width: 768px) {
+  .excelImageWrapper {
+    img {
+      max-width: 80px;
+      height: 80px;
+    }
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .excelImageWrapper {
+    img {
+      max-width: 60px;
+      height: 60px;
+    }
+  }
+}

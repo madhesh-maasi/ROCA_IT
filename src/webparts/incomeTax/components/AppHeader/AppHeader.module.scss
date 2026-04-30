@@ -2,7 +2,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  // background: #307a8a;
   padding: 0 10px;
   border-radius: 4px;
   height: 52px;
@@ -32,3 +31,53 @@
     height: 40px;
   }
 }
+
+// ── Hamburger button — hidden on desktop, shown on mobile ──────────────────
+.hamburger {
+  display: none; // Hidden by default (desktop)
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #307a8a;
+  flex-shrink: 0;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(48, 122, 138, 0.08);
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Tablet + Mobile: show hamburger
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+}
+
+// Mobile: shrink title
+@media (max-width: 480px) {
+  .brandTitle {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .logo img {
+    height: 32px;
+  }
+
+  .header {
+    padding: 0 8px;
+  }
+}
+

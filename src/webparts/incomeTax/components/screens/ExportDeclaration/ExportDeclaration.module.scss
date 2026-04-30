@@ -148,3 +148,56 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 768px) {
+  .filtersBar {
+    gap: 16px;
+    padding: 14px;
+
+    .actionsGroup {
+      margin-left: 0;
+      width: 100%;
+
+      .downloadBtn {
+        width: 100%;
+      }
+    }
+  }
+
+  .tabToggle {
+    width: 100%;
+
+    .tabBtn {
+      flex: 1;
+      text-align: center;
+    }
+  }
+
+  .tableCard {
+    overflow-x: auto;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .notePanel .noteList {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filtersBar {
+    padding: 10px;
+    gap: 12px;
+
+    .filterGroup .yearDropdown {
+      width: 100%;
+    }
+
+    .filterGroup .radioGroup {
+      flex-wrap: wrap;
+    }
+  }
+}

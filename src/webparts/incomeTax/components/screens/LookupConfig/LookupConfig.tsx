@@ -837,12 +837,14 @@ const LookupConfig: React.FC = () => {
       <div className={styles.header}>
         <h2>Lookup Configuration</h2>
         <div className={styles.toolbar}>
-          <SearchInput
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Search"
-            className={styles.searchInput}
-          />
+          <div className={styles.searchInputWrapper}>
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Search"
+              className={styles.searchInput}
+            />
+          </div>
           <ActionButton
             variant="import"
             className="secondaryBtn"

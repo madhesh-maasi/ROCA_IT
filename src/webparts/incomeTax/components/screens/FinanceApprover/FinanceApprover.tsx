@@ -214,52 +214,56 @@ const FinanceApprover: React.FC = () => {
       />
       {(isAdding || isDeleting) && <Loader fullScreen label="Processing..." />}
       <AppToast toastRef={toast} />
-      <div className={screenStyles.toolbar} style={{ alignItems: "center" }}>
+      <div className={screenStyles.toolbar}>
         <h2 className={screenStyles.pageTitle} style={{ margin: 0 }}>
           Finance Approver
         </h2>
         <div className={screenStyles.spacer} />
 
-        <SearchInput value={search} onChange={(val) => setSearch(val)} />
+        <div className={styles.actionRow}>
+          <div className={styles.searchBlock}>
+            <SearchInput value={search} onChange={(val) => setSearch(val)} />
+          </div>
 
-        <div className={styles.btnGroup}>
-          <ActionButton
-            variant="export"
-            icon="pi pi-download"
-            className="primaryBtn"
-            onClick={() => {
-              const exportData = filtered.map((u) => ({
-                "Employee ID": u.EmployeeId || "-",
-                "Employee Name": u.Title,
-              }));
-              if (exportData.length) {
-                exportToExcel(exportData, "Finance_Approvers");
-                setShowDownloadPopup(true);
-                setTimeout(() => {
-                  setShowDownloadPopup(false);
-                }, 3000);
-              } else {
-                showToast(
-                  toast,
-                  "error",
-                  "Export",
-                  "No data available for export",
-                  4000,
-                );
-              }
-            }}
-          />
+          <div className={styles.btnGroup}>
+            <ActionButton
+              variant="export"
+              icon="pi pi-download"
+              className="primaryBtn"
+              onClick={() => {
+                const exportData = filtered.map((u) => ({
+                  "Employee ID": u.EmployeeId || "-",
+                  "Employee Name": u.Title,
+                }));
+                if (exportData.length) {
+                  exportToExcel(exportData, "Finance_Approvers");
+                  setShowDownloadPopup(true);
+                  setTimeout(() => {
+                    setShowDownloadPopup(false);
+                  }, 3000);
+                } else {
+                  showToast(
+                    toast,
+                    "error",
+                    "Export",
+                    "No data available for export",
+                    4000,
+                  );
+                }
+              }}
+            />
 
-          <ActionButton
-            variant="add"
-            label="Add New"
-            icon="pi pi-plus-circle"
-            className="primaryBtn"
-            onClick={() => {
-              setSelectedEmployee([]);
-              setShowAddPopup(true);
-            }}
-          />
+            <ActionButton
+              variant="add"
+              label="Add New"
+              icon="pi pi-plus-circle"
+              className="primaryBtn"
+              onClick={() => {
+                setSelectedEmployee([]);
+                setShowAddPopup(true);
+              }}
+            />
+          </div>
         </div>
       </div>
 

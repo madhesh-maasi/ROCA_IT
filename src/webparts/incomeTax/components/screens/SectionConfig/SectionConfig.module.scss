@@ -3,6 +3,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
 
   h2 {
     font-size: 16px;
@@ -16,6 +18,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 
   .searchInput {
     width: 250px;
@@ -27,6 +30,7 @@
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  overflow-x: auto;
 }
 .inputField label {
   font-weight: 500 !important;
@@ -36,5 +40,68 @@
   align-items: center;
   i {
     font-size: 13px !important;
+  }
+}
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 768px) {
+  .toolbar .searchInput {
+    width: 200px;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+
+    .searchInput {
+      flex: 1;
+      min-width: 120px;
+      width: auto !important;
+      
+      :global(.p-inputtext) {
+        font-size: 13px;
+        padding: 8px 30px; // account for search icon
+      }
+    }
+
+    // ActionButtons inside toolbar
+    button {
+      width: auto;
+      min-width: unset;
+      padding: 8px 6px;
+      flex-shrink: 0;
+      
+      span {
+        display: inline-block !important;
+        font-size: 11px;
+        margin-left: 4px;
+        white-space: nowrap;
+      }
+      
+      i {
+        font-size: 12px !important;
+        margin: 0 !important;
+      }
+    }
+  }
+
+  :global(.p-dialog) {
+    width: 92vw !important;
+    max-width: 92vw !important;
+    margin: 0 4vw !important;
   }
 }

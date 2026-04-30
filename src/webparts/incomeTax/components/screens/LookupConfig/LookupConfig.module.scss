@@ -3,6 +3,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  flex-wrap: wrap;
 
   h2 {
     margin: 0;
@@ -16,6 +17,7 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .searchInput {
@@ -24,6 +26,62 @@
 
 .inputField label {
   font-weight: 500 !important;
+}
+
+// ── Responsive overrides ────────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 768px) {
+  .searchInput {
+    width: 160px;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .toolbar {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .searchInput {
+      width: 100% !important;
+    }
+
+    .searchInputWrapper {
+      flex: 1 1 100%;
+      width: 100%;
+
+      > div {
+        max-width: none !important;
+      }
+      
+      :global(.p-input-icon-left), :global(.p-inputtext) {
+        width: 100%;
+      }
+    }
+
+    > button, > :global(.p-button) {
+      flex: 1 1 calc(33.33% - 6px);
+      min-width: 0;
+      padding: 8px 4px;
+      font-size: 11px;
+      justify-content: center;
+      white-space: nowrap;
+
+      :global(.p-button-label) {
+        flex: 0 0 auto;
+      }
+    }
+  }
 }
 
 // ─── Import Upload Popup Styles ───────────────────────────────────────────────

@@ -5,14 +5,15 @@
   font-family: "Poppins", Tahoma, Geneva, Verdana, sans-serif;
   overflow: hidden;
   padding: 10px;
+  box-sizing: border-box;
 }
 
 .body {
   display: flex;
   flex: 1;
   overflow: hidden;
-  // background: #e5f5fb;
   background: #e5f5fb73;
+  position: relative; // Needed for mobile overlay positioning
 }
 
 .content {
@@ -20,4 +21,39 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 24px 28px;
+}
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Laptop
+@media (max-width: 1024px) {
+  .content {
+    padding: 18px 20px;
+  }
+}
+
+// Tablet
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 8px;
+    height: calc(100vh - 60px); // Account for SP mobile header
+    height: calc(100dvh - 60px);
+  }
+
+  .content {
+    padding: 14px 16px 80px 16px; // Extra bottom padding for safety
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 6px;
+    height: calc(100vh - 60px); // Account for SP mobile header
+    height: calc(100dvh - 60px);
+  }
+
+  .content {
+    padding: 10px 12px 100px 12px; // Extra bottom padding for safety
+  }
 }

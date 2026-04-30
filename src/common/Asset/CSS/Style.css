@@ -3,6 +3,13 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+html,
+body {
+  min-width: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -47,4 +54,8 @@ body {
 .p-datepicker .p-datepicker-header button {
   width: unset !important;
   margin-right: 2px;
+}
+
+.spAppAndPropertyPanelContainer {
+  padding-bottom: 0px;
 }

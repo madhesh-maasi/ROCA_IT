@@ -102,3 +102,39 @@
   font-family: "Poppins", sans-serif !important;
   font-size: 16px;
 }
+
+// ── Responsive overrides ────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .dialogRoot {
+    width: 90vw !important;
+  }
+  .buttonGroup {
+    width: 80%;
+  }
+}
+
+@media (max-width: 480px) {
+  .popup :global {
+    .p-dialog {
+      width: calc(100vw - 32px) !important;
+      max-width: calc(100vw - 32px) !important;
+      margin: 16px auto !important;
+      border-radius: 12px !important;
+    }
+  }
+  .buttonGroup {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .popupContent {
+    padding: 20px 16px;
+  }
+  .title {
+    font-size: 15px;
+  }
+  .message {
+    font-size: 14px;
+  }
+}

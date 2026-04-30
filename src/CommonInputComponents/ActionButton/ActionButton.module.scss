@@ -14,6 +14,7 @@
     border-color 0.2s,
     box-shadow 0.15s,
     transform 0.1s;
+  white-space: nowrap;
 
   &:has(i) {
     gap: 8px;
@@ -162,6 +163,15 @@
     &:hover:not(:disabled) {
       background: #307a8a;
       border-color: #307a8a;
+    }
+
+    @media (max-width: 480px) {
+      padding: 4px 10px;
+      font-size: 11px !important;
+
+      :global(.p-button-label) {
+        font-size: 11px;
+      }
     }
   }
 

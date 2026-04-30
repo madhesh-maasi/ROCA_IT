@@ -1,10 +1,12 @@
 .btnGroup {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .financeTableContainer {
   /* Scope overriding the global PrimeReact datatable to give rows detached floating appearance from the image */
+  overflow-x: auto;
   :global {
     .p-datatable-wrapper {
       background: transparent;
@@ -13,6 +15,7 @@
       border-collapse: separate;
       border-spacing: 0 8px; /* Adds physical gaps between rows */
       background: transparent;
+      min-width: 400px;
     }
 
     .p-datatable-thead > tr > th {
@@ -53,5 +56,61 @@
 .actionCell {
   i {
     font-size: 13px !important;
+  }
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// ── Responsive overrides ───────────────────────────────────────────────────
+
+// Tablet
+@media (max-width: 768px) {
+  :global(.toolbar) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btnGroup {
+    justify-content: flex-end;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .actionRow {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 6px;
+
+    .searchBlock {
+      flex: 1;
+      min-width: 0;
+      
+      :global(.p-input-icon-left), :global(.p-inputtext) {
+        width: 100%;
+      }
+    }
+  }
+
+  .btnGroup {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: auto;
+    
+    button,
+    :global(.p-button) {
+      flex: 0 0 auto;
+      min-width: 0;
+      justify-content: center;
+      padding: 8px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
   }
 }

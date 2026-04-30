@@ -207,7 +207,7 @@ const DeclarationFormScreen: React.FC = () => {
       // 1. Generate PDF of the form
       const fileName = `Declaration_${data.employeeInfo.employeeCode}_${data.employeeInfo.financialYear}`;
       const pdfBlob = await generatePDFBlob(
-        "declaration-form-content",
+        "submission-form-main",
         fileName,
       );
 
