@@ -33,6 +33,16 @@ const AppCalendar: React.FC<ICalendarProps> = ({
 }) => {
   const hasError = Boolean(errorMessage);
   const calendarRef = React.useRef<any>(null);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = (): void => {
+      setIsMobile(window.innerWidth <= 480);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const handleWrapperClick = (): void => {
     // Force open the calendar when the wrapper (input area) is clicked
@@ -64,12 +74,12 @@ const AppCalendar: React.FC<ICalendarProps> = ({
           autoZIndex
           onFocus={(e) => {
             rest.onFocus?.(e);
-            if (!disabled) handleWrapperClick();
           }}
           onChange={(e: any) => onChange?.(e)}
           disabled={disabled}
           panelStyle={{ position: "fixed" }}
           appendTo="self"
+          touchUI={isMobile}
         />
       </div>
       {hasError && (

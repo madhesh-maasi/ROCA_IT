@@ -202,3 +202,45 @@
   color: #307a8a;
   font-weight: 700;
 }
+
+// ── Mobile Responsive Overrides ──────────────────────────────────────────
+@media (max-width: 480px) {
+  :global(.p-datepicker) {
+    min-width: 280px !important;
+    padding: 8px !important;
+
+    :global(.p-datepicker-header) {
+      padding: 0 0 8px 0 !important;
+
+      :global(.p-datepicker-title) {
+        .p-datepicker-month,
+        .p-datepicker-year {
+          font-size: 14px !important;
+        }
+      }
+
+      button {
+        width: 2rem !important;
+        height: 2rem !important;
+      }
+    }
+
+    table {
+      font-size: 12px !important;
+
+      th {
+        padding: 4px !important;
+      }
+
+      td {
+        padding: 1px !important;
+
+        > span {
+          width: 1.85rem !important;
+          height: 1.85rem !important;
+          font-size: 12px !important;
+        }
+      }
+    }
+  }
+}

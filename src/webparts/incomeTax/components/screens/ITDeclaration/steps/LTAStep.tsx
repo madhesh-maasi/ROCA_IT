@@ -257,7 +257,7 @@ const LTAStep: React.FC<ILTAStepProps> = ({
             </thead>
             <tbody>
               {coTravellers.map((person, idx) => (
-                <tr key={person.relationship}>
+                <tr key={`${person.relationship}-${idx}`}>
                   <td
                     style={{
                       fontSize: "14px",

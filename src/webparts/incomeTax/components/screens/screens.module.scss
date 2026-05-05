@@ -345,6 +345,15 @@
           width: 100% !important;
         }
       }
+
+      .fySelect {
+        flex: none !important;
+        width: auto !important;
+
+        :global(.p-dropdown) {
+          width: 150px !important;
+        }
+      }
     }
   }
   .pagination {
